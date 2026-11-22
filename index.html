@@ -1295,9 +1295,9 @@ window.iconErr = iconErr;
 function iconImg(id, fallback, cls){
   cls = cls || "iicon";
   const isImg = fallback && /^(data:|blob:)/.test(fallback);
-  const emo = !isImg && fallback ? fallback : "";
+  const emo = "";   // only real MapleStory pictures: no emoji fallback next to items
   if (!id && isImg) return `<img class="${cls}" src="${fallback}" alt="">`;
-  if (!id) return `<span class="${cls} iemo">${emo}</span>`;
+  if (!id) return "";
   return `<img class="${cls}" src="https://maplestory.io/api/GMS/83/item/${id}/icon" data-id="${id}"${isImg ? ` data-fb="${fallback}"` : ""} alt="" loading="lazy" onerror="iconErr(this)"><span class="${cls} iemo" hidden>${emo}</span>`;
 }
 
