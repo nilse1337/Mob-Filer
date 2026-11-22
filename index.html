@@ -1727,16 +1727,17 @@ function computeSets(){
   for (const slot of SET_SLOTS){
     const cur = S.gear[slot];
     const subs = slot === "weapon" ? jobOf().weapons : SLOT_SUBS[slot];
-    let best = null;
-    if (cur){ const pv = potential(slot, cur.st, cur.sub, cur.slots || 0); best = {keep:true, it:null, st:cur.st, name:cur.name || SUBTYPES[cur.sub], sub:cur.sub, slots:cur.slots || 0, pct:pv.pct, raw:pv.raw, potSt:pv.st}; }
+    let best = null, keepBest = null;
+    if (cur){ const pv = potential(slot, cur.st, cur.sub, cur.slots || 0); keepBest = {keep:true, it:null, st:cur.st, name:cur.name || SUBTYPES[cur.sub], sub:cur.sub, slots:cur.slots || 0, pct:pv.pct, raw:pv.raw, potSt:pv.st}; }
     for (const it of ITEMS){
       if (!subs.includes(it.sub) || !usable(it, cls)) continue;
       if (slot === "weapon" && !weaponOK(it.sub)) continue;
       if (!wearCheck(it, cur).ok) continue;
       const pv = potential(slot, it.st, it.sub, it.slots);
-      // switch only when it is clearly better after scrolling (ties keep what you have)
-      if (!best || pv.pct > best.pct + 0.002) best = {keep:false, it, st:it.st, name:it.name, sub:it.sub, slots:it.slots, pct:pv.pct, raw:pv.raw, potSt:pv.st};
+      // best fresh item (all slots free) for your level, regardless of what you wear now
+      if (!best || pv.pct > best.pct + 1e-6) best = {keep:false, it, st:it.st, name:it.name, sub:it.sub, slots:it.slots, pct:pv.pct, raw:pv.raw, potSt:pv.st};
     }
+    if (!best) best = keepBest;   // nothing in MeowDB you can wear for this slot
     if (best) pick[slot] = best;
   }
   // overall vs top + bottom, compared as complete outfits (taking off the other one counts too)
@@ -1766,6 +1767,12 @@ function computeSets(){
       const g = evalLoadout(trial, model, mob, base).pct - set.pct;
       if (g > 1e-6 && (!bestSc || g > bestSc.g)) bestSc = {sc, g};
     }
+    // no scroll changes the damage (e.g. ACC on a hat): still apply the useful one you picked
+    if (!bestSc && opts.length && free > 0){
+      const pref = ["Accuracy","Crit","Attack","Magic Attack","STR","DEX","INT","LUK"];
+      const sc = opts.slice().sort((a,b) => pref.indexOf(a.stat) - pref.indexOf(b.stat))[0];
+      bestSc = {sc, g:0, noDmg:true};
+    }
     scrollRows[slot] = {free, bestSc, g};
     scrolled[slot] = bestSc && free > 0 ? {st:addSt(p.st, bestSc.sc.st, free*g/100), sub:p.sub} : load[slot];
   }
@@ -1790,10 +1797,10 @@ function previewChar(load, model){
 const deltaLine = d => GSTATS.filter(([k]) => Math.abs(d[k] || 0) >= 0.05).map(([k,l]) => { const v = d[k]; const r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return `<span class="${v > 0 ? 'ok' : 'bad'}">${v > 0 ? '+' : ''}${r} ${l}</span>`; }).join(" · ");
 function gradeBtns(slot, p){
   const free = p.keep ? ((S.gear[slot] || {}).slots || 0) : p.slots;
-  if (!(free > 0)) return `<div class="sgrade"><span class="note">no free slots</span></div>`;
   const cur = gradeOf(slot), opts = [[0,"Not"],[60,"60%"],[10,"10%"]];
+  if (!SCROLLS.some(x => x.target === SCROLL_TARGET[p.sub])) return `<div class="sgrade"><span class="note">no attack, stat or ACC scrolls exist for ${SUBTYPES[p.sub].toLowerCase()}</span></div>`;
   if (S.scrollGrade === 100 || cur === 100) opts.splice(1, 0, [100,"100%"]);
-  return `<div class="sgrade"><span class="note">Scroll ${free} slot${free>1?'s':''}:</span>${opts.map(([v,l]) => `<button data-sgrade="${slot}:${v}" class="${cur===v?'on':''}">${l}</button>`).join("")}</div>`;
+  return `<div class="sgrade"><span class="note">${free > 0 ? `Scroll ${free} slot${free>1?'s':''}:` : 'No free slots on this item · scrolls for new items:'}</span>${opts.map(([v,l]) => `<button data-sgrade="${slot}:${v}" class="${cur===v?'on':''}">${l}</button>`).join("")}</div>`;
 }
 function setColumn(R){
   const rows = [];
@@ -1831,7 +1838,7 @@ function scrollColumn(R){
     const sc = sr.bestSc.sc, exp = addSt({}, sc.st, sr.free*sr.g/100), max = addSt({}, sc.st, sr.free);
     rows.push(`<div class="srow scroll"><span class="sslot">${icon} ${label}</span>
       <div class="smain">${iconImg(scrollIconId(sc), "📜")} <b>${sr.free}× ${esc(sc.target)} ${esc(sc.stat)} Scroll: ${esc(sc.grade)}</b> <span class="tag t-pq">${sc.rate}%</span>
-        <div class="note">on ${esc(p.name)}${p.keep ? '' : ' (new)'} · each ${statLine(sc.st)}</div>
+        <div class="note">on ${esc(p.name)}${p.keep ? '' : ' (new)'} · each ${statLine(sc.st)}${sr.bestSc.noDmg ? ' · <span class="bad">no effect on your damage</span>' : ''}</div>
         <div class="note">${sr.g === 100 ? 'result' : 'expected'}: ${deltaLine(exp)}${sr.g < 100 ? ` · if all succeed: ${deltaLine(max)}` : ''}</div></div></div>`);
   }
   return rows.join("") || `<div class="empty">Add your gear to see scroll plans.</div>`;
@@ -1847,7 +1854,7 @@ function renderSets(){
   $("viewSwitch").innerHTML = [["current","Current gear"],["set","Suggested set"]].map(([k,l]) => `<button data-gview="${k}" class="${S.gearView===k?'on':''}">${l}</button>`).join("");
   $("gradeSwitch").innerHTML = [[100,"100% scrolls"],[60,"60% scrolls"]].map(([g,l]) => `<button data-grade="${g}" class="${S.scrollGrade===g?'on':''}">${l}</button>`).join("");
   $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, R.base.ko, R.base.ko, "current");
-  $("colSetHead").innerHTML = colHead("Suggested set", "best gear you can wear, with the scrolls you picked per item", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
+  $("colSetHead").innerHTML = colHead("Suggested set", "best fresh item per slot for your level (all slots free), with the scrolls you picked", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
   $("colScrHead").innerHTML = colHead("Scroll plan", "which scrolls to use for the set · expected result", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "scrolled");
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = scrollColumn(R);
@@ -1873,6 +1880,23 @@ function needFor(stat, n, mode, model, mob){
   return hi;
 }
 function renderKillGoals(){
+  // follow the "Monsters page uses" switch: current gear or the suggested set (with picked scrolls)
+  if (S.gearView === "set" && !renderKillGoals.busy){
+    const saved = {char:S.char, acc:S.baseAcc, gear:S.gear, rr:RR, ev:EVAL, by:BYID};
+    try {
+      const R = computeSets(), prev = previewChar(R.loadScrolled, R.model);
+      const g = Object.assign({}, S.gear); Object.entries(R.loadScrolled).forEach(([k,v]) => { if (v) g[k] = Object.assign({}, S.gear[k] || {}, {sub:v.sub, st:v.st}); else delete g[k]; });
+      S.char = prev.char; S.baseAcc = prev.acc; S.gear = g;
+      RR = rawRange(); EVAL = monsters().map(m => evaluate(m, RR)); BYID = new Map(EVAL.map(e => [e.id, e]));
+      renderKillGoals.busy = true; renderKillGoals();
+      const h = $("killPanel").querySelector("h3"); if (h) h.insertAdjacentHTML("beforeend", ` <span class="tag t-ok" style="vertical-align:middle">SUGGESTED SET</span>`);
+      const n = $("killPanel").querySelector(".note:last-child"); if (n) n.innerHTML = n.innerHTML.replace("on top of your current gear", "on top of the suggested set (with the scrolls you picked)");
+    } finally {
+      renderKillGoals.busy = false;
+      S.char = saved.char; S.baseAcc = saved.acc; S.gear = saved.gear; RR = saved.rr; EVAL = saved.ev; BYID = saved.by;
+    }
+    return;
+  }
   const mob = BYID.get(S.selectedId) || EVAL[0];
   const model = gearModel(), base = valueWith({}, model, mob), sk = RR.sk;
   const magic = sk.type === "magic";
