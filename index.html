@@ -780,7 +780,7 @@ const TipOCR = (function(){
       if (n >= 2 && w <= 16 && h <= 16 && w/h < 2.5 && h/w < 2.5) out.push({x0,y0,x1,y1,cx:(x0+x1)/2,cy:(y0+y1)/2,w,h,n});
     }
     // bullets are solid squares; text in orange (job buttons, title) gives thin or hollow bits
-    const solid = out.filter(o => o.w >= 2 && o.h >= 2 && o.w/o.h <= 1.6 && o.h/o.w <= 1.6 && o.n >= o.w*o.h*0.45);
+    const solid = out.filter(o => o.w >= 2 && o.h >= 2 && o.w/o.h <= 1.8 && o.h/o.w <= 1.8 && o.n >= o.w*o.h*0.45);
     const pool = solid.length >= 2 ? solid : out;
     const rowsOf = g => { const r = []; for (const o of g) if (!r.length || o.cy - r[r.length-1].cy > 4) r.push(o); return r; };
     // keep the column with most bullets
@@ -1638,20 +1638,35 @@ function placeGear(g, forceSlot){
   S.gear[slot] = g; S.gearSel = slot;
   return slot;
 }
+/* read a tooltip at its own size and also enlarged ×1.5 / ×2 (small or blurry screenshots read better enlarged); keep the best result */
+function tipBest(c){
+  const score = r => (r.values.type ? 5 : 0) + Object.keys(r.values).length + (r.values.slots !== undefined ? 1 : 0)
+    - Object.values(r.values).filter(v => typeof v === "number" && v > 999).length * 4;
+  let best = {values:{}, lines:[]}, bs = -99;
+  for (const k of [1, 2, 1.5]){
+    let cv = c;
+    if (k !== 1){ if (c.width * k > 2400) continue; cv = document.createElement("canvas"); cv.width = Math.round(c.width*k); cv.height = Math.round(c.height*k);
+      const x2 = cv.getContext("2d", {willReadFrequently:true}); x2.imageSmoothingEnabled = true; x2.imageSmoothingQuality = "high"; x2.drawImage(c, 0, 0, cv.width, cv.height); }
+    let r; try { r = TipOCR.read(cv.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, cv.width, cv.height)); } catch(e){ continue; }
+    const s = score(r); if (s > bs){ bs = s; best = Object.assign(r, {canvas:cv}); }
+    if (k === 1 && r.values.type && s >= 4) break;   // clean read at native size: done
+  }
+  return best;
+}
 function readTipFile(file, forceSlot){
   return new Promise(res => {
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = () => {
       const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
       const x = c.getContext("2d", {willReadFrequently:true}); x.drawImage(img, 0, 0); URL.revokeObjectURL(url);
-      let r; try { r = TipOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){ r = {values:{}, lines:[]}; }
+      let r = tipBest(c), cc = r.canvas || c;
       // a character stat window? apply it directly
       let sv = null;
       if (!r.lines.length){ try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){} }
       if (sv && Object.keys(sv.values).length >= 5){ applyStat(sv); IMGS.stat = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stat:true}); return; }
       const g = gearFromTip(r);
-      if (g){ const slot = placeGear(g, forceSlot); IMGS[slot] = {src:snapshot(c), icon:iconCrop(c, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); }
-      else if (r.lines.length && forceSlot){ IMGS[forceSlot] = {src:snapshot(c), icon:iconCrop(c, r.icon), t:Date.now()}; saveImgs(); S.gear[forceSlot] = {sub:SLOT_SUBS[forceSlot][0], st:Object.fromEntries(GSTATS.filter(([k]) => r.values[k]).map(([k]) => [k, r.values[k]])), slots:r.values.slots || 0, name:""}; res({ok:true, slot:forceSlot}); }
+      if (g){ const slot = placeGear(g, forceSlot && SLOT_SUBS[forceSlot].includes(g.sub) ? forceSlot : null);   // the item type on the tooltip wins over where it was dropped IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); }
+      else if (r.lines.length && forceSlot){ IMGS[forceSlot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; saveImgs(); S.gear[forceSlot] = {sub:SLOT_SUBS[forceSlot][0], st:Object.fromEntries(GSTATS.filter(([k]) => r.values[k]).map(([k]) => [k, r.values[k]])), slots:r.values.slots || 0, name:""}; res({ok:true, slot:forceSlot}); }
       else {
         // maybe it's the character stat window
         let sv = null; try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){}
