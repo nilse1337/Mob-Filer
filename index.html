@@ -218,6 +218,7 @@ svg text{font-family:var(--mono)}
 
 .gtool{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
 .gtool .gpaste{flex:1;min-width:240px;margin:0;padding:10px}
+.buildcard{margin:10px 0;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2)}.buildcard .bhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}.buildcard .seg button small{font-weight:600;opacity:.75}
 .hgear{display:flex;align-items:center;gap:8px;margin-left:10px}.hgear .lbl{margin:0;white-space:nowrap}.hgear .seg button{padding:6px 10px}
 @media (max-width:1100px){.hgear .lbl{display:none}}
 .seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:3px;gap:3px}
@@ -1562,7 +1563,7 @@ function equipWindow(){
     </div></div>`;
 }
 function renderGear(){
-  $("charCard").innerHTML = charCard();
+  $("charCard").innerHTML = charCard() + buildCard();
   fillMissingIcons();
   try { renderSets(); } catch(e){ console.error(e); }
   try { renderKillGoals(); } catch(e){ console.error(e); }
@@ -1678,6 +1679,66 @@ document.addEventListener("change", ev => {
     document.querySelectorAll("[data-gf]").forEach(el => { el.value = it.st[el.dataset.gf] || ""; });
     $("gfSlots").value = it.slots; $("gfName").value = it.name; if ($("gfSub")) $("gfSub").value = it.sub;
   }
+});
+
+/* ================= CLASS BUILDS (detected from base stats, shown only for your class) ================= */
+// gear stat requirement in Victoria Island ≈ level − 10 for the secondary stat (e.g. Lv 50 mage hat: LUK 40)
+const secReq = lv => Math.max(4, lv - 10);
+const BUILDS = {
+  magician: {stat:"luk", main:"int", list:[
+    {k:"std", l:"Standard (LUK for gear)", d:"LUK kept around the gear requirement (≈ level − 10) so you can wear every mage item; the rest goes into INT."},
+    {k:"low", l:"Low LUK", d:"Only enough LUK for the items you actually want; more INT, but some mage gear stays out of reach until gear LUK helps."},
+    {k:"none", l:"LUKless", d:"Base LUK 4: everything in INT for the highest damage. Gear with a LUK requirement only fits through LUK on other gear."}]},
+  warrior: {stat:"dex", main:"str", list:[
+    {k:"std", l:"Standard (DEX for gear)", d:"DEX kept around the gear requirement (≈ level − 10) to wear all warrior armour; the rest in STR."},
+    {k:"low", l:"Low DEX", d:"Just enough DEX for the gear you use; more STR."},
+    {k:"none", l:"Pure STR (DEXless)", d:"Base DEX 4: all STR. Warrior armour with a DEX requirement only fits through DEX on other gear."}]},
+  bowman: {stat:"str", main:"dex", list:[
+    {k:"std", l:"Standard (STR for gear)", d:"STR kept around the gear requirement (≈ level − 10) to wear all bowman gear; the rest in DEX."},
+    {k:"low", l:"Low STR", d:"Just enough STR for the gear you use; more DEX."},
+    {k:"none", l:"Pure DEX (STRless)", d:"Base STR 4: all DEX. Bowman gear with a STR requirement only fits through STR on other gear."}]},
+  assassin: {stat:"dex", main:"luk", list:[
+    {k:"std", l:"Standard (DEX for gear)", d:"DEX kept around the gear requirement (≈ level − 10) for claws and thief gear; the rest in LUK."},
+    {k:"low", l:"Low DEX", d:"DEX only for the gear you want; more LUK."},
+    {k:"none", l:"DEXless", d:"DEX at the 25 needed for the job: everything else in LUK. Gear with a higher DEX requirement needs DEX on other gear."}]},
+  bandit: {stat:"dex", main:"luk", list:[
+    {k:"std", l:"Standard LUK", d:"DEX around the gear requirement (≈ level − 10), the rest in LUK."},
+    {k:"str", l:"STR bandit", d:"Extra STR on top of LUK: daggers use STR + DEX as secondary stats, so STR adds damage too."},
+    {k:"low", l:"Low DEX", d:"DEX only for the gear you want; more LUK."}]}
+};
+function buildGroup(){
+  const c = S.char.cls; if (c === "thief") return /BANDIT/i.test(jobOf().sub || "") ? "bandit" : "assassin";
+  return BUILDS[c] ? c : null;
+}
+function baseStats(){
+  const b = {}; ["str","dex","int","luk"].forEach(k => b[k] = (S.char[k] || 0) - Object.values(S.gear || {}).reduce((a,g) => a + ((g.st && g.st[k]) || 0), 0));
+  return b;
+}
+function detectBuild(){
+  const gk = buildGroup(); if (!gk) return null;
+  const G = BUILDS[gk], b = baseStats(), need = secReq(S.level), have = b[G.stat];
+  if (gk === "bandit" && b.str >= Math.max(35, S.level*0.5)) return "str";
+  const floor = gk === "assassin" || gk === "bandit" ? 25 : 5;
+  if (have <= floor && gk !== "bandit") return "none";
+  return have >= need - 3 ? "std" : "low";
+}
+function buildCard(){
+  const gk = buildGroup(); if (!gk || !S.charImported) return "";
+  const G = BUILDS[gk], auto = detectBuild(), cur = (S.builds && S.builds[gk]) || auto;
+  const B = G.list.find(x => x.k === cur) || G.list[0], b = baseStats(), need = secReq(S.level), up = G.stat.toUpperCase();
+  const tip = cur === "std" ? (b[G.stat] < need ? `Put <b>${need - b[G.stat]}</b> more AP in ${up} to reach ≈ ${need} for Lv ${S.level} gear; everything else in ${G.main.toUpperCase()}.` : `${up} ${b[G.stat]} covers gear up to Lv ${b[G.stat] + 10}. Put new AP in ${G.main.toUpperCase()} and add ${up} only when you need it for the next gear (≈ 1 per level).`)
+    : cur === "none" ? `Keep ${up} at ${gk === "assassin" ? 25 : 4}; all AP in ${G.main.toUpperCase()}.`
+    : cur === "str" ? `STR adds damage with a dagger (secondary stat). Keep DEX for gear, split the rest between LUK and STR.`
+    : `Your base ${up} is ${b[G.stat]}: enough for gear up to about Lv ${b[G.stat] + 10}. All other AP in ${G.main.toUpperCase()}.`;
+  return `<div class="buildcard"><div class="bhead"><b>🧭 ${esc(CLASS_LABEL[S.char.cls] || "")}${gk === "bandit" ? " · Bandit" : gk === "assassin" && S.char.cls === "thief" ? " · Assassin / claw" : ""} build</b>
+      <div class="seg">${G.list.map(x => `<button data-build="${gk}:${x.k}" class="${cur===x.k?'on':''}">${x.l}${x.k === auto ? ' <small>(detected)</small>' : ''}</button>`).join("")}</div></div>
+    <div class="note">${B.d}</div>
+    <div class="note">Base stats (stat window minus gear): STR ${b.str} · DEX ${b.dex} · INT ${b.int} · LUK ${b.luk}. ${tip}</div></div>`;
+}
+document.addEventListener("click", ev => {
+  const bt = ev.target.closest("[data-build]"); if (!bt) return;
+  const [gk, k] = bt.dataset.build.split(":"); S.builds = S.builds || {};
+  if (k === detectBuild()) delete S.builds[gk]; else S.builds[gk] = k; renderAll();
 });
 
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
