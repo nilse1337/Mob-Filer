@@ -258,6 +258,9 @@ svg text{font-family:var(--mono)}
 .ubar{display:flex;height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:6px}.ubar i{display:block;height:100%}.ui{background:var(--good)}.tg{color:var(--good)}.to{color:var(--accent)}.us{background:var(--accent)}
 .ugrade{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}.ugrade .seg button{padding:5px 9px;font-size:12px}.ulegend{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}.ulegend i{display:inline-block;width:12px;height:6px;border-radius:3px;margin-left:6px}
 .ugoal{font:800 10px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);margin-left:2px}.g-attack{color:#ff8a5c;border-color:#ff8a5c55}.g-accuracy{color:#5cb8ff;border-color:#5cb8ff55}.g-crit{color:#ff5ca8;border-color:#ff5ca855}.g-luk,.g-int,.g-str,.g-dex{color:var(--good);border-color:color-mix(in srgb,var(--good) 35%,transparent)}
+.upct small{display:block;font:700 10.5px var(--mono);color:var(--muted);text-align:right}.upct.neg{color:var(--bad)}
+.starcell{position:relative;cursor:pointer}.staras{position:absolute;left:3px;top:1px;font:800 11px var(--mono);color:#c55}
+.eqgrid{position:relative}.starpop{position:absolute;right:0;bottom:-4px;transform:translateY(100%);z-index:20;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;width:300px;box-shadow:0 8px 24px rgba(0,0,0,.35)}.starpop button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:7px;padding:4px 6px;color:var(--text);cursor:pointer;font-size:11.5px;text-align:left}.starpop button.on{border-color:var(--accent)}.starpop img{width:22px;height:22px;image-rendering:pixelated}.starpop b{margin-left:auto;font-family:var(--mono)}
 .urow{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;padding:9px 0;border-bottom:1px dashed var(--line)}.urank{width:22px;height:22px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;font:800 11px var(--mono);color:var(--muted)}.upct{font:800 14px var(--mono);color:var(--good)}
 .sgrade{display:flex;align-items:center;gap:4px;margin-top:5px;flex-wrap:wrap}.sgrade .note{margin-right:2px}.sgrade button{font:inherit;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer}.sgrade button.on{background:var(--accent);border-color:var(--accent);color:#1a1200}
 .srow.new .smain b{color:var(--good)}.srow.scroll .smain b{color:var(--accent2)}
@@ -1578,7 +1581,7 @@ function equipWindow(){
   return `<div class="eqwin"><div class="eqtitle">EQUIPMENT INVENTORY</div>
     <div class="eqbody">
       <svg class="eqfig" viewBox="0 0 300 300" aria-hidden="true"><g fill="currentColor"><circle cx="150" cy="62" r="40"/><path d="M112 108 h76 l22 70 -24 6 -10-36 v92 h-24 v-60 h-4 v60 h-24 v-92 l-10 36 -24-6z"/><path d="M226 232 q8-22 24-14 q10-14 22 0 q10 8 2 22 q2 18-18 18 h-14 q-20 0-16-26z"/></g></svg>
-      <div class="eqgrid">${cells}</div>
+      <div class="eqgrid">${cells}${typeof starCell === "function" ? starCell() : ""}</div>
     </div></div>`;
 }
 function renderGear(){
@@ -1775,6 +1778,26 @@ function wearChar(){
   return c;
 }
 
+/* ================= THROWING STARS (claw users) ================= */
+// MSCW stars with a known source (MeowDB): name, W.ATK, item ID (same ID on maplestory.io)
+const STARS = [["Subi Throwing Stars",15,"2070000"],["Wolbi Throwing Stars",17,"2070001"],["Mokbi Throwing Stars",19,"2070002"],["Wooden Top",19,"2070009"],
+  ["Kumbi Throwing Stars",21,"2070003"],["Icicle",21,"2070010"],["Tobi Throwing Stars",23,"2070004"],["Steely Throwing Knives",25,"2070005"],["Ilbi Throwing Stars",27,"2070006"]];
+const usesStars = () => S.char.cls === "thief" && (S.gear.weapon ? S.gear.weapon.sub === 22 : jobOf().weapons[0] === 22);
+const curStar = () => STARS.find(s => s[0] === S.stars) || STARS[0];
+const bestStar = () => STARS.reduce((a, s) => s[1] > a[1] ? s : a, STARS[0]);
+function starCell(){
+  if (!usesStars()) return "";
+  const s = curStar(), open = S.starPick;
+  return `<div class="eqcell has starcell" style="grid-column:5;grid-row:5" data-starpick="1" title="Throwing stars: ${esc(s[0])} (W.ATK +${s[1]})${S.stars ? '' : ' — assumed, click to pick yours'}">
+      <img class="eqico" src="https://maplestory.io/api/GMS/83/item/${s[2]}/icon" alt=""><span class="eqslots">+${s[1]}</span>${S.stars ? '' : '<span class="staras">?</span>'}</div>
+    ${open ? `<div class="starpop">${STARS.map(x => `<button data-star="${esc(x[0])}" class="${x[0] === s[0] ? 'on' : ''}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt=""><span>${esc(x[0].replace(" Throwing Stars","").replace(" Throwing Knives"," Knives"))}</span><b>+${x[1]}</b></button>`).join("")}</div>` : ''}`;
+}
+document.addEventListener("click", ev => {
+  const st = ev.target.closest("[data-star]"); if (st){ S.stars = st.dataset.star; S.starPick = false; renderAll(); return; }
+  if (ev.target.closest("[data-starpick]")){ S.starPick = !S.starPick; renderAll(); return; }
+  if (S.starPick && !ev.target.closest(".starpop")){ S.starPick = false; renderAll(); }
+});
+
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
 if (!S.gearView || S.gearView === "scrolled") S.gearView = S.gearView ? "set" : "current";   // which gear the Monsters page uses: current | set | scrolled
 S.scrollGrade = 60;                         // default per item (the global switch is gone)
@@ -1802,6 +1825,7 @@ function loadoutDelta(load, model){
       d = addSt(addSt(d, o), c, -1);
     } else d = addSt(addSt(d, newSt), cur ? cur.st : {}, -1);
   }
+  if (load.stars) d.watk = (d.watk || 0) + load.stars.watk - curStar()[1];   // throwing stars add W.ATK
   return d;
 }
 function evalLoadout(load, model, mob, base){
@@ -1870,6 +1894,8 @@ function computeSets(){
     if (!useOverall && slot === "overall"){ if (S.gear.overall) load.overall = null; continue; }
     if (pick[slot]) load[slot] = {st:pick[slot].st, sub:pick[slot].sub};
   }
+  const clawSet = (pick.weapon ? pick.weapon.sub : (S.gear.weapon || {}).sub) === 22 && S.char.cls === "thief";
+  if (clawSet){ const b = bestStar(); if (b[1] > curStar()[1]) load.stars = {watk:b[1], name:b[0], id:b[2]}; }
   const set = evalLoadout(load, model, mob, base);
   // scrolls on the suggested set
   const scrolled = {}, scrollRows = {};
@@ -1924,7 +1950,7 @@ function setColumn(R){
     if (R.useOverall && (slot === "top" || slot === "bottom")) continue;
     if (!R.useOverall && slot === "overall") continue;
     const p = R.pick[slot], cur = S.gear[slot];
-    if (!p){ rows.push(`<div class="brow empty"><div class="bico"></div><div class="bmain"><div class="bslot">${label}</div><div class="note">nothing to wear here</div></div></div>`); continue; }
+    if (!p){ rows.push(`<div class="brow empty"><div class="bico"></div><div class="bmain"><div class="bslot">${label}</div><div class="note">${slot === "shield" && TWO_HANDED.includes((R.pick.weapon || S.gear.weapon || {}).sub) ? "no shield with a two-handed weapon / claw" : "nothing to wear here"}</div></div></div>`); continue; }
     const sr = R.scrollRows[slot], scSt = R.loadScrolled[slot] ? R.loadScrolled[slot].st : p.st;
     const scrolled = sr && sr.bestSc && sr.free > 0;
     const curSt = cur ? cur.st : {};
@@ -1947,19 +1973,39 @@ function setColumn(R){
       <div class="bside">${p.keep ? '' : `<span class="bpct ${one > 0.0005 ? 'ok' : one < -0.0005 ? 'bad' : ''}" title="damage vs your current ${label.toLowerCase()}">${one > 0.0005 ? '+' : one < -0.0005 ? '−' : '±'}${Math.abs(one*100).toFixed(1)}%</span>`}${gradeBtns(slot, p)}</div>
     </div>`);
   }
+  if (usesStars() || R.load.stars){
+    const c = curStar(), n = R.load.stars, keep = !n;
+    const one = keep ? 0 : evalLoadout({stars:n}, R.model, R.mob, R.base).pct;
+    rows.push(`<div class="brow ${keep ? 'keep' : ''}"><div class="bico"><img class="bimg" src="https://maplestory.io/api/GMS/83/item/${keep ? c[2] : n.id}/icon" alt=""></div>
+      <div class="bmain"><div class="btop"><span class="bslot">Stars</span><b class="bname">${esc(keep ? c[0] : n.name)}</b>${keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
+        <div class="bchips"><span class="bchip ${keep ? '' : 'up'}">W.ATK +${keep ? c[1] : n.watk}</span></div>
+        <div class="bmeta">${keep ? 'best stars available' : `vs your ${esc(c[0])}${S.stars ? '' : ' (assumed — click the stars in the inventory)'}`}</div></div>
+      <div class="bside">${keep ? '' : `<span class="bpct ok">+${(one*100).toFixed(1)}%</span>`}</div></div>`);
+  }
   if (!R.useOverall && S.gear.overall) rows.push(`<div class="note" style="padding:8px 2px">Top + bottom beat your overall.</div>`);
   if (R.useOverall && (S.gear.top || S.gear.bottom)) rows.push(`<div class="note" style="padding:8px 2px">An overall beats your top + bottom.</div>`);
   return `<div class="blegend note"><span class="bchip up">+</span>more than now <span class="bchip down">−</span>less · % = damage vs now</div>` + rows.join("");
 }
 
 /* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
+const GOALS = [["damage","Damage"],["attack","Attack"],["accuracy","Accuracy"],["crit","Crit"],["main","Main stat"]];
 function usefulList(R){
   const model = R.model, mob = R.mob, base = R.base, out = [], grade = S.usefulGrade === undefined ? 60 : S.usefulGrade;
+  const goal = S.usefulGoal || "damage", magic = RR.sk.type === "magic";
   let lastHit = null;
   const gainOf = load => { const e = evalLoadout(load, model, mob, base); lastHit = e.v.hitP; return e.pct; };
-  const hitOf = load => { evalLoadout(load, model, mob, base); return lastHit; };
-  // one-word goal of a change: the stat that adds the most damage on its own
-  const goalOf = (slot, fromSt, toSt, sub, extra) => {
+  const prim = () => magic ? "int" : WEAPON_MODEL(S.gear.weapon ? S.gear.weapon.sub : defaultWeapon()).P;
+  // how much a change helps the chosen goal (higher = better); damage % is shown for every goal
+  const metric = (slot, fromSt, toSt, sub, extra) => {
+    const d = diff(toSt, fromSt);
+    if (goal === "attack") return magic ? (d.matk || 0) : (d.watk || 0);
+    if (goal === "crit") return (d.critRate || 0) + (d.critDamage || 0) * 0.5;
+    if (goal === "main") return d[prim()] || 0;
+    if (goal === "accuracy"){ gainOf(Object.assign({}, extra, {[slot]: {st:toSt, sub}})); const h = lastHit;
+      return ((h != null && base.hitP != null) ? (h - base.hitP) * 100 : 0) + ((d.acc || 0) + accFromStats(d)) * 0.01; }
+    return gainOf(Object.assign({}, extra, {[slot]: {st:toSt, sub}}));
+  };
+  const goalWord = (fromSt, toSt, slot, sub, extra) => {
     const d = diff(toSt, fromSt); let best = null;
     for (const k of Object.keys(d)){ if (d[k] <= 0) continue;
       const g = gainOf(Object.assign({}, extra, {[slot]: {st:addSt(fromSt, {[k]: d[k]}), sub}})); const h = lastHit;
@@ -1971,54 +2017,74 @@ function usefulList(R){
     if (k === "critRate" || k === "critDamage") return "Crit";
     return {str:"STR", dex:"DEX", int:"INT", luk:"LUK"}[k] || "Damage";
   };
-  const bestScroll = (slot, st, sub, free, extra) => {
-    let best = null; if (!(free > 0) || !grade) return null;
-    for (const sc of scrollsFor(SCROLL_TARGET[sub], grade)){
-      const g = gainOf(Object.assign({}, extra, {[slot]: {st:addSt(st, sc.st, free), sub}}));
-      if (!best || g > best.g) best = {g, sc};
-    }
+  const opts = (sub) => grade ? scrollsFor(SCROLL_TARGET[sub], grade) : [];
+  const bestFor = (slot, st, sub, free, fromSt, extra) => {     // best scroll (or none) for the goal
+    let best = {m: metric(slot, fromSt, st, sub, extra), sc:null, to:st};
+    if (free > 0) for (const sc of opts(sub)){ const to = addSt(st, sc.st, free), m = metric(slot, fromSt, to, sub, extra); if (m > best.m + 1e-9) best = {m, sc, to}; }
     return best;
   };
   for (const slot of SET_SLOTS){
-    const p = R.pick[slot], cur = S.gear[slot];
-    if (p && !p.keep){
-      if ((slot === "top" || slot === "bottom") && S.gear.overall) continue;
-      const extra = {}; if (slot === "overall"){ if (S.gear.top) extra.top = null; if (S.gear.bottom) extra.bottom = null; }
-      const raw = gainOf(Object.assign({}, extra, {[slot]: {st:p.st, sub:p.sub}}));
-      const b = bestScroll(slot, p.st, p.sub, p.slots, extra);
-      const g = b && b.g > raw ? b.g : raw;
-      // split of the bar: what the bare item adds vs what its scrolls add (measured from an empty slot)
-      const empty = slot === "weapon" ? gainOf({weapon: {st:{}, sub:p.sub}}) : gainOf(Object.assign({}, extra, {[slot]: null}));
-      const fromItem = Math.max(0, raw - empty), fromScroll = Math.max(0, g - raw);
-      const share = fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1;
-      const hit = hitOf(Object.assign({}, extra, {[slot]: b && b.g > raw ? {st:addSt(p.st, b.sc.st, p.slots), sub:p.sub} : {st:p.st, sub:p.sub}}));
-      const toSt = b && b.g > raw ? addSt(p.st, b.sc.st, p.slots) : p.st;
-      const fromSt = slot === "overall" && !cur ? sumSt(S.gear.top ? S.gear.top.st : {}, S.gear.bottom ? S.gear.bottom.st : {}) : (cur ? cur.st : {});
-      const goal = goalOf(slot, cur ? cur.st : {}, toSt, p.sub, extra);
-      if (g > 0.0005) out.push({kind:"item", slot, g, raw, share, hit, goal, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv, sc: b && b.g > raw ? {n:p.slots, sc:b.sc, rate:grade} : null});
+    const cur = S.gear[slot];
+    if ((slot === "top" || slot === "bottom") && S.gear.overall) continue;
+    const extra = {}; if (slot === "overall"){ if (S.gear.top) extra.top = null; if (S.gear.bottom) extra.bottom = null; }
+    const fromSt = slot === "overall" && !cur ? sumSt(S.gear.top ? S.gear.top.st : {}, S.gear.bottom ? S.gear.bottom.st : {}) : (cur ? cur.st : {});
+    // candidate fresh items: the best-set pick for Damage, every wearable item for the other goals
+    let cands = [];
+    if (goal === "damage"){ const p = R.pick[slot]; if (p && !p.keep && p.it) cands = [p.it]; }
+    else {
+      const subs = slot === "weapon" ? jobOf().weapons : SLOT_SUBS[slot];
+      cands = ITEMS.filter(it => subs.includes(it.sub) && usable(it, S.char.cls) && (slot !== "weapon" || weaponOK(it.sub)) && wearCheck(it, cur).ok);
     }
-    if (cur && cur.slots > 0){
-      const b = bestScroll(slot, cur.st, cur.sub, cur.slots, {});
-      const hit = b ? hitOf({[slot]: {st:addSt(cur.st, b.sc.st, cur.slots), sub:cur.sub}}) : null;
-      const goal = b ? goalOf(slot, cur.st, addSt(cur.st, b.sc.st, cur.slots), cur.sub, {}) : "Damage";
-      if (b && b.g > 0.0005) out.push({kind:"scroll", slot, g:b.g, raw:0, share:0, hit, goal, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:b.sc, rate:grade}});
+    let bestItem = null;
+    for (const it of cands){ const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (!bestItem || b.m > bestItem.b.m) bestItem = {it, b}; }
+    if (bestItem && bestItem.b.m > 1e-6){
+      const it = bestItem.it, b = bestItem.b;
+      const g = gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})), hit = lastHit;
+      const raw = gainOf(Object.assign({}, extra, {[slot]: {st:it.st, sub:it.sub}}));
+      const empty = slot === "weapon" ? gainOf({weapon: {st:{}, sub:it.sub}}) : gainOf(Object.assign({}, extra, {[slot]: null}));
+      const fromItem = Math.max(0, raw - empty), fromScroll = Math.max(0, g - raw);
+      if (goal !== "damage" || g > 0.0005) out.push({kind:"item", slot, g, raw, m:b.m, share: fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1, hit,
+        goal: goalWord(fromSt, b.to, slot, it.sub, extra), name:it.name, id:itemIconId(it.name), lv:it.lv, d:diff(b.to, fromSt), sc: b.sc ? {n:it.slots, sc:b.sc, rate:grade} : null});
+    }
+    if (cur && cur.slots > 0 && grade){
+      const b = bestFor(slot, cur.st, cur.sub, cur.slots, cur.st, {});
+      if (b.sc && b.m > 1e-6){
+        const g = gainOf({[slot]: {st:b.to, sub:cur.sub}}), hit = lastHit;
+        if (goal !== "damage" || g > 0.0005) out.push({kind:"scroll", slot, g, raw:0, m:b.m, share:0, hit, goal: goalWord(cur.st, b.to, slot, cur.sub, {}), name:cur.name || SUBTYPES[cur.sub], d:diff(b.to, cur.st), sc:{n:cur.slots, sc:b.sc, rate:grade}});
+      }
     }
   }
-  return out.sort((a,b) => b.g - a.g).slice(0, 10);
+  // throwing stars
+  if (usesStars()){
+    const c = curStar(), bs = bestStar();
+    if (bs[1] > c[1]){ const g = gainOf({stars:{watk:bs[1]}}), hit = lastHit;
+      const m = goal === "attack" ? bs[1] - c[1] : goal === "damage" ? g : 0;
+      if (m > 0) out.push({kind:"stars", slot:"stars", g, raw:g, m, share:1, hit, goal:"Attack", name:bs[0], id:bs[2], d:{watk:bs[1] - c[1]}, sc:null}); }
+  }
+  // other goals: skip changes that cost more than 5% damage
+  return out.filter(x => goal === "damage" || x.g > -0.05).sort((a,b) => b.m - a.m).slice(0, 10);
+}
+function goalValue(x, goal){
+  const d = x.d || {}, f = v => (v > 0 ? '+' : '') + (Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1));
+  if (goal === "attack") return (RR.sk.type === "magic" ? f(d.matk || 0) + ' M.ATK' : f(d.watk || 0) + ' W.ATK');
+  if (goal === "crit") return [d.critRate ? f(d.critRate) + ' crit %' : '', d.critDamage ? f(d.critDamage) + ' crit dmg' : ''].filter(Boolean).join(' · ') || '';
+  if (goal === "main"){ const p = RR.sk.type === "magic" ? "int" : WEAPON_MODEL(S.gear.weapon ? S.gear.weapon.sub : defaultWeapon()).P; return f(d[p] || 0) + ' ' + p.toUpperCase(); }
+  if (goal === "accuracy"){ const a = (d.acc || 0) + accFromStats(d); return (a ? f(a) + ' ACC' : '') + (x.hit != null && x.hit < 0.999 ? ' · hit ' + (x.hit*100).toFixed(1) + '%' : ''); }
+  return '';
 }
 function usefulColumn(R){
-  const L = usefulList(R);
+  const L = usefulList(R), goal = S.usefulGoal || "damage";
   if (!L.length) return `<div class="empty">${(S.usefulGrade === 0) ? "Without scrolls no item beats what you wear now. Pick a scroll % above to see what scrolling adds." : "Nothing found that adds damage right now."}</div>`;
   const max = Math.max(...L.map(x => x.g));
   return L.map((x, i) => {
     const sc = x.sc ? `${x.sc.n}× ${esc(x.sc.sc.target)} ${esc(x.sc.sc.stat)} Scroll ${x.sc.rate}%` : "";
     return `<div class="urow"><div class="urank">${i+1}</div>
       <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
-        <div class="note">${x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
+        <div class="note">${x.kind === "stars" ? `Throwing stars · W.ATK +${x.d.watk} vs ${esc(curStar()[0])}` : x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
         ${x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
         ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
         <div class="ubar">${(() => { const it = x.g * (x.share === undefined ? 1 : x.share), scp = x.g - it; return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item share"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scroll share"></i>` : ''}`; })()}</div></div>
-      <div class="upct">+${(x.g*100).toFixed(1)}%</div></div>`;
+      <div class="upct ${x.g < -0.0005 ? 'neg' : ''}">${x.g >= 0 ? '+' : '−'}${Math.abs(x.g*100).toFixed(1)}%${goal !== "damage" ? `<small>${goalValue(x, goal)}</small>` : ''}</div></div>`;
   }).join("");
 }
 function scrollColumn(R){
@@ -2058,7 +2124,8 @@ function renderSets(){
   const ug = S.usefulGrade === undefined ? 60 : S.usefulGrade;
   $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
     <div class="ugrade"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
-    <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div></div></div>`;
+    <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div>
+    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${l}</button>`).join("")}</div></div></div></div>`;
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = usefulColumn(R);
   $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
@@ -2067,6 +2134,7 @@ function renderSets(){
 }
 document.addEventListener("click", ev => {
   const v = ev.target.closest("[data-gview]"); if (v){ S.gearView = v.dataset.gview; renderAll(); return; }
+  const ugo = ev.target.closest("[data-ugoal]"); if (ugo){ S.usefulGoal = ugo.dataset.ugoal; renderAll(); return; }
   const ugb = ev.target.closest("[data-ugrade]"); if (ugb){ S.usefulGrade = +ugb.dataset.ugrade; renderAll(); return; }
   const gd = ev.target.closest("[data-gender]"); if (gd){ S.gender = gd.dataset.gender; renderAll(); return; }
   const sg = ev.target.closest("[data-sgrade]"); if (sg){ const [slot, v] = sg.dataset.sgrade.split(":"); if (+v === S.scrollGrade) delete S.slotGrade[slot]; else S.slotGrade[slot] = +v; renderAll(); return; }
