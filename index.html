@@ -1525,10 +1525,13 @@ function slotCard(slot, label, icon){
 function gearEditForm(slot, g){
   g = g || {sub: slot === "weapon" ? defaultWeapon() : SLOT_SUBS[slot][0], st:{}, slots:0, name:""};
   const subs = SLOT_SUBS[slot];
-  const presets = ITEMS.filter(it => subs.includes(it.sub) && usable(it, S.char.cls)).sort((a,b) => a.lv - b.lv || a.name.localeCompare(b.name));
+  // every MSCW item for this slot: the ones for your class/gender first, the rest after
+  const all = ITEMS.filter(it => subs.includes(it.sub)).sort((a,b) => a.lv - b.lv || a.name.localeCompare(b.name));
+  const presets = all.filter(it => usable(it, S.char.cls)), others = all.filter(it => !usable(it, S.char.cls));
+  const OPT = (it => { const w = wearCheck(it, S.gear[slot]); return `<option value="${ITEMS.indexOf(it)}">${w.ok ? '' : '✕ '}${esc(it.name)} (Lv ${it.lv}${it.req.some(Boolean) ? ' · ' + it.req.map((r,j) => r ? REQ_LBL[j] + ' ' + r : '').filter(Boolean).join(' ') : ''})</option>`; });
   return `<div class="gform">
     ${subs.length > 1 ? `<select id="gfSub">${subs.filter(s => weaponOK(s) || s === g.sub).map(s => `<option value="${s}" ${s===g.sub?'selected':''}>${SUBTYPES[s]}</option>`).join("")}</select>` : ''}
-    <select id="gfPreset"><option value="">Fill from MeowDB item…</option>${presets.map((it,i) => { const w = wearCheck(it, S.gear[slot]); return `<option value="${ITEMS.indexOf(it)}">${w.ok ? '' : '✕ '}${esc(it.name)} (Lv ${it.lv}${it.req.some(Boolean) ? ' · ' + it.req.map((r,j) => r ? REQ_LBL[j] + ' ' + r : '').filter(Boolean).join(' ') : ''})</option>`; }).join("")}</select>
+    <select id="gfPreset"><option value="">Fill from MeowDB item… (${all.length})</option><optgroup label="For your class">${presets.map(OPT).join("")}</optgroup>${others.length ? `<optgroup label="Other class / gender">${others.map(it => OPT(it).replace('">', '">' + (itemGender(it) && itemGender(it) !== (S.gender || detectGender() || "m") ? (itemGender(it) === "f" ? "♀ " : "♂ ") : ""))).join("")}</optgroup>` : ''}</select>
     <input class="txt" id="gfName" placeholder="Item name (optional)" value="${esc(g.name || '')}">
     <div class="gfgrid">${GSTATS.map(([k,l]) => `<label>${l}<input class="txt mono" data-gf="${k}" value="${g.st[k] || ''}" inputmode="numeric"></label>`).join("")}
       <label>Slots left<input class="txt mono" id="gfSlots" value="${g.slots || 0}" inputmode="numeric"></label></div>
