@@ -1665,7 +1665,7 @@ function readTipFile(file, forceSlot){
       if (!r.lines.length){ try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){} }
       if (sv && Object.keys(sv.values).length >= 5){ applyStat(sv); IMGS.stat = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stat:true}); return; }
       const g = gearFromTip(r);
-      if (g){ const slot = placeGear(g, forceSlot && SLOT_SUBS[forceSlot].includes(g.sub) ? forceSlot : null);   // the item type on the tooltip wins over where it was dropped IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); }
+      if (g){ const slot = placeGear(g, forceSlot && SLOT_SUBS[forceSlot].includes(g.sub) ? forceSlot : null); IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); }
       else if (r.lines.length && forceSlot){ IMGS[forceSlot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; saveImgs(); S.gear[forceSlot] = {sub:SLOT_SUBS[forceSlot][0], st:Object.fromEntries(GSTATS.filter(([k]) => r.values[k]).map(([k]) => [k, r.values[k]])), slots:r.values.slots || 0, name:""}; res({ok:true, slot:forceSlot}); }
       else {
         // maybe it's the character stat window
