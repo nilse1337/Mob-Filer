@@ -260,7 +260,8 @@ svg text{font-family:var(--mono)}
 .ugoal{font:800 10px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);margin-left:2px}.g-attack{color:#ff8a5c;border-color:#ff8a5c55}.g-accuracy{color:#5cb8ff;border-color:#5cb8ff55}.g-crit{color:#ff5ca8;border-color:#ff5ca855}.g-luk,.g-int,.g-str,.g-dex{color:var(--good);border-color:color-mix(in srgb,var(--good) 35%,transparent)}
 .upct small{display:block;font:700 10.5px var(--mono);color:var(--muted);text-align:right}.upct.neg{color:var(--bad)}
 .starcell{position:relative;cursor:pointer}.staras{position:absolute;left:3px;top:1px;font:800 11px var(--mono);color:#c55}
-.eqgrid{position:relative}.starpop{position:absolute;right:0;bottom:-4px;transform:translateY(100%);z-index:20;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;width:300px;box-shadow:0 8px 24px rgba(0,0,0,.35)}.starpop button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:7px;padding:4px 6px;color:var(--text);cursor:pointer;font-size:11.5px;text-align:left}.starpop button.on{border-color:var(--accent)}.starpop img{width:22px;height:22px;image-rendering:pixelated}.starpop b{margin-left:auto;font-family:var(--mono)}
+.eqgrid{position:relative}.starpop{position:absolute;right:0;bottom:-4px;transform:translateY(100%);z-index:20;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;width:300px;box-shadow:0 8px 24px rgba(0,0,0,.35)}.starhint{grid-column:1/-1;font-size:11.5px;color:var(--muted);padding:2px 2px 4px}.starcell.sel{outline:2px solid var(--accent);outline-offset:-2px}
+.starpop button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);border-radius:7px;padding:4px 6px;color:var(--text);cursor:pointer;font-size:11.5px;text-align:left}.starpop button.on{border-color:var(--accent)}.starpop img{width:22px;height:22px;image-rendering:pixelated}.starpop b{margin-left:auto;font-family:var(--mono)}
 .urow{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;padding:9px 0;border-bottom:1px dashed var(--line)}.urank{width:22px;height:22px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;font:800 11px var(--mono);color:var(--muted)}.upct{font:800 14px var(--mono);color:var(--good)}
 .sgrade{display:flex;align-items:center;gap:4px;margin-top:5px;flex-wrap:wrap}.sgrade .note{margin-right:2px}.sgrade button{font:inherit;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer}.sgrade button.on{background:var(--accent);border-color:var(--accent);color:#1a1200}
 .srow.new .smain b{color:var(--good)}.srow.scroll .smain b{color:var(--accent2)}
@@ -1589,11 +1590,12 @@ function renderGear(){
   fillMissingIcons();
   try { renderSets(); } catch(e){ console.error(e); }
   try { renderKillGoals(); } catch(e){ console.error(e); }
-  if (!S.gearSel || (!S.gear[S.gearSel] && S.gearEdit !== S.gearSel && !EQUIP_LAYOUT.some(e => e[0] === S.gearSel))){
+  if (!S.gearSel || (S.gearSel !== "stars" && !S.gear[S.gearSel] && S.gearEdit !== S.gearSel && !EQUIP_LAYOUT.some(e => e[0] === S.gearSel))){
     const first = SLOTS.find(([k]) => S.gear[k]); S.gearSel = first ? first[0] : "weapon";
   }
   const selLbl = SLOTS.find(s => s[0] === S.gearSel) || SLOTS[0];
-  $("gearSlots").innerHTML = equipWindow() + `<div class="eqdetail">${slotCard(selLbl[0], selLbl[1], selLbl[2]) || `<div class="note">Covered by your overall.</div>`}</div>`;
+  const starDetail = S.gearSel === "stars" && typeof curStar === "function" ? `<div class="gcard"><div class="gslothead"><span>⭐ STARS</span></div><div class="gbody">${IMGS.stars && IMGS.stars.src ? `<img class="gimg" src="${IMGS.stars.src}" data-gimg="stars" alt="">` : ''}<div style="min-width:0"><div class="gname">${esc(curStar()[0])}</div><div class="note">W.ATK +${curStar()[1]}${S.stars ? '' : ' (assumed)'}</div><div class="note">Paste a screenshot of your stars (Ctrl+V) while this slot is selected, or click the stars to pick.</div></div></div></div>` : '';
+  $("gearSlots").innerHTML = equipWindow() + `<div class="eqdetail">${starDetail || slotCard(selLbl[0], selLbl[1], selLbl[2]) || `<div class="note">Covered by your overall.</div>`}</div>`;
   if (!$("advList")) return;   // 'All upgrade ideas' panel removed
   const A = buildAdvice(), sk = RR.sk;
   const mobs = EVAL.filter(e => Math.abs(e.level - S.level) <= 20 || e.id === A.mob.id).sort((a,b) => a.level - b.level);
@@ -1660,6 +1662,13 @@ function readTipFile(file, forceSlot){
       const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
       const x = c.getContext("2d", {willReadFrequently:true}); x.drawImage(img, 0, 0); URL.revokeObjectURL(url);
       let r = tipBest(c), cc = r.canvas || c;
+      // stars slot selected: a throwing-star tooltip → match the stars by their W.ATK
+      if ((forceSlot || S.gearSel) === "stars" && typeof STARS !== "undefined"){
+        const w = r.values.watk;
+        const hit = w ? STARS.filter(s => s[1] === w) : [];
+        if (hit.length){ S.stars = (hit.find(s => s[0] === S.stars) || hit[0])[0]; IMGS.stars = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; saveImgs(); res({ok:true, stars:true, amb:hit.length > 1}); return; }
+        res({ok:false, stars:true}); return;
+      }
       // a character stat window? apply it directly
       let sv = null;
       if (!r.lines.length){ try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){} }
@@ -1681,6 +1690,7 @@ async function handleGearFiles(files, forceSlot){
   const msgs = [];
   for (const f of files){
     const r = await readTipFile(f, forceSlot);
+    if (r.stars){ msgs.push(r.ok ? `<span class="ok">✓</span> Throwing stars: ${esc(curStar()[0])} (W.ATK +${curStar()[1]})${r.amb ? ' — two stars have this W.ATK, click the stars slot to switch' : ''}` : `<span class="bad">✕ Couldn't read the stars' W.ATK.</span> Pick them from the list in the stars slot instead.`); continue; }
     if (r.ok && r.stat){ msgs.push(`<span class="ok">✓</span> Character updated from your stat window: ${esc(jobOf().label)}, Lv ${S.level}`); continue; }
     if (r.ok){ const g = S.gear[r.slot]; msgs.push(`<span class="ok">✓</span> ${SLOTS.find(s => s[0] === r.slot)[1]}: ${statLine(g.st)}${g.slots ? ` · ${g.slots} slots` : ''}`); }
     else msgs.push(`<span class="bad">✕ Couldn't read that tooltip.</span> Use an uncropped PNG screenshot with the whole tooltip visible.`);
@@ -1803,14 +1813,17 @@ const bestStar = () => STARS.reduce((a, s) => s[1] > a[1] ? s : a, STARS[0]);
 function starCell(){
   if (!usesStars()) return "";
   const s = curStar(), open = S.starPick;
-  return `<div class="eqcell has starcell" style="grid-column:5;grid-row:5" data-starpick="1" title="Throwing stars: ${esc(s[0])} (W.ATK +${s[1]})${S.stars ? '' : ' — assumed, click to pick yours'}">
+  return `<div class="eqcell has starcell ${S.gearSel === 'stars' ? 'sel' : ''}" style="grid-column:5;grid-row:5" data-starpick="1" title="Throwing stars: ${esc(s[0])} (W.ATK +${s[1]})${S.stars ? '' : ' — assumed, click to pick yours'}">
       <img class="eqico" src="https://maplestory.io/api/GMS/83/item/${s[2]}/icon" alt=""><span class="eqslots">+${s[1]}</span>${S.stars ? '' : '<span class="staras">?</span>'}</div>
-    ${open ? `<div class="starpop">${STARS.map(x => `<button data-star="${esc(x[0])}" class="${x[0] === s[0] ? 'on' : ''}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt=""><span>${esc(x[0].replace(" Throwing Stars","").replace(" Throwing Knives"," Knives"))}</span><b>+${x[1]}</b></button>`).join("")}</div>` : ''}`;
+    ${open ? `<div class="starpop"><div class="starhint">📋 Paste a screenshot of your stars (Ctrl+V) or pick them:</div>${STARS.map(x => `<button data-star="${esc(x[0])}" class="${x[0] === s[0] ? 'on' : ''}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt=""><span>${esc(x[0].replace(" Throwing Stars","").replace(" Throwing Knives"," Knives"))}</span><b>+${x[1]}</b></button>`).join("")}</div>` : ''}`;
 }
 document.addEventListener("click", ev => {
   const st = ev.target.closest("[data-star]"); if (st){ S.stars = st.dataset.star; S.starPick = false; renderAll(); return; }
-  if (ev.target.closest("[data-starpick]")){ S.starPick = !S.starPick; renderAll(); return; }
+  if (ev.target.closest("[data-starpick]")){ S.starPick = !S.starPick; S.gearSel = "stars"; renderAll(); return; }
   if (S.starPick && !ev.target.closest(".starpop")){ S.starPick = false; renderAll(); }
+});
+// pasting while the stars slot is selected reads the stars (handled in readTipFile)
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && S.starPick){ S.starPick = false; renderAll(); }
 });
 
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
@@ -2239,6 +2252,10 @@ function elPill(el){
   const ic = {fire:"🔥", ice:"❄", lightning:"⚡", holy:"✨", poison:"☠"}[el] || "";
   return `<span class="elpill ${EL_COLOR[el] || 'other'}">${ic} ${el}</span>`;
 }
+document.addEventListener("click", ev => {
+  if (!ev.target.closest("[data-resetf]")) return; ev.preventDefault();
+  document.getElementById("btnResetFilters").click();
+});
 function passFilters(e){
   const q = S.search.trim().toLowerCase();
   if (q){
@@ -2343,7 +2360,7 @@ function renderList(){
   const [sKey, sDir] = S.sort.split(":");
   $("thead").innerHTML = COLS.map(([k,l]) => `<th data-sort="${k}" class="${sKey===k?'sorted':''}">${l} ${sKey===k?`<span class="arr">${+sDir>0?'▲':'▼'}</span>`:''}</th>`).join("");
   const rows = EVAL.filter(passFilters).sort(sorter());
-  $("countNote").textContent = `${rows.length} of ${EVAL.length} monsters`;
+  $("countNote").innerHTML = `${rows.length} of ${EVAL.length} monsters${rows.length < EVAL.length ? ' · <a href="#" data-resetf="1" style="color:var(--accent)">show all</a>' : ''}`;
   if (!rows.length){ $("tbody").innerHTML = `<tr><td colspan="7" class="empty">No monsters match these filters.</td></tr>`; return; }
   $("tbody").innerHTML = rows.map(e => {
     const color = e.raw >= 1 ? "var(--good)" : e.missing <= 10 ? "var(--warn)" : "var(--bad)";
@@ -2588,7 +2605,7 @@ $("btnSettings").onclick = () => $("setModal").classList.add("open");
 $("btnTheme").onclick = () => { S.theme = S.theme === "light" ? "dark" : "light"; renderAll(); };
 $("btnApplyEst").onclick = () => { S.baseAcc = classAcc(S.bClass, S.level, S.bPrimary, S.bLuk) + S.bGear; renderAll(); };
 $("btnResetAll").onclick = () => { const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), keep); $("setModal").classList.remove("open"); renderAll(); };
-$("btnResetFilters").onclick = () => { Object.assign(S, {search:"", region:"all", status:"all", elFilter:"all"}); renderAll(); };
+$("btnResetFilters").onclick = () => { Object.assign(S, {search:"", region:"all", status:"all", elFilter:"all"}); $("inSearch").value = ""; renderAll(); };
 document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open")); });
 
