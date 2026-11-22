@@ -1954,7 +1954,9 @@ function setColumn(R){
 /* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
 function usefulList(R){
   const model = R.model, mob = R.mob, base = R.base, out = [], grade = S.usefulGrade === undefined ? 60 : S.usefulGrade;
-  const gainOf = load => evalLoadout(load, model, mob, base).pct;
+  let lastHit = null;
+  const gainOf = load => { const e = evalLoadout(load, model, mob, base); lastHit = e.v.hitP; return e.pct; };
+  const hitOf = load => { evalLoadout(load, model, mob, base); return lastHit; };
   const bestScroll = (slot, st, sub, free, extra) => {
     let best = null; if (!(free > 0) || !grade) return null;
     for (const sc of scrollsFor(SCROLL_TARGET[sub], grade)){
@@ -1975,11 +1977,13 @@ function usefulList(R){
       const empty = slot === "weapon" ? gainOf({weapon: {st:{}, sub:p.sub}}) : gainOf(Object.assign({}, extra, {[slot]: null}));
       const fromItem = Math.max(0, raw - empty), fromScroll = Math.max(0, g - raw);
       const share = fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1;
-      if (g > 0.0005) out.push({kind:"item", slot, g, raw, share, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv, sc: b && b.g > raw ? {n:p.slots, sc:b.sc, rate:grade} : null});
+      const hit = hitOf(Object.assign({}, extra, {[slot]: b && b.g > raw ? {st:addSt(p.st, b.sc.st, p.slots), sub:p.sub} : {st:p.st, sub:p.sub}}));
+      if (g > 0.0005) out.push({kind:"item", slot, g, raw, share, hit, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv, sc: b && b.g > raw ? {n:p.slots, sc:b.sc, rate:grade} : null});
     }
     if (cur && cur.slots > 0){
       const b = bestScroll(slot, cur.st, cur.sub, cur.slots, {});
-      if (b && b.g > 0.0005) out.push({kind:"scroll", slot, g:b.g, raw:0, share:0, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:b.sc, rate:grade}});
+      const hit = b ? hitOf({[slot]: {st:addSt(cur.st, b.sc.st, cur.slots), sub:cur.sub}}) : null;
+      if (b && b.g > 0.0005) out.push({kind:"scroll", slot, g:b.g, raw:0, share:0, hit, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:b.sc, rate:grade}});
     }
   }
   return out.sort((a,b) => b.g - a.g).slice(0, 10);
@@ -1994,6 +1998,7 @@ function usefulColumn(R){
       <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : esc(x.name)}</b></div>
         <div class="note">${x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
         ${x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
+        ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
         <div class="ubar">${(() => { const it = x.g * (x.share === undefined ? 1 : x.share), scp = x.g - it; return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item share"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scroll share"></i>` : ''}`; })()}</div></div>
       <div class="upct">+${(x.g*100).toFixed(1)}%</div></div>`;
   }).join("");
@@ -2033,7 +2038,7 @@ function renderSets(){
   $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, R.base.ko, R.base.ko, "current");
   $("colSetHead").innerHTML = colHead("Best possible set", "best item per slot for your level and build, all slots free, with the scrolls you pick", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
   const ug = S.usefulGrade === undefined ? 60 : S.usefulGrade;
-  $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">single changes that add the most damage for your build (scrolls counted as all succeeding)</div>
+  $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
     <div class="ugrade"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
     <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div></div></div>`;
   $("setList").innerHTML = setColumn(R);
