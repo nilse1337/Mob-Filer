@@ -257,6 +257,7 @@ svg text{font-family:var(--mono)}
 .sname{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.sname .iicon{margin:0}
 .ubar{display:flex;height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:6px}.ubar i{display:block;height:100%}.ui{background:var(--good)}.tg{color:var(--good)}.to{color:var(--accent)}.us{background:var(--accent)}
 .ugrade{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}.ugrade .seg button{padding:5px 9px;font-size:12px}.ulegend{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}.ulegend i{display:inline-block;width:12px;height:6px;border-radius:3px;margin-left:6px}
+.ugoal{font:800 10px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);margin-left:2px}.g-attack{color:#ff8a5c;border-color:#ff8a5c55}.g-accuracy{color:#5cb8ff;border-color:#5cb8ff55}.g-crit{color:#ff5ca8;border-color:#ff5ca855}.g-luk,.g-int,.g-str,.g-dex{color:var(--good);border-color:color-mix(in srgb,var(--good) 35%,transparent)}
 .urow{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;padding:9px 0;border-bottom:1px dashed var(--line)}.urank{width:22px;height:22px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;font:800 11px var(--mono);color:var(--muted)}.upct{font:800 14px var(--mono);color:var(--good)}
 .sgrade{display:flex;align-items:center;gap:4px;margin-top:5px;flex-wrap:wrap}.sgrade .note{margin-right:2px}.sgrade button{font:inherit;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer}.sgrade button.on{background:var(--accent);border-color:var(--accent);color:#1a1200}
 .srow.new .smain b{color:var(--good)}.srow.scroll .smain b{color:var(--accent2)}
@@ -1957,6 +1958,19 @@ function usefulList(R){
   let lastHit = null;
   const gainOf = load => { const e = evalLoadout(load, model, mob, base); lastHit = e.v.hitP; return e.pct; };
   const hitOf = load => { evalLoadout(load, model, mob, base); return lastHit; };
+  // one-word goal of a change: the stat that adds the most damage on its own
+  const goalOf = (slot, fromSt, toSt, sub, extra) => {
+    const d = diff(toSt, fromSt); let best = null;
+    for (const k of Object.keys(d)){ if (d[k] <= 0) continue;
+      const g = gainOf(Object.assign({}, extra, {[slot]: {st:addSt(fromSt, {[k]: d[k]}), sub}})); const h = lastHit;
+      if (!best || g > best.g) best = {k, g, h}; }
+    if (!best || best.g <= 0.0002) return "Damage";
+    const k = best.k;
+    if (k === "acc" || (best.h != null && base.hitP != null && best.h - base.hitP > 0.004 && (k === "dex" || k === "luk"))) return "Accuracy";
+    if (k === "watk" || k === "matk") return "Attack";
+    if (k === "critRate" || k === "critDamage") return "Crit";
+    return {str:"STR", dex:"DEX", int:"INT", luk:"LUK"}[k] || "Damage";
+  };
   const bestScroll = (slot, st, sub, free, extra) => {
     let best = null; if (!(free > 0) || !grade) return null;
     for (const sc of scrollsFor(SCROLL_TARGET[sub], grade)){
@@ -1978,12 +1992,16 @@ function usefulList(R){
       const fromItem = Math.max(0, raw - empty), fromScroll = Math.max(0, g - raw);
       const share = fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1;
       const hit = hitOf(Object.assign({}, extra, {[slot]: b && b.g > raw ? {st:addSt(p.st, b.sc.st, p.slots), sub:p.sub} : {st:p.st, sub:p.sub}}));
-      if (g > 0.0005) out.push({kind:"item", slot, g, raw, share, hit, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv, sc: b && b.g > raw ? {n:p.slots, sc:b.sc, rate:grade} : null});
+      const toSt = b && b.g > raw ? addSt(p.st, b.sc.st, p.slots) : p.st;
+      const fromSt = slot === "overall" && !cur ? sumSt(S.gear.top ? S.gear.top.st : {}, S.gear.bottom ? S.gear.bottom.st : {}) : (cur ? cur.st : {});
+      const goal = goalOf(slot, cur ? cur.st : {}, toSt, p.sub, extra);
+      if (g > 0.0005) out.push({kind:"item", slot, g, raw, share, hit, goal, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv, sc: b && b.g > raw ? {n:p.slots, sc:b.sc, rate:grade} : null});
     }
     if (cur && cur.slots > 0){
       const b = bestScroll(slot, cur.st, cur.sub, cur.slots, {});
       const hit = b ? hitOf({[slot]: {st:addSt(cur.st, b.sc.st, cur.slots), sub:cur.sub}}) : null;
-      if (b && b.g > 0.0005) out.push({kind:"scroll", slot, g:b.g, raw:0, share:0, hit, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:b.sc, rate:grade}});
+      const goal = b ? goalOf(slot, cur.st, addSt(cur.st, b.sc.st, cur.slots), cur.sub, {}) : "Damage";
+      if (b && b.g > 0.0005) out.push({kind:"scroll", slot, g:b.g, raw:0, share:0, hit, goal, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:b.sc, rate:grade}});
     }
   }
   return out.sort((a,b) => b.g - a.g).slice(0, 10);
@@ -1995,7 +2013,7 @@ function usefulColumn(R){
   return L.map((x, i) => {
     const sc = x.sc ? `${x.sc.n}× ${esc(x.sc.sc.target)} ${esc(x.sc.sc.stat)} Scroll ${x.sc.rate}%` : "";
     return `<div class="urow"><div class="urank">${i+1}</div>
-      <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : esc(x.name)}</b></div>
+      <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
         <div class="note">${x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
         ${x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
         ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
