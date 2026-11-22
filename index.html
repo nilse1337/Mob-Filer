@@ -235,6 +235,8 @@ svg text{font-family:var(--mono)}
 .sslot{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding-top:2px}
 
 .sstat{font-size:12.5px;font-weight:600;margin-top:1px}
+.sname{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.sname .iicon{margin:0}
+.urow{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;padding:9px 0;border-bottom:1px dashed var(--line)}.urank{width:22px;height:22px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;font:800 11px var(--mono);color:var(--muted)}.upct{font:800 14px var(--mono);color:var(--good)}
 .sgrade{display:flex;align-items:center;gap:4px;margin-top:5px;flex-wrap:wrap}.sgrade .note{margin-right:2px}.sgrade button{font:inherit;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer}.sgrade button.on{background:var(--accent);border-color:var(--accent);color:#1a1200}
 .srow.new .smain b{color:var(--good)}.srow.scroll .smain b{color:var(--accent2)}
 .ctot{margin-top:10px}
@@ -1898,28 +1900,74 @@ function gradeBtns(slot, p){
 }
 function setColumn(R){
   const rows = [];
+  const fmtSt = st => GSTATS.filter(([k]) => Math.abs(st[k] || 0) >= 0.05).map(([k,l]) => { const v = st[k], r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return `${l} ${v > 0 ? '+' : ''}${r}`; }).join(" · ") || "no attack stats";
   for (const [slot, label, icon] of SLOTS){
     if (R.useOverall && (slot === "top" || slot === "bottom")) continue;
     if (!R.useOverall && slot === "overall") continue;
     const p = R.pick[slot], cur = S.gear[slot];
-    if (!p){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">nothing useful you can wear</span></div>`); continue; }
+    if (!p){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">nothing to wear here</span></div>`); continue; }
     const sr = R.scrollRows[slot], scSt = R.loadScrolled[slot] ? R.loadScrolled[slot].st : p.st;
-    const scrolledNow = sr && sr.bestSc && sr.free > 0;
+    const scrolled = sr && sr.bestSc && sr.free > 0;
     const ch = deltaLine(diff(scSt, cur ? cur.st : {}));
-    const fmtSt = st => GSTATS.filter(([k]) => Math.abs(st[k] || 0) >= 0.05).map(([k,l]) => { const v = st[k], r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return `${l} ${v > 0 ? '+' : ''}${r}`; }).join(" · ") || "no attack stats";
     const w = p.it ? wearCheck(p.it, cur) : null;
+    // one compact info line: level · slots · which scrolls
+    const info = [p.it ? `Lv ${p.it.lv}` : "", `${sr ? sr.free : p.slots} slot${(sr ? sr.free : p.slots) === 1 ? '' : 's'}`,
+      scrolled ? `${sr.free}× ${esc(sr.bestSc.sc.stat)} ${sr.g}%` : ""].filter(Boolean).join(" · ");
+    const reqMiss = p.it && w && !w.ok;
     rows.push(`<div class="srow ${p.keep ? 'keep' : 'new'}"><span class="sslot">${icon} ${label}</span>
-      <div class="smain">${iconImg(itemIconId(p.name), (p.keep && IMGS[slot] && IMGS[slot].icon) || icon)} <b>${esc(p.name)}</b> ${p.keep ? '<span class="tag t-cus">KEEP</span>' : '<span class="tag t-ok">NEW</span>'}
-        ${scrolledNow ? `<div class="sstat">${fmtSt(scSt)} <span class="note">· after ${sr.free}× ${sr.g}% scroll${sr.free > 1 ? 's' : ''}, all succeed</span></div>
-        <div class="note">base: ${statLine(p.st)}${p.keep ? ' (as pasted)' : ` · ${p.slots} slots`}</div>`
-        : `<div class="sstat">${fmtSt(p.st)}</div>${p.keep ? '' : `<div class="note">${p.slots} slots</div>`}`}
-        ${ch ? `<div class="note">vs now: ${ch}</div>` : ''}
-        ${p.it ? `<div class="note">${reqLine(p.it, w)}</div>` : ''}
+      <div class="smain"><div class="sname">${iconImg(itemIconId(p.name), p.keep && IMGS[slot] && IMGS[slot].icon)}<b>${esc(p.name)}</b>${p.keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
+        <div class="sstat">${fmtSt(scSt)}</div>
+        <div class="note">${info}${ch && !p.keep ? ` · vs now ${ch}` : ''}</div>
+        ${reqMiss ? `<div class="note">${reqLine(p.it, w)}</div>` : ''}
         ${gradeBtns(slot, p)}</div></div>`);
   }
   if (!R.useOverall && S.gear.overall) rows.push(`<div class="note" style="padding:6px 2px">Top + bottom beat your overall.</div>`);
   if (R.useOverall && (S.gear.top || S.gear.bottom)) rows.push(`<div class="note" style="padding:6px 2px">An overall beats your top + bottom.</div>`);
   return rows.join("");
+}
+
+/* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
+function usefulList(R){
+  const model = R.model, mob = R.mob, base = R.base, out = [];
+  const gainOf = load => evalLoadout(load, model, mob, base).pct;
+  for (const slot of SET_SLOTS){
+    const p = R.pick[slot], cur = S.gear[slot], sr = R.scrollRows[slot];
+    if (p && !p.keep && R.loadScrolled[slot]){
+      const load = {[slot]: R.loadScrolled[slot]};
+      if (slot === "overall"){ if (S.gear.top) load.top = null; if (S.gear.bottom) load.bottom = null; }
+      if ((slot === "top" || slot === "bottom") && S.gear.overall) continue;
+      const g = gainOf(load);
+      if (g > 0.0005) out.push({kind:"item", slot, g, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv,
+        sc: sr && sr.bestSc && sr.free > 0 ? {n:sr.free, sc:sr.bestSc.sc, rate:sr.g} : null, raw:gainOf({[slot]: {st:p.st, sub:p.sub}})});
+    }
+    // scrolls on the item you already wear
+    if (cur && cur.slots > 0){
+      const target = SCROLL_TARGET[cur.sub];
+      let best = null;
+      for (const rate of [gradeOf(slot)].filter(Boolean)){
+        for (const sc of scrollsFor(target, rate)){
+          const g = gainOf({[slot]: {st:addSt(cur.st, sc.st, cur.slots), sub:cur.sub}});
+          if (g > 0.0005 && (!best || g > best.g)) best = {g, sc, rate};
+        }
+      }
+      if (best) out.push({kind:"scroll", slot, g:best.g, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:best.sc, rate:best.rate}});
+    }
+  }
+  return out.sort((a,b) => b.g - a.g).slice(0, 10);
+}
+function usefulColumn(R){
+  const L = usefulList(R);
+  if (!L.length) return `<div class="empty">Nothing found that adds damage right now.</div>`;
+  const max = Math.max(...L.map(x => x.g));
+  return L.map((x, i) => {
+    const sc = x.sc ? `${x.sc.n}× ${esc(x.sc.sc.target)} ${esc(x.sc.sc.stat)} Scroll ${x.sc.rate}%` : "";
+    return `<div class="urow"><div class="urank">${i+1}</div>
+      <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : esc(x.name)}</b></div>
+        <div class="note">${x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
+        ${x.kind === "item" && x.sc ? `<div class="note">item alone: ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}% · with all scrolls: +${(x.g*100).toFixed(1)}%</div>` : ''}
+        <div class="advbar"><i style="width:${Math.max(4, x.g/max*100)}%"></i></div></div>
+      <div class="upct">+${(x.g*100).toFixed(1)}%</div></div>`;
+  }).join("");
 }
 function scrollColumn(R){
   const rows = [];
@@ -1947,19 +1995,19 @@ function renderHeaderGear(){
   const box = $("hdrGear"); if (!box) return;
   box.style.display = S.charImported ? "" : "none";
   if (!S.charImported) return;
-  $("viewSwitch").innerHTML = [["current","Current gear"],["set","Suggested set"]].map(([k,l]) => `<button data-gview="${k}" class="${S.gearView===k?'on':''}">${l}</button>`).join("");
+  $("viewSwitch").innerHTML = [["current","Current gear"],["set","Best possible set"]].map(([k,l]) => `<button data-gview="${k}" class="${S.gearView===k?'on':''}">${l}</button>`).join("");
   const gd = S.gender || detectGender() || "m";
   $("genderSwitch").innerHTML = [["m","♂ Male"],["f","♀ Female"]].map(([k,l]) => `<button data-gender="${k}" class="${gd===k?'on':''}" title="${S.gender ? '' : 'Picked automatically'}">${l}</button>`).join("");
 }
 function renderSets(){
   const R = computeSets();
   $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, R.base.ko, R.base.ko, "current");
-  $("colSetHead").innerHTML = colHead("Suggested set", "best fresh item per slot for your level (all slots free), with the scrolls you picked", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
-  $("colScrHead").innerHTML = colHead("Scroll plan", "which scrolls to use · stats assume every scroll succeeds", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "scrolled");
+  $("colSetHead").innerHTML = colHead("Best possible set", "best item per slot for your level and build, all slots free, with the scrolls you pick", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
+  $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">single changes that add the most damage for your build (scrolls counted as all succeeding)</div></div></div>`;
   $("setList").innerHTML = setColumn(R);
-  $("scrollList").innerHTML = scrollColumn(R);
+  $("scrollList").innerHTML = usefulColumn(R);
   $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
-  $("scrTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
+  $("scrTotals").innerHTML = "";
   return R;
 }
 document.addEventListener("click", ev => {
@@ -1989,8 +2037,8 @@ function renderKillGoals(){
       S.char = prev.char; S.baseAcc = prev.acc; S.gear = g;
       RR = rawRange(); EVAL = monsters().map(m => evaluate(m, RR)); BYID = new Map(EVAL.map(e => [e.id, e]));
       renderKillGoals.busy = true; renderKillGoals();
-      const h = $("killPanel").querySelector("h3"); if (h) h.insertAdjacentHTML("beforeend", ` <span class="tag t-ok" style="vertical-align:middle">SUGGESTED SET</span>`);
-      const n = $("killPanel").querySelector(".note:last-child"); if (n) n.innerHTML = n.innerHTML.replace("on top of your current gear", "on top of the suggested set (with the scrolls you picked)");
+      const h = $("killPanel").querySelector("h3"); if (h) h.insertAdjacentHTML("beforeend", ` <span class="tag t-ok" style="vertical-align:middle">BEST POSSIBLE SET</span>`);
+      const n = $("killPanel").querySelector(".note:last-child"); if (n) n.innerHTML = n.innerHTML.replace("on top of your current gear", "on top of the best possible set (with the scrolls you picked)");
     } finally {
       renderKillGoals.busy = false;
       S.char = saved.char; S.baseAcc = saved.acc; S.gear = saved.gear; RR = saved.rr; EVAL = saved.ev; BYID = saved.by;
@@ -2344,7 +2392,7 @@ function renderAll(){
   const bar = $("previewBar");
   if (prev){
     bar.style.display = "";
-    bar.innerHTML = `🛡 <b>Preview: suggested set (with the scrolls you picked)</b> — stats below include ${deltaLine(prev.d) || 'no changes'}${prev.acc !== saved.acc ? ` · ACC ${saved.acc} → ${prev.acc}` : ''}. <a href="#gear">See the set</a> · <a href="#" id="previewOff">Back to current gear</a>`;
+    bar.innerHTML = `🛡 <b>Preview: best possible set (with the scrolls you picked)</b> — stats below include ${deltaLine(prev.d) || 'no changes'}${prev.acc !== saved.acc ? ` · ACC ${saved.acc} → ${prev.acc}` : ''}. <a href="#gear">See the set</a> · <a href="#" id="previewOff">Back to current gear</a>`;
   } else bar.style.display = "none";
   if (saved){ S.char = saved.char; S.baseAcc = saved.acc; }
   save();
