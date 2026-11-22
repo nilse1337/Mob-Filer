@@ -235,6 +235,25 @@ svg text{font-family:var(--mono)}
 .sslot{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding-top:2px}
 
 .sstat{font-size:12.5px;font-weight:600;margin-top:1px}
+.brow{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.brow:last-child{border-bottom:0}
+.bico{width:40px;height:40px;border-radius:9px;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;overflow:hidden}
+.bimg{max-width:34px;max-height:34px;image-rendering:pixelated}
+.btop{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.bslot{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);min-width:0}
+.bname{font-size:13.5px}
+.bchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.bchip{font:700 11px var(--mono);padding:2px 6px;border-radius:6px;background:var(--line);color:var(--text)}
+.bchip.up{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.bchip.down{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.bmeta{font-size:11.5px;color:var(--muted);margin-top:4px}
+.bside{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.bpct{font:800 13px var(--mono)}
+.bseg{display:inline-flex;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:2px;gap:2px}
+.bseg button{border:0;background:none;border-radius:6px;padding:3px 6px;font:700 10.5px var(--mono);color:var(--muted);cursor:pointer}
+.bseg button.on{background:var(--accent);color:#1a1205}
+.bnoscroll{font-size:10.5px;color:var(--muted)}
+.blegend{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .sname{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.sname .iicon{margin:0}
 .ubar{display:flex;height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:6px}.ubar i{display:block;height:100%}.ui{background:var(--good)}.tg{color:var(--good)}.to{color:var(--accent)}.us{background:var(--accent)}
 .ugrade{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}.ugrade .seg button{padding:5px 9px;font-size:12px}.ulegend{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}.ulegend i{display:inline-block;width:12px;height:6px;border-radius:3px;margin-left:6px}
@@ -1891,38 +1910,43 @@ function previewChar(load, model){
 /* ---------- render ---------- */
 const deltaLine = d => GSTATS.filter(([k]) => Math.abs(d[k] || 0) >= 0.05).map(([k,l]) => { const v = d[k]; const r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return `<span class="${v > 0 ? 'ok' : 'bad'}">${v > 0 ? '+' : ''}${r} ${l}</span>`; }).join(" · ");
 function gradeBtns(slot, p){
-  const free = p.keep ? ((S.gear[slot] || {}).slots || 0) : p.slots;
-  const cur = gradeOf(slot), opts = [[0,"Not"],[60,"60%"],[10,"10%"]];
-  if (!SCROLLS.some(x => x.target === SCROLL_TARGET[p.sub])) return `<div class="sgrade"><span class="note">no attack, stat or ACC scrolls exist for ${SUBTYPES[p.sub].toLowerCase()}</span></div>`;
-  opts.splice(1, 0, [100,"100%"]);
-  return `<div class="sgrade"><span class="note">${free > 0 ? `Scroll ${free} slot${free>1?'s':''}:` : 'No free slots on this item · scrolls for new items:'}</span>${opts.map(([v,l]) => `<button data-sgrade="${slot}:${v}" class="${cur===v?'on':''}">${l}</button>`).join("")}</div>`;
+  if (!SCROLLS.some(x => x.target === SCROLL_TARGET[p.sub])) return `<span class="bnoscroll" title="No attack, stat or ACC scrolls exist for ${SUBTYPES[p.sub].toLowerCase()}">no scrolls</span>`;
+  const cur = gradeOf(slot);
+  return `<div class="bseg" title="Scroll this item's slots">${[[0,"–"],[100,"100"],[60,"60"],[10,"10"]].map(([v,l]) => `<button data-sgrade="${slot}:${v}" class="${cur===v?'on':''}" title="${v ? v + '% scrolls' : 'no scrolls'}">${l}${v ? '%' : ''}</button>`).join("")}</div>`;
 }
 function setColumn(R){
   const rows = [];
-  const fmtSt = st => GSTATS.filter(([k]) => Math.abs(st[k] || 0) >= 0.05).map(([k,l]) => { const v = st[k], r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return `${l} ${v > 0 ? '+' : ''}${r}`; }).join(" · ") || "no attack stats";
+  const num = v => { const r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return (v > 0 ? '+' : '') + r; };
   for (const [slot, label, icon] of SLOTS){
     if (R.useOverall && (slot === "top" || slot === "bottom")) continue;
     if (!R.useOverall && slot === "overall") continue;
     const p = R.pick[slot], cur = S.gear[slot];
-    if (!p){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">nothing to wear here</span></div>`); continue; }
+    if (!p){ rows.push(`<div class="brow empty"><div class="bico"></div><div class="bmain"><div class="bslot">${label}</div><div class="note">nothing to wear here</div></div></div>`); continue; }
     const sr = R.scrollRows[slot], scSt = R.loadScrolled[slot] ? R.loadScrolled[slot].st : p.st;
     const scrolled = sr && sr.bestSc && sr.free > 0;
-    const ch = deltaLine(diff(scSt, cur ? cur.st : {}));
+    const curSt = cur ? cur.st : {};
+    // stat chips after scrolls; green = more than you have now, red = less
+    const chips = GSTATS.filter(([k]) => Math.abs(scSt[k] || 0) >= 0.05).map(([k,l]) => {
+      const d = (scSt[k] || 0) - (curSt[k] || 0), cls = p.keep ? '' : d > 0.05 ? 'up' : d < -0.05 ? 'down' : '';
+      return `<span class="bchip ${cls}" title="${p.keep ? '' : 'vs now: ' + num(d)}">${l} ${num(scSt[k])}</span>`; }).join("") || '<span class="note">no attack stats</span>';
+    const lost = p.keep ? [] : GSTATS.filter(([k]) => (curSt[k] || 0) > 0.05 && !(Math.abs(scSt[k] || 0) >= 0.05)).map(([k,l]) => `<span class="bchip down" title="you lose this">${l} −${num(curSt[k]).replace('+','')}</span>`);
     const w = p.it ? wearCheck(p.it, cur) : null;
-    // one compact info line: level · slots · which scrolls
-    const info = [p.it ? `Lv ${p.it.lv}` : "", `${sr ? sr.free : p.slots} slot${(sr ? sr.free : p.slots) === 1 ? '' : 's'}`,
-      scrolled ? `${sr.free}× ${esc(sr.bestSc.sc.stat)} ${sr.g}%` : ""].filter(Boolean).join(" · ");
-    const reqMiss = p.it && w && !w.ok;
-    rows.push(`<div class="srow ${p.keep ? 'keep' : 'new'}"><span class="sslot">${icon} ${label}</span>
-      <div class="smain"><div class="sname">${iconImg(itemIconId(p.name), p.keep && IMGS[slot] && IMGS[slot].icon)}<b>${esc(p.name)}</b>${p.keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
-        <div class="sstat">${fmtSt(scSt)}</div>
-        <div class="note">${info}${ch && !p.keep ? ` · vs now ${ch}` : ''}</div>
-        ${reqMiss ? `<div class="note">${reqLine(p.it, w)}</div>` : ''}
-        ${gradeBtns(slot, p)}</div></div>`);
+    const meta = [p.it ? `Lv ${p.it.lv}` : "", scrolled ? `${sr.free}× ${esc(sr.bestSc.sc.stat)} ${sr.g}%` : `${sr ? sr.free : p.slots} slots`].filter(Boolean).join(" · ");
+    const one = p.keep ? 0 : evalLoadout({[slot]: R.loadScrolled[slot] || {st:p.st, sub:p.sub}}, R.model, R.mob, R.base).pct;
+    const ico = iconImg(itemIconId(p.name), p.keep && IMGS[slot] && IMGS[slot].icon, "bimg");
+    rows.push(`<div class="brow ${p.keep ? 'keep' : ''}">
+      <div class="bico">${ico}</div>
+      <div class="bmain">
+        <div class="btop"><span class="bslot">${label}</span><b class="bname">${esc(p.name)}</b>${p.keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
+        <div class="bchips">${chips}${lost.join("")}</div>
+        <div class="bmeta">${meta}${p.it && w && !w.ok ? ` · ${reqLine(p.it, w)}` : ''}</div>
+      </div>
+      <div class="bside">${p.keep ? '' : `<span class="bpct ${one > 0.0005 ? 'ok' : one < -0.0005 ? 'bad' : ''}" title="damage vs your current ${label.toLowerCase()}">${one > 0.0005 ? '+' : one < -0.0005 ? '−' : '±'}${Math.abs(one*100).toFixed(1)}%</span>`}${gradeBtns(slot, p)}</div>
+    </div>`);
   }
-  if (!R.useOverall && S.gear.overall) rows.push(`<div class="note" style="padding:6px 2px">Top + bottom beat your overall.</div>`);
-  if (R.useOverall && (S.gear.top || S.gear.bottom)) rows.push(`<div class="note" style="padding:6px 2px">An overall beats your top + bottom.</div>`);
-  return rows.join("");
+  if (!R.useOverall && S.gear.overall) rows.push(`<div class="note" style="padding:8px 2px">Top + bottom beat your overall.</div>`);
+  if (R.useOverall && (S.gear.top || S.gear.bottom)) rows.push(`<div class="note" style="padding:8px 2px">An overall beats your top + bottom.</div>`);
+  return `<div class="blegend note"><span class="bchip up">+</span>more than now <span class="bchip down">−</span>less · % = damage vs now</div>` + rows.join("");
 }
 
 /* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
