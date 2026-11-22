@@ -1367,8 +1367,9 @@ let IMGS = {};
 try { IMGS = JSON.parse(localStorage.getItem(IMG_KEY) || "{}") || {}; } catch(e){ IMGS = {}; }
 function saveImgs(){
   try { localStorage.setItem(IMG_KEY, JSON.stringify(IMGS)); return true; }
-  catch(e){ // storage full: drop the oldest screenshots until it fits
+  catch(e){ // storage full: first drop the big screenshots (oldest first) but keep the small item icons
     const keys = Object.keys(IMGS).sort((a,b) => (IMGS[a].t||0) - (IMGS[b].t||0));
+    for (const k of keys){ if (k === "stat" || !IMGS[k].src) continue; delete IMGS[k].src; try { localStorage.setItem(IMG_KEY, JSON.stringify(IMGS)); return false; } catch(e2){} }
     while (keys.length){ delete IMGS[keys.shift()]; try { localStorage.setItem(IMG_KEY, JSON.stringify(IMGS)); return false; } catch(e2){} }
     return false;
   }
@@ -1526,7 +1527,7 @@ function slotCard(slot, label, icon){
   if (slot === "overall" && !g && (S.gear.top || S.gear.bottom)) return "";
   let body;
   if (editing) body = gearEditForm(slot, g);
-  else if (g) body = `<div class="gbody">${IMGS[slot] ? `<img class="gimg" src="${IMGS[slot].src}" data-gimg="${slot}" alt="" title="Click to enlarge">` : ''}<div style="min-width:0"><div class="gname">${itemIconId(g.name) ? iconImg(itemIconId(g.name), "", "iicon") + " " : ""}${esc(g.name || SUBTYPES[g.sub])}</div>
+  else if (g) body = `<div class="gbody">${IMGS[slot] && IMGS[slot].src ? `<img class="gimg" src="${IMGS[slot].src}" data-gimg="${slot}" alt="" title="Click to enlarge">` : ''}<div style="min-width:0"><div class="gname">${itemIconId(g.name) ? iconImg(itemIconId(g.name), "", "iicon") + " " : ""}${esc(g.name || SUBTYPES[g.sub])}</div>
       <div class="gstats">${GSTATS.filter(([k]) => g.st[k]).map(([k,l]) => `<span class="gchip ${k==='int'||k==='matk'?'mag':''}">${l} ${g.st[k]>0?'+':''}${g.st[k]}</span>`).join("") || '<span class="note">no attack stats</span>'}</div>
       <div class="note">${g.slots > 0 ? `<b class="ok">${g.slots}</b> upgrade slot${g.slots>1?'s':''} left` : 'no slots left'}</div></div></div>`;
   else body = `<div class="gempty">Paste a tooltip or <a href="#" data-gedit="${slot}">fill in</a></div>`;
