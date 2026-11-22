@@ -208,6 +208,9 @@ svg text{font-family:var(--mono)}
 .gbody{display:flex;gap:9px;align-items:flex-start}
 .gimg{width:62px;height:84px;object-fit:cover;object-position:top left;border-radius:6px;border:1px solid var(--line2);cursor:zoom-in;flex:none;background:#000}
 .ccimg{width:46px;height:58px;object-fit:cover;object-position:top left;border-radius:6px;border:1px solid var(--line2);cursor:zoom-in;flex:none}
+
+.srctag{font-weight:600;letter-spacing:0;text-transform:none;color:var(--dim);margin-left:4px}
+.srcreset{color:var(--accent2);text-decoration:none}.srcreset:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -226,9 +229,9 @@ svg text{font-family:var(--mono)}
   <!-- 1. CHARACTER -->
   <section class="panel charbar">
     <div class="cb-row">
-      <div><label class="lbl">Level</label>
+      <div><label class="lbl">Level <span id="lvlSrc" class="srctag"></span></label>
         <div class="step"><button data-step="level:-1">−</button><input id="inLevel" inputmode="numeric"><button data-step="level:1">+</button></div></div>
-      <div><label class="lbl">Accuracy (stat window)</label>
+      <div><label class="lbl">Accuracy <span id="accSrc" class="srctag"></span></label>
         <div class="accbox"><div class="step" style="flex:1"><button data-step="baseAcc:-1">−</button><input id="inAcc" inputmode="numeric"><button data-step="baseAcc:1">+</button></div></div></div>
       <div><label class="lbl">Job</label>
         <select id="cCls"></select></div>
@@ -369,7 +372,7 @@ svg text{font-family:var(--mono)}
     <div class="setgrid" style="gap:10px">
       <div><label class="lbl">Name</label><input class="txt" id="mName" placeholder="e.g. Frost Golem"></div>
       <div class="three">
-        <div><label class="lbl">Level</label><input class="txt mono" id="mLevel" value="40" inputmode="numeric"></div>
+        <div><label class="lbl">Level <span id="lvlSrc" class="srctag"></span></label><input class="txt mono" id="mLevel" value="40" inputmode="numeric"></div>
         <div><label class="lbl">Avoid</label><input class="txt mono" id="mAvoid" value="20" inputmode="numeric"></div>
         <div><label class="lbl">HP</label><input class="txt mono" id="mHp" value="2000" inputmode="numeric"></div>
       </div>
@@ -1343,8 +1346,8 @@ function charCard(){
     <button class="btn primary small" id="ccImport">📷 Add stat window</button></div>`;
   const d = new Date(S.charImported);
   const mainStats = c.cls === "magician" ? `INT ${c.int} · LUK ${c.luk} · Magic ${c.magic}` : c.cls === "bowman" ? `DEX ${c.dex} · STR ${c.str} · Attack ${c.atkMin}–${c.atkMax}` : c.cls === "thief" ? `LUK ${c.luk} · DEX ${c.dex} · STR ${c.str} · Attack ${c.atkMin}–${c.atkMax}` : `STR ${c.str} · DEX ${c.dex} · Attack ${c.atkMin}–${c.atkMax}`;
-  return `<div class="charcard">${IMGS.stat ? `<img class="ccimg" src="${IMGS.stat.src}" data-gimg="stat" alt="" title="Click to enlarge">` : ''}<div style="flex:1;min-width:0"><div class="cctitle">👤 <select id="ccJob" class="txt">${jobOptions(c.job)}</select> <b>Lv ${S.level}</b></div>
-      <div class="note">${mainStats} · ACC ${S.baseAcc} · Crit ${c.critRate}% / ${c.critDmg}% · from your stat window, ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}</div></div>
+  return `<div class="charcard">${IMGS.stat ? `<img class="ccimg" src="${IMGS.stat.src}" data-gimg="stat" alt="" title="Click to enlarge">` : ''}<div style="flex:1;min-width:0"><div class="cctitle">👤 <select id="ccJob" class="txt">${jobOptions(c.job)}</select> <b>Lv ${S.level}${S.statWin && S.statWin.levelSrc === "derived" && S.level === S.statWin.level ? ' <span class="note" title="Calculated from your base stats">(≈ from stats)</span>' : ''}</b></div>
+      <div class="note">${mainStats} · ACC ${S.baseAcc}${S.statWin && S.statWin.accSrc === 'derived' && S.baseAcc === S.statWin.acc ? ' (≈ from stats)' : ''} · Crit ${c.critRate}% / ${c.critDmg}% · from your stat window, ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}</div></div>
     <button class="btn small" id="ccImport" title="Paste or choose a new stat window screenshot">📷 Update</button></div>`;
 }
 function renderGear(){
@@ -1534,6 +1537,13 @@ function renderChar(){
   $("cSkill").innerHTML = list.map(s => `<option value="${s.k}" ${s.k===S.skill?'selected':''}>${esc(s.name)} · ${esc(s.job)}</option>`).join("");
   $("skillInfo").innerHTML = `<b>${Math.round(at.S*100)}%</b>${at.hits>1?`×${at.hits}`:''} ${elPill(sk.el)} <span class="note">raw ${fmt(RR.min)}–${fmt(RR.max)}</span>`;
   const extra = totalAcc() - S.baseAcc;
+  const sw = S.statWin, tag = (cur, ref, src, key) => {
+    if (!sw) return "";
+    if (cur !== ref) return `<a href="#" class="srcreset" data-statwin="${key}" title="Use the value from your stat window">manual · ↺ ${ref}</a>`;
+    return src === "derived" ? `<span title="Not readable in the screenshot — calculated from your stats">≈ from stats</span>` : `<span title="Read from your stat window">📷</span>`;
+  };
+  $("lvlSrc").innerHTML = sw ? tag(S.level, sw.level, sw.levelSrc, "level") : "";
+  $("accSrc").innerHTML = sw ? tag(S.baseAcc, sw.acc, sw.accSrc, "baseAcc") : "";
   $("accNote").innerHTML = `Total ACC <b class="mono" style="color:var(--accent2)">${totalAcc()}</b>${extra ? ` <span class="note">(${S.baseAcc} + ${extra} from potion/buffs/gear)</span>` : ''}${sk.note ? ` · <span class="note">${sk.note}</span>` : ''}`;
   document.querySelectorAll("[data-char]").forEach(el => { if (document.activeElement !== el) el.value = ch[el.dataset.char]; });
   $("buffChips").innerHTML = BUFFS.map(([k,n,v]) => `<span class="chip ${S.buffs[k]?'on':''}" data-buff="${k}">${n} +${v}</span>`).join("");
@@ -1666,7 +1676,7 @@ function editBox(e){
     <h3 style="margin:0 0 8px;font-size:13px">${e.isCustom?'Edit custom monster':'Override this monster (saved in your browser)'}</h3>
     <div class="setgrid" style="gap:8px">
       ${e.isCustom?`<div><label class="lbl">Name</label><input class="txt" id="eName" value="${esc(e.name)}"></div>`:''}
-      <div class="three"><div><label class="lbl">Level</label><input class="txt mono" id="eLevel" value="${e.level}"></div><div><label class="lbl">Avoid</label><input class="txt mono" id="eAvoid" value="${e.avoid}"></div><div><label class="lbl">HP</label><input class="txt mono" id="eHp" value="${e.hp}"></div></div>
+      <div class="three"><div><label class="lbl">Level <span id="lvlSrc" class="srctag"></span></label><input class="txt mono" id="eLevel" value="${e.level}"></div><div><label class="lbl">Avoid</label><input class="txt mono" id="eAvoid" value="${e.avoid}"></div><div><label class="lbl">HP</label><input class="txt mono" id="eHp" value="${e.hp}"></div></div>
       <div class="two"><div><label class="lbl">P.DEF</label><input class="txt mono" id="ePdef" value="${e.pdef}"></div><div><label class="lbl">M.DEF</label><input class="txt mono" id="eMdef" value="${e.mdef}"></div></div>
       <div class="two"><div><label class="lbl" style="color:var(--fire)">🔥 Fire</label><select id="eFire">${opt(e.fire)}</select></div><div><label class="lbl" style="color:var(--ice)">❄ Ice</label><select id="eIce">${opt(e.ice)}</select></div></div>
       <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
@@ -1750,6 +1760,8 @@ function renderAll(){
 
 /* ---------- events ---------- */
 document.addEventListener("click", ev => {
+  const sr = ev.target.closest("[data-statwin]");
+  if (sr && S.statWin){ ev.preventDefault(); if (sr.dataset.statwin === "level") S.level = S.statWin.level; else S.baseAcc = S.statWin.acc; renderAll(); return; }
   const t = ev.target.closest("[data-step],[data-class],[data-buff],[data-dbuff],[data-pin],[data-jump],[data-quick],[data-tab],[data-close],#tbody tr[data-id],th[data-sort]");
   if (!t) return;
   if (t.dataset.close){ $(t.dataset.close).classList.remove("open"); return; }
@@ -1769,7 +1781,10 @@ function keepFocus(el){ const pos = el.selectionStart; renderAll(); if (document
 function bindNum(id, key){
   const el = $(id);
   el.addEventListener("input", () => { const v = parseInt(el.value, 10); if (!Number.isFinite(v)) return; const [lo, hi] = LIMITS[key]; S[key] = Math.max(lo, Math.min(key === "skillLv" ? skillByKey(S.skill).max : hi, v)); keepFocus(el); });
-  el.addEventListener("blur", () => { el.value = S[key]; });
+  el.addEventListener("blur", () => {
+    if (el.value.trim() === "" && S.statWin && (key === "level" || key === "baseAcc")){ S[key] = key === "level" ? S.statWin.level : S.statWin.acc; renderAll(); }
+    el.value = S[key];
+  });
 }
 [["inLevel","level"],["inAcc","baseAcc"],["inExtra","extraAcc"],["inDark","darkness"],["cSkillLv","skillLv"],["inPrimary","bPrimary"],["inLuk","bLuk"],["inGear","bGear"]].forEach(([i,k]) => bindNum(i,k));
 document.querySelectorAll("[data-char]").forEach(el => {
@@ -1807,6 +1822,7 @@ $("mAdd").onclick = () => {
 };
 
 /* ---------- stat window import ---------- */
+let impLast = {};
 const IMP_FIELDS = [["level","Level"],["accuracy","Accuracy"],["str","STR"],["dex","DEX"],["int","INT"],["luk","LUK"],["attackMin","Attack min"],["attackMax","Attack max"],["magic","Magic"],["critRate","Crit rate %"],["critDamage","Crit dmg %"]];
 function guessClass(v){
   const st = {warrior:v.str||0, bowman:v.dex||0, magician:v.int||0, thief:v.luk||0};
@@ -1847,28 +1863,50 @@ function loadImage(file){
     const ctx = c.getContext("2d", {willReadFrequently:true}); ctx.drawImage(img, 0, 0); URL.revokeObjectURL(url);
     let res; try { res = StatOCR.read(ctx.getImageData(0, 0, c.width, c.height)); } catch(err){ res = {values:{}, found:{pink:0,green:0,blue:0}}; }
     const v = res.values, n = IMP_FIELDS.filter(([k]) => v[k] !== undefined).length;
+    impLast = v;
     const dj = detectJob(res.job, v);
     $("impStatus").innerHTML = n ? `<span class="ok">Read ${n} of ${IMP_FIELDS.length} values.</span>` : `<span class="bad">Couldn't find the stat window.</span> Use an uncropped screenshot with the CHARACTER STAT window and DETAIL panel fully visible.`;
     $("impGrid").innerHTML = `<div style="grid-column:span 2"><label>Job ${dj.conf < 0.6 ? '<span class="near">(please check)</span>' : '<span class="ok">✓ read</span>'}</label><select class="txt" id="impCls">${jobOptions(dj.job)}</select></div>` +
-      IMP_FIELDS.map(([k,l]) => `<div><label>${l}</label><input class="txt mono ${v[k]===undefined?'miss':''}" data-imp="${k}" value="${v[k] ?? ''}" inputmode="numeric"></div>`).join("");
+      IMP_FIELDS.map(([k,l]) => { const ph = k === "level" && v.level === undefined ? (levelFromStats(v) ? "≈" + levelFromStats(v) + " (from stats)" : "") : k === "accuracy" && v.accuracy === undefined ? "auto from stats" : "";
+        return `<div><label>${l}</label><input class="txt mono ${v[k]===undefined && !ph?'miss':''}" data-imp="${k}" value="${v[k] ?? ''}" placeholder="${ph}" inputmode="numeric"></div>`; }).join("");
     $("impResult").style.display = "";
   };
   img.onerror = () => { $("impStatus").textContent = "Could not open that image."; $("impResult").style.display = ""; };
   img.src = url;
 }
+/* level from base stats: you start with 25 stat points and get 5 AP per level */
+function levelFromStats(v){
+  const b = ["str","dex","int","luk"].map(k => v[k+"Base"] !== undefined ? v[k+"Base"] : v[k]);
+  if (b.some(x => x === undefined || !Number.isFinite(x))) return null;
+  const lv = Math.round((b.reduce((s,x) => s + x, 0) - 25) / 5) + 1;
+  return lv >= 1 && lv <= 200 ? lv : null;
+}
+/* accuracy from the class formula + accuracy on your gear */
+function accFromStatWindow(cls, lv, c){
+  const prim = cls === "magician" ? c.int : c.dex;
+  const gearAcc = Object.values(S.gear || {}).reduce((s,g) => s + ((g && g.st && g.st.acc) || 0), 0);
+  return classAcc(CLASSES[cls] ? cls : "beginner", lv, prim || 0, c.luk || 0) + gearAcc;
+}
 function applyStatValues(v, job){
   const c = S.char;
   const keepSkill = c.job === job && skillsForJob().some(s => s.k === S.skill);
-  if (v.level) S.level = Math.max(1, Math.min(200, v.level));
-  if (v.accuracy !== undefined) S.baseAcc = v.accuracy;
   [["str","str"],["dex","dex"],["int","int"],["luk","luk"],["attackMin","atkMin"],["attackMax","atkMax"],["magic","magic"],["critRate","critRate"],["critDamage","critDmg"]].forEach(([a,b]) => { if (v[a] !== undefined) c[b] = v[a]; });
   if (!keepSkill) setJob(job); else { c.job = job; c.cls = JOBS[job].cls; S.bClass = c.cls; }
+  const sw = {};
+  if (v.level){ sw.level = v.level; sw.levelSrc = "stat"; }
+  else { const d = levelFromStats(v); if (d){ sw.level = d; sw.levelSrc = "derived"; } else { sw.level = S.level; sw.levelSrc = "kept"; } }
+  sw.level = Math.max(1, Math.min(200, sw.level));
+  if (v.accuracy !== undefined){ sw.acc = v.accuracy; sw.accSrc = "stat"; }
+  else { sw.acc = accFromStatWindow(c.cls, sw.level, c); sw.accSrc = "derived"; }
+  S.level = sw.level; S.baseAcc = sw.acc; S.statWin = sw;
   S.bPrimary = c.cls === "magician" ? (c.int || S.bPrimary) : (c.dex || S.bPrimary); S.bLuk = c.luk || S.bLuk;
   S.charImported = Date.now();
 }
 function applyStat(res){ applyStatValues(res.values, detectJob(res.job, res.values).job); }
 $("impApply").onclick = () => {
-  const v = {}; document.querySelectorAll("[data-imp]").forEach(el => { const n = parseInt(el.value, 10); if (Number.isFinite(n)) v[el.dataset.imp] = n; });
+  const v = {}; ["str","dex","int","luk"].forEach(k => { if (impLast[k+"Base"] !== undefined) v[k+"Base"] = impLast[k+"Base"]; });
+  document.querySelectorAll("[data-imp]").forEach(el => { const n = parseInt(el.value, 10); if (Number.isFinite(n)) v[el.dataset.imp] = n; });
+  ["str","dex","int","luk"].forEach(k => { if (v[k] !== impLast[k]) delete v[k+"Base"]; });
   applyStatValues(v, $("impCls").value);
   $("impModal").classList.remove("open"); renderAll();
   toast(`✓ Character saved: ${jobOf().label}, Lv ${S.level}. It stays saved for next time.`);
