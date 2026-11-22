@@ -1710,7 +1710,7 @@ const BUILDS = {
     {k:"none", l:"DEXless", d:"DEX at the 25 needed for the job: everything else in LUK. Gear with a higher DEX requirement needs DEX on other gear."}]},
   bandit: {stat:"dex", main:"luk", list:[
     {k:"std", l:"Standard LUK", d:"DEX around the gear requirement (≈ level − 10), the rest in LUK."},
-    {k:"str", l:"STR bandit", d:"Extra STR on top of LUK: daggers use STR + DEX as secondary stats, so STR adds damage too."},
+    {k:"str", l:"STR bandit", d:"Just enough STR to equip STR-based daggers, DEX kept very low (near the 25 base), all remaining AP in LUK for maximum damage."},
     {k:"low", l:"Low DEX", d:"DEX only for the gear you want; more LUK."}]}
 };
 function buildGroup(){
@@ -1724,7 +1724,7 @@ function baseStats(){
 function detectBuild(){
   const gk = buildGroup(); if (!gk) return null;
   const G = BUILDS[gk], b = baseStats(), need = secReq(S.level), have = b[G.stat];
-  if (gk === "bandit" && b.str >= Math.max(35, S.level*0.5)) return "str";
+  if (gk === "bandit" && b.str > b.dex + 10 && b.dex <= 40) return "str";
   const floor = gk === "assassin" || gk === "bandit" ? 25 : 5;
   if (have <= floor && gk !== "bandit") return "none";
   return have >= need - 3 ? "std" : "low";
@@ -1735,12 +1735,12 @@ function buildCard(){
   const B = G.list.find(x => x.k === cur) || G.list[0], b = baseStats(), need = secReq(S.level), up = G.stat.toUpperCase();
   const tip = cur === "std" ? (b[G.stat] < need ? `Put <b>${need - b[G.stat]}</b> more AP in ${up} to reach ≈ ${need} for Lv ${S.level} gear; everything else in ${G.main.toUpperCase()}.` : `${up} ${b[G.stat]} covers gear up to Lv ${b[G.stat] + 10}. Put new AP in ${G.main.toUpperCase()} and add ${up} only when you need it for the next gear (≈ 1 per level).`)
     : cur === "none" ? `Keep ${up} at ${gk === "assassin" ? 25 : 4}; all AP in ${G.main.toUpperCase()}.`
-    : cur === "str" ? `STR adds damage with a dagger (secondary stat). Keep DEX for gear, split the rest between LUK and STR.`
+    : cur === "str" ? `Keep DEX at 25; raise STR only to the next STR dagger's requirement (≈ ${need} at Lv ${S.level}, you have ${b.str}); everything else in LUK.`
     : `Your base ${up} is ${b[G.stat]}: enough for gear up to about Lv ${b[G.stat] + 10}. All other AP in ${G.main.toUpperCase()}.`;
   return `<div class="buildcard"><div class="bhead"><b>🧭 ${esc(CLASS_LABEL[S.char.cls] || "")}${gk === "bandit" ? " · Bandit" : gk === "assassin" && S.char.cls === "thief" ? " · Assassin / claw" : ""} build</b>
       <div class="seg">${G.list.map(x => `<button data-build="${gk}:${x.k}" class="${cur===x.k?'on':''}">${x.l}${x.k === auto ? ' <small>(detected)</small>' : ''}</button>`).join("")}</div></div>
     <div class="note">${B.d}</div>
-    <div class="note">${cur === "std" || cur === "str" ? `Suggestions count ${up} as ≈ ${Math.max(b[G.stat], need)} (gear level), so they can include items you reach by adding ${up}.` : cur === "none" ? `Suggestions only include items you can wear with ${up} at ${gk === "assassin" ? 25 : 4} (plus ${up} from gear).` : `Suggestions use your current ${up} (${b[G.stat]} base).`}</div>
+    <div class="note">${cur === "str" ? `Suggestions count DEX as 25 (+ gear) and STR as ≈ ${Math.max(b.str, need)}, so they favour STR daggers and gear without a DEX requirement.` : cur === "std" ? `Suggestions count ${up} as ≈ ${Math.max(b[G.stat], need)} (gear level), so they can include items you reach by adding ${up}.` : cur === "none" ? `Suggestions only include items you can wear with ${up} at ${gk === "assassin" ? 25 : 4} (plus ${up} from gear).` : `Suggestions use your current ${up} (${b[G.stat]} base).`}</div>
     <div class="note">Base stats (stat window minus gear): STR ${b.str} · DEX ${b.dex} · INT ${b.int} · LUK ${b.luk}. ${tip}</div></div>`;
 }
 document.addEventListener("click", ev => {
@@ -1756,7 +1756,11 @@ function currentBuild(){ const gk = buildGroup(); if (!gk) return null; return {
 function wearChar(){
   const cb = currentBuild(); if (!cb || !S.charImported) return S.char;
   const G = BUILDS[cb.gk], k = G.stat, c = Object.assign({}, S.char), b = baseStats(), gearPart = (S.char[k] || 0) - b[k];
-  if (cb.k === "std" || cb.k === "str") c[k] = Math.max(b[k], secReq(S.level)) + gearPart;
+  if (cb.k === "std") c[k] = Math.max(b[k], secReq(S.level)) + gearPart;
+  else if (cb.k === "str"){   // STR bandit: DEX near base, STR just enough for STR daggers
+    c.dex = 25 + ((S.char.dex || 0) - b.dex);
+    c.str = Math.max(b.str, secReq(S.level)) + ((S.char.str || 0) - b.str);
+  }
   else if (cb.k === "none") c[k] = (cb.gk === "assassin" ? 25 : 4) + gearPart;
   return c;
 }
