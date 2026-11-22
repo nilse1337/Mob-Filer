@@ -2016,7 +2016,10 @@ function usefulList(R){
     if (goal === "attack") return magic ? (d.matk || 0) : (d.watk || 0);
     if (goal === "crit") return (d.critRate || 0) + (d.critDamage || 0) * 0.5;
     if (goal === "main") return d[prim()] || 0;
-    if (goal === "accuracy"){ gainOf(Object.assign({}, extra, {[slot]: {st:toSt, sub}})); const h = lastHit;
+    if (goal === "accuracy"){
+      // magic accuracy only comes from INT and LUK (the ACC stat does nothing for spells)
+      if (magic){ const a = accFromStats(d); return a > 0 ? a + gainOf(Object.assign({}, extra, {[slot]: {st:toSt, sub}})) * 0.01 : 0; }
+      gainOf(Object.assign({}, extra, {[slot]: {st:toSt, sub}})); const h = lastHit;
       return ((h != null && base.hitP != null) ? (h - base.hitP) * 100 : 0) + ((d.acc || 0) + accFromStats(d)) * 0.01; }
     return gainOf(Object.assign({}, extra, {[slot]: {st:toSt, sub}}));
   };
@@ -2025,8 +2028,9 @@ function usefulList(R){
     for (const k of Object.keys(d)){ if (d[k] <= 0) continue;
       const g = gainOf(Object.assign({}, extra, {[slot]: {st:addSt(fromSt, {[k]: d[k]}), sub}})); const h = lastHit;
       if (!best || g > best.g) best = {k, g, h}; }
-    if (!best || best.g <= 0.0002) return "Damage";
+    if (!best || best.g <= 0.0002) return goal === "accuracy" ? "Accuracy" : goal === "crit" ? "Crit" : goal === "attack" ? "Attack" : "Damage";
     const k = best.k;
+    if (k === "acc" && magic) return "Damage";
     if (k === "acc" || (best.h != null && base.hitP != null && best.h - base.hitP > 0.004 && (k === "dex" || k === "luk"))) return "Accuracy";
     if (k === "watk" || k === "matk") return "Attack";
     if (k === "critRate" || k === "critDamage") return "Crit";
@@ -2084,7 +2088,7 @@ function goalValue(x, goal){
   if (goal === "attack") return (RR.sk.type === "magic" ? f(d.matk || 0) + ' M.ATK' : f(d.watk || 0) + ' W.ATK');
   if (goal === "crit") return [d.critRate ? f(d.critRate) + ' crit %' : '', d.critDamage ? f(d.critDamage) + ' crit dmg' : ''].filter(Boolean).join(' · ') || '';
   if (goal === "main"){ const p = RR.sk.type === "magic" ? "int" : WEAPON_MODEL(S.gear.weapon ? S.gear.weapon.sub : defaultWeapon()).P; return f(d[p] || 0) + ' ' + p.toUpperCase(); }
-  if (goal === "accuracy"){ const a = (d.acc || 0) + accFromStats(d); return (a ? f(a) + ' ACC' : '') + (x.hit != null && x.hit < 0.999 ? ' · hit ' + (x.hit*100).toFixed(1) + '%' : ''); }
+  if (goal === "accuracy"){ const a = (RR.sk.type === "magic" ? 0 : (d.acc || 0)) + accFromStats(d); return (a ? f(a) + ' ACC' : '') + (x.hit != null && x.hit < 0.999 ? ' · hit ' + (x.hit*100).toFixed(1) + '%' : ''); }
   return '';
 }
 function usefulColumn(R){
