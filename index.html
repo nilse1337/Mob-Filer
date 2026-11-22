@@ -1751,7 +1751,7 @@ function buildCard(){
   return `<div class="buildcard"><div class="bhead"><b>🧭 ${esc(CLASS_LABEL[S.char.cls] || "")}${gk === "bandit" ? " · Bandit" : gk === "assassin" && S.char.cls === "thief" ? " · Assassin / claw" : ""} build</b>
       <div class="seg">${G.list.map(x => `<button data-build="${gk}:${x.k}" class="${cur===x.k?'on':''}">${x.l}${x.k === auto ? ' <small>(detected)</small>' : ''}</button>`).join("")}</div></div>
     <div class="note">${B.d}</div>
-    <div class="note">${cur === "str" ? `Suggestions count DEX as 25 (+ gear) and STR as ≈ ${Math.max(b.str, need)}, so they favour STR daggers and gear without a DEX requirement.` : cur === "std" ? `Suggestions count ${up} as ≈ ${Math.max(b[G.stat], need)} (gear level), so they can include items you reach by adding ${up}.` : cur === "none" ? `Suggestions only include items you can wear with ${up} at ${gk === "assassin" ? 25 : 4} (plus ${up} from gear).` : `Suggestions use your current ${up} (${b[G.stat]} base).`}</div>
+    <div class="note">${cur === "str" ? `Suggestions use your current stats (STR ${S.char.str}, DEX ${S.char.dex}, LUK ${S.char.luk}) and only swap gear that adds damage, so LUK gear wins over DEX gear.` : cur === "std" ? `Suggestions count ${up} as ≈ ${Math.max(b[G.stat], need)} (gear level), so they can include items you reach by adding ${up}.` : cur === "none" ? `Suggestions only include items you can wear with ${up} at ${gk === "assassin" ? 25 : 4} (plus ${up} from gear).` : `Suggestions use your current ${up} (${b[G.stat]} base).`}</div>
     <div class="note">Base stats (stat window minus gear): STR ${b.str} · DEX ${b.dex} · INT ${b.int} · LUK ${b.luk}. ${tip}</div></div>`;
 }
 document.addEventListener("click", ev => {
@@ -1768,10 +1768,7 @@ function wearChar(){
   const cb = currentBuild(); if (!cb || !S.charImported) return S.char;
   const G = BUILDS[cb.gk], k = G.stat, c = Object.assign({}, S.char), b = baseStats(), gearPart = (S.char[k] || 0) - b[k];
   if (cb.k === "std") c[k] = Math.max(b[k], secReq(S.level)) + gearPart;
-  else if (cb.k === "str"){   // STR bandit: DEX near base, STR just enough for STR daggers
-    c.dex = 25 + ((S.char.dex || 0) - b.dex);
-    c.str = Math.max(b.str, secReq(S.level)) + ((S.char.str || 0) - b.str);
-  }
+  // STR bandit: your current stats (STR already raised for the daggers you use, the rest is LUK)
   else if (cb.k === "none") c[k] = (cb.gk === "assassin" ? 25 : 4) + gearPart;
   return c;
 }
@@ -1853,6 +1850,8 @@ function computeSets(){
       if (!best || pv.pct > best.pct + 1e-6 || (Math.abs(pv.pct - best.pct) <= 1e-6 && (best.keep || it.lv > best.it.lv || (it.lv === best.it.lv && tot(it.st) > tot(best.it.st))))) best = {keep:false, it, st:it.st, name:it.name, sub:it.sub, slots:it.slots, pct:pv.pct, raw:pv.raw, potSt:pv.st};
     }
     if (!best) best = keepBest;   // nothing in MeowDB you can wear for this slot
+    // never suggest a swap that lowers your damage: keep what you wear when it is as good or better
+    else if (keepBest && keepBest.pct >= best.pct - 1e-6) best = keepBest;
     if (slot === "shield" && pick.weapon && TWO_HANDED.includes(pick.weapon.sub)) best = null;   // no shield with a two-handed weapon
     if (best) pick[slot] = best;
   }
