@@ -390,17 +390,6 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
     <div class="panel col"><div id="colScrHead"></div><div id="scrollList"></div><div id="scrTotals" class="ctot"></div></div>
   </section>
   <section class="panel" style="padding:14px 16px" id="killPanel"></section>
-  <section class="panel">
-    <div class="advhead">
-      <h3 style="margin:0 0 2px;font-size:15px">All upgrade ideas, ranked</h3>
-      <div class="note" id="advBasis"></div>
-      <div class="lbl" style="margin-top:12px">What one point is worth for your damage</div>
-      <div class="uvals" id="advUnit"></div>
-      <div class="chips" id="advFilters" style="margin-bottom:12px"></div>
-    </div>
-    <div id="advList"></div>
-    <div class="note" style="padding:12px 16px;border-top:1px solid var(--line)">Only weapons, armor and scrolls with a known source in MSCW (MeowDB) are suggested, checked against your level and stat requirements. Scroll gains are expected values (gain × success rate). Chaos scrolls can destroy the item on failure. Your character, skill and the training monster are used for the math.</div>
-  </section>
 </main>
 
 <div id="toast"></div>
@@ -1579,6 +1568,7 @@ function renderGear(){
   }
   const selLbl = SLOTS.find(s => s[0] === S.gearSel) || SLOTS[0];
   $("gearSlots").innerHTML = equipWindow() + `<div class="eqdetail">${slotCard(selLbl[0], selLbl[1], selLbl[2]) || `<div class="note">Covered by your overall.</div>`}</div>`;
+  if (!$("advList")) return;   // 'All upgrade ideas' panel removed
   const A = buildAdvice(), sk = RR.sk;
   const mobs = EVAL.filter(e => Math.abs(e.level - S.level) <= 20 || e.id === A.mob.id).sort((a,b) => a.level - b.level);
   $("advBasis").innerHTML = `${esc(jobOf().label)} · ${esc(sk.name)} Lv ${RR.at.lv} · training on
