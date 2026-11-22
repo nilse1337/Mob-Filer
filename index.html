@@ -236,7 +236,7 @@ svg text{font-family:var(--mono)}
 
 .sstat{font-size:12.5px;font-weight:600;margin-top:1px}
 .sname{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.sname .iicon{margin:0}
-.ubar{display:flex;height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:6px}.ubar i{display:block;height:100%}.ui{background:var(--good)}.us{background:var(--accent)}
+.ubar{display:flex;height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:6px}.ubar i{display:block;height:100%}.ui{background:var(--good)}.tg{color:var(--good)}.to{color:var(--accent)}.us{background:var(--accent)}
 .ugrade{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}.ugrade .seg button{padding:5px 9px;font-size:12px}.ulegend{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}.ulegend i{display:inline-block;width:12px;height:6px;border-radius:3px;margin-left:6px}
 .urow{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;padding:9px 0;border-bottom:1px dashed var(--line)}.urank{width:22px;height:22px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);display:grid;place-items:center;font:800 11px var(--mono);color:var(--muted)}.upct{font:800 14px var(--mono);color:var(--good)}
 .sgrade{display:flex;align-items:center;gap:4px;margin-top:5px;flex-wrap:wrap}.sgrade .note{margin-right:2px}.sgrade button{font:inherit;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer}.sgrade button.on{background:var(--accent);border-color:var(--accent);color:#1a1200}
@@ -1933,10 +1933,10 @@ function setColumn(R){
 
 /* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
 function usefulList(R){
-  const model = R.model, mob = R.mob, base = R.base, out = [], grade = S.usefulGrade || 60;
+  const model = R.model, mob = R.mob, base = R.base, out = [], grade = S.usefulGrade === undefined ? 60 : S.usefulGrade;
   const gainOf = load => evalLoadout(load, model, mob, base).pct;
   const bestScroll = (slot, st, sub, free, extra) => {
-    let best = null; if (!(free > 0)) return null;
+    let best = null; if (!(free > 0) || !grade) return null;
     for (const sc of scrollsFor(SCROLL_TARGET[sub], grade)){
       const g = gainOf(Object.assign({}, extra, {[slot]: {st:addSt(st, sc.st, free), sub}}));
       if (!best || g > best.g) best = {g, sc};
@@ -1951,26 +1951,30 @@ function usefulList(R){
       const raw = gainOf(Object.assign({}, extra, {[slot]: {st:p.st, sub:p.sub}}));
       const b = bestScroll(slot, p.st, p.sub, p.slots, extra);
       const g = b && b.g > raw ? b.g : raw;
-      if (g > 0.0005) out.push({kind:"item", slot, g, raw, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv, sc: b && b.g > raw ? {n:p.slots, sc:b.sc, rate:grade} : null});
+      // split of the bar: what the bare item adds vs what its scrolls add (measured from an empty slot)
+      const empty = slot === "weapon" ? gainOf({weapon: {st:{}, sub:p.sub}}) : gainOf(Object.assign({}, extra, {[slot]: null}));
+      const fromItem = Math.max(0, raw - empty), fromScroll = Math.max(0, g - raw);
+      const share = fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1;
+      if (g > 0.0005) out.push({kind:"item", slot, g, raw, share, name:p.name, id:itemIconId(p.name), lv:p.it && p.it.lv, sc: b && b.g > raw ? {n:p.slots, sc:b.sc, rate:grade} : null});
     }
     if (cur && cur.slots > 0){
       const b = bestScroll(slot, cur.st, cur.sub, cur.slots, {});
-      if (b && b.g > 0.0005) out.push({kind:"scroll", slot, g:b.g, raw:0, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:b.sc, rate:grade}});
+      if (b && b.g > 0.0005) out.push({kind:"scroll", slot, g:b.g, raw:0, share:0, name:cur.name || SUBTYPES[cur.sub], sc:{n:cur.slots, sc:b.sc, rate:grade}});
     }
   }
   return out.sort((a,b) => b.g - a.g).slice(0, 10);
 }
 function usefulColumn(R){
   const L = usefulList(R);
-  if (!L.length) return `<div class="empty">Nothing found that adds damage right now.</div>`;
+  if (!L.length) return `<div class="empty">${(S.usefulGrade === 0) ? "Without scrolls no item beats what you wear now. Pick a scroll % above to see what scrolling adds." : "Nothing found that adds damage right now."}</div>`;
   const max = Math.max(...L.map(x => x.g));
   return L.map((x, i) => {
     const sc = x.sc ? `${x.sc.n}× ${esc(x.sc.sc.target)} ${esc(x.sc.sc.stat)} Scroll ${x.sc.rate}%` : "";
     return `<div class="urow"><div class="urank">${i+1}</div>
       <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : esc(x.name)}</b></div>
         <div class="note">${x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
-        ${x.kind === "item" && x.sc ? `<div class="note">item alone: ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}% · with all scrolls: +${(x.g*100).toFixed(1)}%</div>` : ''}
-        <div class="ubar">${(() => { const it = Math.max(0, x.raw), scp = Math.max(0, x.g - it); return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item: +${(it*100).toFixed(1)}%"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scrolls: +${(scp*100).toFixed(1)}%"></i>` : ''}`; })()}</div></div>
+        ${x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
+        <div class="ubar">${(() => { const it = x.g * (x.share === undefined ? 1 : x.share), scp = x.g - it; return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item share"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scroll share"></i>` : ''}`; })()}</div></div>
       <div class="upct">+${(x.g*100).toFixed(1)}%</div></div>`;
   }).join("");
 }
@@ -2008,9 +2012,9 @@ function renderSets(){
   const R = computeSets();
   $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, R.base.ko, R.base.ko, "current");
   $("colSetHead").innerHTML = colHead("Best possible set", "best item per slot for your level and build, all slots free, with the scrolls you pick", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
-  const ug = S.usefulGrade || 60;
+  const ug = S.usefulGrade === undefined ? 60 : S.usefulGrade;
   $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">single changes that add the most damage for your build (scrolls counted as all succeeding)</div>
-    <div class="ugrade"><div class="seg">${[100,60,10].map(g => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${g}% scrolls</button>`).join("")}</div>
+    <div class="ugrade"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
     <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div></div></div>`;
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = usefulColumn(R);
