@@ -1434,7 +1434,7 @@ const diff = (a, b) => { const o = {}; GSTATS.forEach(([k]) => { const v = (a[k]
 
 /* can the character wear this item? (stats checked without the item it would replace) */
 function wearCheck(it, cur){
-  const c = S.char, miss = [];
+  const c = typeof wearChar === "function" ? wearChar() : S.char, miss = [];
   it.req.forEach((r, i) => { if (!r) return; const k = REQ_KEYS[i]; const have = (c[k] || 0) - ((cur && cur.st[k]) || 0); if (have < r) miss.push({k, lbl:REQ_LBL[i], need:r, have, short:r - have}); });
   const lvShort = Math.max(0, it.lv - S.level);
   return {ok: !miss.length && !lvShort, lvShort, miss, statShort: miss.reduce((s,m) => s + m.short, 0)};
@@ -1733,6 +1733,7 @@ function buildCard(){
   return `<div class="buildcard"><div class="bhead"><b>🧭 ${esc(CLASS_LABEL[S.char.cls] || "")}${gk === "bandit" ? " · Bandit" : gk === "assassin" && S.char.cls === "thief" ? " · Assassin / claw" : ""} build</b>
       <div class="seg">${G.list.map(x => `<button data-build="${gk}:${x.k}" class="${cur===x.k?'on':''}">${x.l}${x.k === auto ? ' <small>(detected)</small>' : ''}</button>`).join("")}</div></div>
     <div class="note">${B.d}</div>
+    <div class="note">${cur === "std" || cur === "str" ? `Suggestions count ${up} as ≈ ${Math.max(b[G.stat], need)} (gear level), so they can include items you reach by adding ${up}.` : cur === "none" ? `Suggestions only include items you can wear with ${up} at ${gk === "assassin" ? 25 : 4} (plus ${up} from gear).` : `Suggestions use your current ${up} (${b[G.stat]} base).`}</div>
     <div class="note">Base stats (stat window minus gear): STR ${b.str} · DEX ${b.dex} · INT ${b.int} · LUK ${b.luk}. ${tip}</div></div>`;
 }
 document.addEventListener("click", ev => {
@@ -1740,6 +1741,18 @@ document.addEventListener("click", ev => {
   const [gk, k] = bt.dataset.build.split(":"); S.builds = S.builds || {};
   if (k === detectBuild()) delete S.builds[gk]; else S.builds[gk] = k; renderAll();
 });
+
+/* stats used for "can you wear it" in the suggestions, following the chosen build:
+   Standard / STR bandit: the secondary stat is assumed at the gear level (≈ level − 10, you add AP for it)
+   Low: your real stats · LUKless / DEXless / pure: secondary base stat at the minimum (+ what gear gives) */
+function currentBuild(){ const gk = buildGroup(); if (!gk) return null; return {gk, k:(S.builds && S.builds[gk]) || detectBuild()}; }
+function wearChar(){
+  const cb = currentBuild(); if (!cb || !S.charImported) return S.char;
+  const G = BUILDS[cb.gk], k = G.stat, c = Object.assign({}, S.char), b = baseStats(), gearPart = (S.char[k] || 0) - b[k];
+  if (cb.k === "std" || cb.k === "str") c[k] = Math.max(b[k], secReq(S.level)) + gearPart;
+  else if (cb.k === "none") c[k] = (cb.gk === "assassin" ? 25 : 4) + gearPart;
+  return c;
+}
 
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
 if (!S.gearView || S.gearView === "scrolled") S.gearView = S.gearView ? "set" : "current";   // which gear the Monsters page uses: current | set | scrolled
