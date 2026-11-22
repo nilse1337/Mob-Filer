@@ -230,6 +230,9 @@ svg text{font-family:var(--mono)}
 .srow{display:grid;grid-template-columns:92px 1fr;gap:8px;padding:9px 0;border-bottom:1px dashed var(--line)}
 .srow.empty{display:flex;gap:8px;align-items:center}
 .sslot{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+
+.sstat{font-size:12.5px;font-weight:600;margin-top:1px}
+.sgrade{display:flex;align-items:center;gap:4px;margin-top:5px;flex-wrap:wrap}.sgrade .note{margin-right:2px}.sgrade button{font:inherit;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer}.sgrade button.on{background:var(--accent);border-color:var(--accent);color:#1a1200}
 .srow.new .smain b{color:var(--good)}.srow.scroll .smain b{color:var(--accent2)}
 .ctot{margin-top:10px}
 .previewbar{background:color-mix(in srgb,var(--accent) 14%,var(--panel));border:1px solid var(--accent);border-radius:10px;padding:10px 14px;font-size:13px}
@@ -1662,8 +1665,11 @@ document.addEventListener("change", ev => {
 });
 
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
-if (!S.gearView) S.gearView = "current";   // which gear the Monsters page uses: current | set | scrolled
+if (!S.gearView || S.gearView === "scrolled") S.gearView = S.gearView ? "set" : "current";   // which gear the Monsters page uses: current | set | scrolled
 if (!S.scrollGrade) S.scrollGrade = 60;     // 100 = Lesser, 60 = Intermediate
+if (!S.slotGrade) S.slotGrade = {};        // per slot: 0 = no scrolls, 100 / 60 / 10; missing = global choice
+const gradeOf = slot => S.slotGrade[slot] !== undefined ? S.slotGrade[slot] : S.scrollGrade;
+const scrollsFor = (target, g) => SCROLLS.filter(x => x.target === target && x.rate === g && !x.destroy);
 const SET_SLOTS = ["weapon","hat","overall","top","bottom","gloves","shoes","cape","shield","earrings"];
 const addSt = (a, b, k) => { const o = Object.assign({}, a); Object.keys(b || {}).forEach(x => o[x] = (o[x] || 0) + b[x]*(k === undefined ? 1 : k)); return o; };
 
@@ -1704,22 +1710,37 @@ function computeSets(){
   const mob = BYID.get(S.selectedId) || EVAL[0];
   const model = gearModel(), base = valueWith({}, model, mob), cls = S.char.cls;
   const single = (slot, nw) => evalLoadout({[slot]: nw}, model, mob, base).pct;
+  const grade = S.scrollGrade;   // global default (per-slot choice via gradeOf)
+  // value of an item after filling its free slots with the best scroll of the chosen grade
+  const scOpts = {};
+  const potential = (slot, st, sub, free) => {
+    const raw = single(slot, {st, sub});
+    const g = gradeOf(slot);
+    if (!(free > 0) || !g) return {pct:raw, raw, sc:null, st};
+    const target = SCROLL_TARGET[sub], ck = target + "|" + g;
+    const opts = scOpts[ck] || (scOpts[ck] = scrollsFor(target, g));
+    let bp = raw, bsc = null, bst = st;
+    for (const sc of opts){ const s2 = addSt(st, sc.st, free*g/100), p = single(slot, {st:s2, sub}); if (p > bp + 1e-9){ bp = p; bsc = sc; bst = s2; } }
+    return {pct:bp, raw, sc:bsc, st:bst};
+  };
   const pick = {};
   for (const slot of SET_SLOTS){
     const cur = S.gear[slot];
     const subs = slot === "weapon" ? jobOf().weapons : SLOT_SUBS[slot];
-    let best = cur ? {keep:true, it:null, st:cur.st, name:cur.name || SUBTYPES[cur.sub], sub:cur.sub, slots:cur.slots || 0, pct:0} : null;
+    let best = null;
+    if (cur){ const pv = potential(slot, cur.st, cur.sub, cur.slots || 0); best = {keep:true, it:null, st:cur.st, name:cur.name || SUBTYPES[cur.sub], sub:cur.sub, slots:cur.slots || 0, pct:pv.pct, raw:pv.raw, potSt:pv.st}; }
     for (const it of ITEMS){
       if (!subs.includes(it.sub) || !usable(it, cls)) continue;
       if (slot === "weapon" && !weaponOK(it.sub)) continue;
       if (!wearCheck(it, cur).ok) continue;
-      const p = single(slot, {st:it.st, sub:it.sub});
-      if (!best || p > best.pct + 1e-6) best = {keep:false, it, st:it.st, name:it.name, sub:it.sub, slots:it.slots, pct:p};
+      const pv = potential(slot, it.st, it.sub, it.slots);
+      // switch only when it is clearly better after scrolling (ties keep what you have)
+      if (!best || pv.pct > best.pct + 0.002) best = {keep:false, it, st:it.st, name:it.name, sub:it.sub, slots:it.slots, pct:pv.pct, raw:pv.raw, potSt:pv.st};
     }
     if (best) pick[slot] = best;
   }
   // overall vs top + bottom, compared as complete outfits (taking off the other one counts too)
-  const asLoad = p => p ? {st:p.st, sub:p.sub} : undefined;
+  const asLoad = p => p ? {st:p.potSt || p.st, sub:p.sub} : undefined;
   const ovLoad = {overall: asLoad(pick.overall)}; if (S.gear.top) ovLoad.top = null; if (S.gear.bottom) ovLoad.bottom = null;
   const tbLoad = {top: asLoad(pick.top), bottom: asLoad(pick.bottom)}; if (S.gear.overall) tbLoad.overall = null;
   const ovVal = pick.overall ? evalLoadout(ovLoad, model, mob, base).pct : -1e9;
@@ -1733,20 +1754,20 @@ function computeSets(){
   }
   const set = evalLoadout(load, model, mob, base);
   // scrolls on the suggested set
-  const grade = S.scrollGrade, scrolled = {}, scrollRows = {};
+  const scrolled = {}, scrollRows = {};
   for (const slot of SET_SLOTS){
     const p = pick[slot]; if (!p || load[slot] === null || load[slot] === undefined) continue;
     const free = p.keep ? (S.gear[slot].slots || 0) : p.slots;
     const target = SCROLL_TARGET[p.sub];
-    const opts = SCROLLS.filter(s => s.target === target && s.rate === grade);
+    const g = gradeOf(slot), opts = g ? scrollsFor(target, g) : [];
     let bestSc = null;
     for (const sc of opts){
       const trial = Object.assign({}, load, {[slot]: {st:addSt(p.st, sc.st), sub:p.sub}});
       const g = evalLoadout(trial, model, mob, base).pct - set.pct;
       if (g > 1e-6 && (!bestSc || g > bestSc.g)) bestSc = {sc, g};
     }
-    scrollRows[slot] = {free, bestSc};
-    scrolled[slot] = bestSc && free > 0 ? {st:addSt(p.st, bestSc.sc.st, free*grade/100), sub:p.sub} : load[slot];
+    scrollRows[slot] = {free, bestSc, g};
+    scrolled[slot] = bestSc && free > 0 ? {st:addSt(p.st, bestSc.sc.st, free*g/100), sub:p.sub} : load[slot];
   }
   const loadScrolled = Object.assign({}, load, scrolled);
   const withScrolls = evalLoadout(loadScrolled, model, mob, base);
@@ -1767,6 +1788,13 @@ function previewChar(load, model){
 
 /* ---------- render ---------- */
 const deltaLine = d => GSTATS.filter(([k]) => Math.abs(d[k] || 0) >= 0.05).map(([k,l]) => { const v = d[k]; const r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return `<span class="${v > 0 ? 'ok' : 'bad'}">${v > 0 ? '+' : ''}${r} ${l}</span>`; }).join(" · ");
+function gradeBtns(slot, p){
+  const free = p.keep ? ((S.gear[slot] || {}).slots || 0) : p.slots;
+  if (!(free > 0)) return `<div class="sgrade"><span class="note">no free slots</span></div>`;
+  const cur = gradeOf(slot), opts = [[0,"Not"],[60,"60%"],[10,"10%"]];
+  if (S.scrollGrade === 100 || cur === 100) opts.splice(1, 0, [100,"100%"]);
+  return `<div class="sgrade"><span class="note">Scroll ${free} slot${free>1?'s':''}:</span>${opts.map(([v,l]) => `<button data-sgrade="${slot}:${v}" class="${cur===v?'on':''}">${l}</button>`).join("")}</div>`;
+}
 function setColumn(R){
   const rows = [];
   for (const [slot, label, icon] of SLOTS){
@@ -1774,13 +1802,19 @@ function setColumn(R){
     if (!R.useOverall && slot === "overall") continue;
     const p = R.pick[slot], cur = S.gear[slot];
     if (!p){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">nothing useful you can wear</span></div>`); continue; }
-    const ch = p.keep ? "" : deltaLine(diff(p.st, cur ? cur.st : {}));
+    const sr = R.scrollRows[slot], scSt = R.loadScrolled[slot] ? R.loadScrolled[slot].st : p.st;
+    const scrolledNow = sr && sr.bestSc && sr.free > 0;
+    const ch = deltaLine(diff(scSt, cur ? cur.st : {}));
+    const fmtSt = st => GSTATS.filter(([k]) => Math.abs(st[k] || 0) >= 0.05).map(([k,l]) => { const v = st[k], r = Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1); return `${l} ${v > 0 ? '+' : ''}${r}`; }).join(" · ") || "no attack stats";
     const w = p.it ? wearCheck(p.it, cur) : null;
     rows.push(`<div class="srow ${p.keep ? 'keep' : 'new'}"><span class="sslot">${icon} ${label}</span>
       <div class="smain">${iconImg(itemIconId(p.name), (p.keep && IMGS[slot] && IMGS[slot].icon) || icon)} <b>${esc(p.name)}</b> ${p.keep ? '<span class="tag t-cus">KEEP</span>' : '<span class="tag t-ok">NEW</span>'}
-        <div class="note">${statLine(p.st)}${p.keep ? '' : ` · ${p.slots} slots`}</div>
+        ${scrolledNow ? `<div class="sstat">${fmtSt(scSt)} <span class="note">· after ${sr.free}× ${sr.g}%${sr.g < 100 ? ' (expected)' : ''}</span></div>
+        <div class="note">base: ${statLine(p.st)}${p.keep ? ' (as pasted)' : ` · ${p.slots} slots`}</div>`
+        : `<div class="sstat">${fmtSt(p.st)}</div>${p.keep ? '' : `<div class="note">${p.slots} slots</div>`}`}
         ${ch ? `<div class="note">vs now: ${ch}</div>` : ''}
-        ${p.it ? `<div class="note">${reqLine(p.it, w)}</div>` : ''}</div></div>`);
+        ${p.it ? `<div class="note">${reqLine(p.it, w)}</div>` : ''}
+        ${gradeBtns(slot, p)}</div></div>`);
   }
   if (!R.useOverall && S.gear.overall) rows.push(`<div class="note" style="padding:6px 2px">Top + bottom beat your overall.</div>`);
   if (R.useOverall && (S.gear.top || S.gear.bottom)) rows.push(`<div class="note" style="padding:6px 2px">An overall beats your top + bottom.</div>`);
@@ -1792,37 +1826,39 @@ function scrollColumn(R){
     const sr = R.scrollRows[slot]; if (!sr) continue;
     const p = R.pick[slot];
     if (!sr.free){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">${esc(p.name)} · no upgrade slots left</span></div>`); continue; }
-    if (!sr.bestSc){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">${esc(p.name)} · no ${R.grade}% scroll helps your damage (${sr.free} slots)</span></div>`); continue; }
-    const sc = sr.bestSc.sc, exp = addSt({}, sc.st, sr.free*R.grade/100), max = addSt({}, sc.st, sr.free);
+    if (!sr.g){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">${esc(p.name)} · not scrolled (your choice, ${sr.free} slots)</span></div>`); continue; }
+    if (!sr.bestSc){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">${esc(p.name)} · no ${sr.g}% scroll helps your damage (${sr.free} slots)</span></div>`); continue; }
+    const sc = sr.bestSc.sc, exp = addSt({}, sc.st, sr.free*sr.g/100), max = addSt({}, sc.st, sr.free);
     rows.push(`<div class="srow scroll"><span class="sslot">${icon} ${label}</span>
       <div class="smain">${iconImg(scrollIconId(sc), "📜")} <b>${sr.free}× ${esc(sc.target)} ${esc(sc.stat)} Scroll: ${esc(sc.grade)}</b> <span class="tag t-pq">${sc.rate}%</span>
         <div class="note">on ${esc(p.name)}${p.keep ? '' : ' (new)'} · each ${statLine(sc.st)}</div>
-        <div class="note">${R.grade === 100 ? 'result' : 'expected'}: ${deltaLine(exp)}${R.grade < 100 ? ` · if all succeed: ${deltaLine(max)}` : ''}</div></div></div>`);
+        <div class="note">${sr.g === 100 ? 'result' : 'expected'}: ${deltaLine(exp)}${sr.g < 100 ? ` · if all succeed: ${deltaLine(max)}` : ''}</div></div></div>`);
   }
   return rows.join("") || `<div class="empty">Add your gear to see scroll plans.</div>`;
 }
 function colHead(title, sub, pct, ko, baseKo, key){
   const on = S.gearView === key;
-  const koTxt = Number.isFinite(ko) ? `${ko} hit${ko>1?'s':''} to kill` : "can't kill";
+
   return `<div class="colhead ${on ? 'on' : ''}"><div><h3>${title}</h3><div class="note">${sub}</div></div>
-    <div class="colstat"><b class="${pct > 0.0005 ? 'ok' : ''}">${pct > 0.0005 ? '+' + (pct*100).toFixed(1) + '%' : 'baseline'}</b><small>${koTxt}${Number.isFinite(ko) && Number.isFinite(baseKo) && ko < baseKo ? ` (was ${baseKo})` : ''}</small></div></div>`;
+    <div class="colstat"><b class="${pct > 0.0005 ? 'ok' : pct < -0.0005 ? 'bad' : ''}">${pct > 0.0005 ? '+' + (pct*100).toFixed(1) + '%' : pct < -0.0005 ? '−' + (-pct*100).toFixed(1) + '%' : 'baseline'}</b>${pct < -0.0005 && key === 'set' ? '<small>before scrolling the new items</small>' : ''}</div></div>`;
 }
 function renderSets(){
   const R = computeSets();
-  $("viewSwitch").innerHTML = [["current","Current gear"],["set","Suggested set"],["scrolled","Set + scrolls"]].map(([k,l]) => `<button data-gview="${k}" class="${S.gearView===k?'on':''}">${l}</button>`).join("");
+  $("viewSwitch").innerHTML = [["current","Current gear"],["set","Suggested set"]].map(([k,l]) => `<button data-gview="${k}" class="${S.gearView===k?'on':''}">${l}</button>`).join("");
   $("gradeSwitch").innerHTML = [[100,"100% scrolls"],[60,"60% scrolls"]].map(([g,l]) => `<button data-grade="${g}" class="${S.scrollGrade===g?'on':''}">${l}</button>`).join("");
   $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, R.base.ko, R.base.ko, "current");
-  $("colSetHead").innerHTML = colHead("Suggested set", "best you can wear now (level + stat requirements)", R.set.pct, R.set.ko, R.base.ko, "set");
-  $("colScrHead").innerHTML = colHead(`Set + ${R.grade}% scrolls`, R.grade === 100 ? "Lesser scrolls, always succeed" : "Intermediate scrolls, expected result", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "scrolled");
+  $("colSetHead").innerHTML = colHead("Suggested set", "best gear you can wear, with the scrolls you picked per item", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
+  $("colScrHead").innerHTML = colHead("Scroll plan", "which scrolls to use for the set · expected result", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "scrolled");
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = scrollColumn(R);
-  $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.set.d) || 'none'}</div>`;
+  $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
   $("scrTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
   return R;
 }
 document.addEventListener("click", ev => {
   const v = ev.target.closest("[data-gview]"); if (v){ S.gearView = v.dataset.gview; renderAll(); return; }
-  const g = ev.target.closest("[data-grade]"); if (g){ S.scrollGrade = +g.dataset.grade; renderAll(); return; }
+  const g = ev.target.closest("[data-grade]"); if (g){ S.scrollGrade = +g.dataset.grade; S.slotGrade = {}; renderAll(); return; }
+  const sg = ev.target.closest("[data-sgrade]"); if (sg){ const [slot, v] = sg.dataset.sgrade.split(":"); if (+v === S.scrollGrade) delete S.slotGrade[slot]; else S.slotGrade[slot] = +v; renderAll(); return; }
   if (ev.target.closest("#previewOff")){ ev.preventDefault(); S.gearView = "current"; renderAll(); }
 });
 
@@ -1858,11 +1894,13 @@ function renderKillGoals(){
   $("killPanel").innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <h3 style="margin:0;font-size:15px">What it takes to 1-, 2- or 3-hit</h3>
       <select id="killMob" class="txt" style="width:auto;height:32px;font-size:12.5px">${mobs.map(e => `<option value="${e.id}" ${e.id===mob.id?'selected':''}>${esc(e.name)} (Lv ${e.level} · ${fmt(e.hp)} HP)</option>`).join("")}</select>
-      <span class="note">${esc(sk.name)} Lv ${RR.at.lv} · now: ${fmt(base.lo)}–${fmt(base.hi)} per hit · ${Number.isFinite(base.ko) ? base.ko + ' hit' + (base.ko > 1 ? 's' : '') + ' on average' : "can't kill"}</span></div>
+      <span class="note">now: ${fmt(base.lo)}–${fmt(base.hi)} per hit · ${Number.isFinite(base.ko) ? base.ko + ' hit' + (base.ko > 1 ? 's' : '') + ' on average' : "can't kill"}</span></div>
+    <div class="note" style="margin:4px 0 2px">Based on: <b>${esc(jobOf().label)} Lv ${S.level}</b> · ${magic ? `INT ${S.char.int} · LUK ${S.char.luk} · Magic ${S.char.magic}` : `${prim.toUpperCase()} ${S.char[prim]} · Attack ${S.char.atkMin}–${S.char.atkMax}`} · Crit ${S.char.critRate}% / ${S.char.critDmg}% · <b>${esc(sk.name)} Lv ${RR.at.lv}</b>${hits > 1 ? ` (${hits} hits per cast)` : ''} · vs ${esc(mob.name)}: Lv ${mob.level}, ${fmt(mob.hp)} HP${mob.mdef !== undefined || mob.pdef !== undefined ? `, ${magic ? 'M.DEF ' + (mob.mdef ?? '?') : 'P.DEF ' + (mob.pdef ?? '?')}` : ''}</div>
     <div class="kgrid">${cards}</div>
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
+window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 
 const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["any","🔥/❄ Weak to either"],["hw","✨ Weak to holy"],["undead","💀 Undead"],["fs","Resists fire"],["is","Resists ice"]];
@@ -2170,7 +2208,7 @@ function renderAll(){
   let saved = null, prev = null;
   if (S.gearView !== "current" && Object.keys(S.gear).length + 1 > 0){
     try {
-      const R = computeSets(), load = S.gearView === "scrolled" ? R.loadScrolled : R.load;
+      const R = computeSets(), load = R.loadScrolled;
       prev = previewChar(load, R.model);
       saved = {char:S.char, acc:S.baseAcc};
       S.char = prev.char; S.baseAcc = prev.acc;
@@ -2181,7 +2219,7 @@ function renderAll(){
   const bar = $("previewBar");
   if (prev){
     bar.style.display = "";
-    bar.innerHTML = `🛡 <b>Preview: ${S.gearView === "scrolled" ? "suggested set + " + S.scrollGrade + "% scrolls" : "suggested set"}</b> — stats below include ${deltaLine(prev.d) || 'no changes'}${prev.acc !== saved.acc ? ` · ACC ${saved.acc} → ${prev.acc}` : ''}. <a href="#gear">See the set</a> · <a href="#" id="previewOff">Back to current gear</a>`;
+    bar.innerHTML = `🛡 <b>Preview: suggested set (with the scrolls you picked)</b> — stats below include ${deltaLine(prev.d) || 'no changes'}${prev.acc !== saved.acc ? ` · ACC ${saved.acc} → ${prev.acc}` : ''}. <a href="#gear">See the set</a> · <a href="#" id="previewOff">Back to current gear</a>`;
   } else bar.style.display = "none";
   if (saved){ S.char = saved.char; S.baseAcc = saved.acc; }
   save();
