@@ -1665,11 +1665,18 @@ function readTipFile(file, forceSlot){
       const x = c.getContext("2d", {willReadFrequently:true}); x.drawImage(img, 0, 0); URL.revokeObjectURL(url);
       let r = tipBest(c), cc = r.canvas || c;
       // stars slot selected: a throwing-star tooltip → match the stars by their W.ATK
-      if ((forceSlot || S.gearSel) === "stars" && typeof STARS !== "undefined"){
-        const w = r.values.watk;
+      const starSel = (forceSlot || S.gearSel) === "stars";
+      if (typeof STARS !== "undefined" && (starSel || (!r.values.type && usesStars()))){
+        let w = r.values.watk;
+        if (!w){
+          const ok = v => STARS.some(s => s[1] === v);
+          let nums = readStarAttack(c).filter(ok);
+          if (!nums.length){ const c2 = document.createElement("canvas"); c2.width = c.width*2; c2.height = c.height*2; const x2 = c2.getContext("2d", {willReadFrequently:true}); x2.imageSmoothingQuality = "high"; x2.drawImage(c, 0, 0, c2.width, c2.height); nums = readStarAttack(c2).filter(ok); }
+          if (nums.length) w = nums[nums.length - 1];
+        }
         const hit = w ? STARS.filter(s => s[1] === w) : [];
-        if (hit.length){ S.stars = (hit.find(s => s[0] === S.stars) || hit[0])[0]; IMGS.stars = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stars:true, amb:hit.length > 1}); return; }
-        res({ok:false, stars:true}); return;
+        if (hit.length){ S.stars = (hit.find(s => s[0] === S.stars) || hit[0])[0]; IMGS.stars = {src:snapshot(c), t:Date.now()}; saveImgs(); S.gearSel = "stars"; res({ok:true, stars:true, amb:hit.length > 1}); return; }
+        if (starSel){ res({ok:false, stars:true}); return; }
       }
       // a character stat window? apply it directly
       let sv = null;
@@ -1828,6 +1835,47 @@ document.addEventListener("click", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && S.starPick){ S.starPick = false; renderAll(); }
 });
 
+/* read "+NN" (Weapon Attack) from a throwing-star tooltip: the number follows the only "+" in the text */
+function readStarAttack(canvas){
+  const W = canvas.width, H = canvas.height, d = canvas.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
+  const on = new Uint8Array(W*H);
+  for (let i = 0; i < W*H; i++){ const r = d[i*4], g = d[i*4+1], b = d[i*4+2]; on[i] = (r > 140 && g > 140 && b > 140 && Math.max(r,g,b) - Math.min(r,g,b) < 70) ? 1 : 0; }
+  // connected components (8-neighbour)
+  const lab = new Int32Array(W*H), comps = []; let n = 0;
+  for (let i = 0; i < W*H; i++){ if (!on[i] || lab[i]) continue; n++; const st = [i]; lab[i] = n; let x0 = W, y0 = H, x1 = 0, y1 = 0, c = 0;
+    while (st.length){ const p = st.pop(), x = p % W, y = (p / W) | 0; c++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){ const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue; const q = yy*W + xx; if (on[q] && !lab[q]){ lab[q] = n; st.push(q); } } }
+    if (c < 4000) comps.push({id:n, x0, y0, x1, y1, w:x1-x0+1, h:y1-y0+1, c}); }
+  const at = (cp, x, y) => lab[y*W + x] === cp.id;
+  // digit templates rendered in Arial at the digit height
+  const grid = (cp) => { const G = []; for (let gy = 0; gy < 10; gy++) for (let gx = 0; gx < 6; gx++){ let s = 0, t = 0;
+      for (let y = cp.y0 + gy*cp.h/10; y < cp.y0 + (gy+1)*cp.h/10; y += 0.5) for (let x = cp.x0 + gx*cp.w/6; x < cp.x0 + (gx+1)*cp.w/6; x += 0.5){ t++; if (at(cp, x|0, y|0)) s++; }
+      G.push(t ? s/t : 0); } return G; };
+  const tplCache = {};
+  const digitTpl = h => tplCache[h] || (tplCache[h] = "0123456789".split("").map(ch => { const cv = document.createElement("canvas"); cv.width = h*2; cv.height = h*2; const x = cv.getContext("2d");
+      x.fillStyle = "#000"; x.fillRect(0,0,cv.width,cv.height); x.fillStyle = "#fff"; x.font = `${Math.round(h*1.38)}px Arial`; x.textBaseline = "alphabetic"; x.fillText(ch, 2, h*1.6);
+      const dd = x.getImageData(0,0,cv.width,cv.height).data; let X0 = 1e9, Y0 = 1e9, X1 = -1, Y1 = -1;
+      for (let y = 0; y < cv.height; y++) for (let xx = 0; xx < cv.width; xx++) if (dd[(y*cv.width+xx)*4] > 110){ if (xx < X0) X0 = xx; if (xx > X1) X1 = xx; if (y < Y0) Y0 = y; if (y > Y1) Y1 = y; }
+      const w = X1-X0+1, hh = Y1-Y0+1, G = [];
+      for (let gy = 0; gy < 10; gy++) for (let gx = 0; gx < 6; gx++){ let s = 0, t = 0; for (let y = Y0 + gy*hh/10; y < Y0 + (gy+1)*hh/10; y += 0.5) for (let xx = X0 + gx*w/6; xx < X0 + (gx+1)*w/6; xx += 0.5){ t++; if (dd[(((y|0))*cv.width + (xx|0))*4] > 110) s++; } G.push(t ? s/t : 0); }
+      return {ch, G, ar:w/hh}; }));
+  const readDigit = cp => { if (cp.w <= cp.h*0.3) return "1"; let best = null; for (const t of digitTpl(cp.h)){ const g = grid(cp); let e = 0; for (let i = 0; i < 60; i++) e += Math.abs(g[i] - t.G[i]); e += Math.abs(cp.w/cp.h - t.ar)*8; if (!best || e < best.e) best = {e, ch:t.ch}; } return best.ch; };
+  const found = [];
+  for (const p of comps){
+    if (p.w < 5 || p.h < 5 || p.w > 16 || Math.abs(p.w - p.h) > 2) continue;
+    const cx = p.x0 + (p.w >> 1), cy = p.y0 + (p.h >> 1);
+    if (at(p, p.x0, p.y0) || at(p, p.x1, p.y0) || at(p, p.x0, p.y1) || at(p, p.x1, p.y1)) continue;     // corners empty
+    if (!at(p, cx, p.y0) && !at(p, cx-1, p.y0) && !at(p, cx+1, p.y0)) continue;                          // vertical bar
+    if (!at(p, p.x0, cy) && !at(p, p.x0, cy-1) && !at(p, p.x0, cy+1)) continue;                          // horizontal bar
+    if (p.c > p.w*p.h*0.55) continue;
+    // digits right after the plus, on the same line
+    const ds = comps.filter(q => q.x0 > p.x1 && q.x0 - p.x1 < p.h*2.5 && q.y1 >= cy && q.y0 <= cy && q.h >= p.h && q.h <= p.h*2.4).sort((a,b) => a.x0 - b.x0);
+    const dig = []; let last = p;
+    for (const q of ds){ if (q.x0 - last.x1 > p.h*1.2 && dig.length) break; if (dig.length && Math.abs(q.h - dig[0].h) > 2) break; dig.push(q); last = q; if (dig.length === 2) break; }
+    if (dig.length) found.push(+dig.map(readDigit).join(""));
+  }
+  return found;
+}
 
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
 if (!S.gearView || S.gearView === "scrolled") S.gearView = S.gearView ? "set" : "current";   // which gear the Monsters page uses: current | set | scrolled
