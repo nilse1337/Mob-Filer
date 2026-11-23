@@ -1669,11 +1669,7 @@ function readTipFile(file, forceSlot){
         const w = r.values.watk;
         const hit = w ? STARS.filter(s => s[1] === w) : [];
         if (hit.length){ S.stars = (hit.find(s => s[0] === S.stars) || hit[0])[0]; IMGS.stars = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stars:true, amb:hit.length > 1}); return; }
-        matchStarIcon(c).then(m => {
-          if (m){ S.stars = m[0]; IMGS.stars = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stars:true}); }
-          else res({ok:false, stars:true});
-        }).catch(() => res({ok:false, stars:true}));
-        return;
+        res({ok:false, stars:true}); return;
       }
       // a character stat window? apply it directly
       let sv = null;
@@ -1696,7 +1692,7 @@ async function handleGearFiles(files, forceSlot){
   const msgs = [];
   for (const f of files){
     const r = await readTipFile(f, forceSlot);
-    if (r.stars){ msgs.push(r.ok ? `<span class="ok">✓</span> Throwing stars: ${esc(curStar()[0])} (W.ATK +${curStar()[1]})${r.amb ? ' — two stars have this W.ATK, click the stars slot to switch' : ''}` : `<span class="bad">✕ Couldn't read the stars' W.ATK.</span> Pick them from the list in the stars slot instead.`); continue; }
+    if (r.stars){ msgs.push(r.ok ? `<span class="ok">✓</span> Throwing stars: ${esc(curStar()[0])} (W.ATK +${curStar()[1]})${r.amb ? ' — two stars have this W.ATK, click the stars slot to switch' : ''}` : `<span class="bad">✕ Couldn't read the stars from that screenshot.</span> Pick them from the list under the inventory.`); continue; }
     if (r.ok && r.stat){ msgs.push(`<span class="ok">✓</span> Character updated from your stat window: ${esc(jobOf().label)}, Lv ${S.level}`); continue; }
     if (r.ok){ const g = S.gear[r.slot]; msgs.push(`<span class="ok">✓</span> ${SLOTS.find(s => s[0] === r.slot)[1]}: ${statLine(g.st)}${g.slots ? ` · ${g.slots} slots` : ''}`); }
     else msgs.push(`<span class="bad">✕ Couldn't read that tooltip.</span> Use an uncropped PNG screenshot with the whole tooltip visible.`);
@@ -1832,37 +1828,6 @@ document.addEventListener("click", ev => {
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && S.starPick){ S.starPick = false; renderAll(); }
 });
 
-/* recognise stars in a pasted screenshot by their icon (icons from maplestory.io, which allows reading them) */
-let STAR_IMGS = null;
-function loadStarIcons(){
-  if (STAR_IMGS) return STAR_IMGS;
-  STAR_IMGS = Promise.all(STARS.map(s => new Promise(res => { const im = new Image(); im.crossOrigin = "anonymous";
-    im.onload = () => res({s, im}); im.onerror = () => res(null); im.src = `https://maplestory.io/api/GMS/83/item/${s[2]}/icon`; }))).then(a => a.filter(Boolean));
-  return STAR_IMGS;
-}
-async function matchStarIcon(canvas){
-  const icons = await loadStarIcons(); if (!icons.length) return null;
-  const W = canvas.width, H = canvas.height, src = canvas.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
-  const N = 12; let best = null;
-  for (const {s, im} of icons){
-    const t = document.createElement("canvas"); t.width = N; t.height = N; const tx = t.getContext("2d", {willReadFrequently:true});
-    tx.imageSmoothingEnabled = true; tx.drawImage(im, 0, 0, N, N); const td = tx.getImageData(0, 0, N, N).data;
-    const pts = []; for (let i = 0; i < N*N; i++) if (td[i*4+3] > 160) pts.push([i % N, (i / N) | 0, td[i*4], td[i*4+1], td[i*4+2]]);
-    if (pts.length < 10) continue;
-    for (const k of [1, 1.25, 1.33, 1.5, 2, 2.5, 2.67, 3]){
-      const sz = Math.round(Math.max(im.width, im.height) * k); if (sz > W || sz > H) continue;
-      const sx = im.width * k / N, sy = im.height * k / N, step = Math.max(1, Math.round(sz / 16));
-      for (let y = 0; y + sz <= H; y += step) for (let x = 0; x + sz <= W; x += step){
-        let e = 0;
-        for (const [px, py, r, g, b] of pts){ const o = (((y + (py + .5) * sy) | 0) * W + ((x + (px + .5) * sx) | 0)) * 4;
-          e += Math.abs(src[o] - r) + Math.abs(src[o+1] - g) + Math.abs(src[o+2] - b); if (best && e / pts.length > best.e) break; }
-        e /= pts.length;
-        if (!best || e < best.e) best = {e, s};
-      }
-    }
-  }
-  return best && best.e < 45 ? best.s : null;
-}
 
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
 if (!S.gearView || S.gearView === "scrolled") S.gearView = S.gearView ? "set" : "current";   // which gear the Monsters page uses: current | set | scrolled
@@ -2266,7 +2231,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout, matchStarIcon:typeof matchStarIcon === "function" ? matchStarIcon : null};
+window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 
 const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["any","🔥/❄ Weak to either"],["hw","✨ Weak to holy"],["undead","💀 Undead"],["fs","Resists fire"],["is","Resists ice"]];
