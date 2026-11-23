@@ -1863,7 +1863,6 @@ async function matchStarIcon(canvas){
   }
   return best && best.e < 45 ? best.s : null;
 }
-if (window.__mf){ window.__mf.matchStarIcon = matchStarIcon; window.__mf.STARS = STARS; }
 
 /* ================= SUGGESTED SET + SCROLLS + PREVIEW ================= */
 if (!S.gearView || S.gearView === "scrolled") S.gearView = S.gearView ? "set" : "current";   // which gear the Monsters page uses: current | set | scrolled
@@ -2267,7 +2266,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout, matchStarIcon:typeof matchStarIcon === "function" ? matchStarIcon : null};
 
 
 const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["any","🔥/❄ Weak to either"],["hw","✨ Weak to holy"],["undead","💀 Undead"],["fs","Resists fire"],["is","Resists ice"]];
