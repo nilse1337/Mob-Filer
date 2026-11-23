@@ -1258,8 +1258,22 @@ const JOBS = {
 const CLASS_LABEL = {beginner:"Beginner", warrior:"Warrior", magician:"Magician", bowman:"Bowman", thief:"Thief"};
 const JOB_TPL = [{"ch":"W","ar":1.17,"g":[0.5,0,0.33,0,0.5,0.5,0,0.33,0,0.5,0.5,0,0.33,0,0.5,0.5,0,0.33,0,0.5,0.5,0,0.33,0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,1,0.67,1,0.5]},{"ch":"I","ar":0.17,"g":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},{"ch":"Z","ar":0.5,"g":[1,1,1,1,1,0.5,0.5,0.5,0.75,1,0,0.25,0.5,0.5,0.5,0,0.5,1,0.5,0,0.5,0.5,0.5,0.25,0,1,0.75,0.5,0.5,0.5,1,1,1,1,1]},{"ch":"A","ar":0.67,"g":[0,0.5,1,0.5,0,0.5,0.5,0.5,0.5,0.5,1,0.75,0.5,0.75,1,1,1,1,1,1,1,0.75,0.5,0.75,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1]},{"ch":"R","ar":0.67,"g":[1,1,1,0.5,0,1,0.75,0.5,0.5,0.5,1,0.75,0.5,0.5,0.5,1,1,1,0.5,0,1,0.75,0.5,0.5,0.5,1,0.5,0,0.5,1,1,0.5,0,0.5,1]},{"ch":"D","ar":0.67,"g":[1,1,1,0.5,0,1,0.75,0.5,0.5,0.5,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.75,0.5,0.5,0.5,1,1,1,0.5,0]},{"ch":"-","ar":0.5,"g":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},{"ch":"F","ar":0.67,"g":[1,1,1,1,1,1,0.75,0.5,0.5,0.5,1,0.75,0.5,0.25,0,1,1,1,0.5,0,1,0.75,0.5,0.25,0,1,0.5,0,0,0,1,0.5,0,0,0]},{"ch":"E","ar":0.67,"g":[1,1,1,1,1,1,0.75,0.5,0.5,0.5,1,0.75,0.5,0.25,0,1,1,1,0.5,0,1,0.75,0.5,0.25,0,1,0.75,0.5,0.5,0.5,1,1,1,1,1]},{"ch":"/","ar":0.5,"g":[0,0,0,0.5,1,0,0,0,0.5,1,0,0.25,0.5,0.5,0.5,0,0.5,1,0.5,0,0.5,0.5,0.5,0.25,0,1,0.5,0,0,0,1,0.5,0,0,0]},{"ch":"P","ar":0.67,"g":[1,1,1,0.5,0,1,0.75,0.5,0.5,0.5,1,0.75,0.5,0.5,0.5,1,1,1,0.5,0,1,0.75,0.5,0.25,0,1,0.5,0,0,0,1,0.5,0,0,0]},{"ch":"O","ar":0.67,"g":[0,0.5,1,0.5,0,0.5,0.5,0.5,0.5,0.5,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,0.5,0.5,0.5,0.5,0.5,0,0.5,1,0.5,0]},{"ch":"S","ar":0.67,"g":[0,0.5,1,1,1,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.25,0,0,0.5,1,0.5,0,0,0.25,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,1,1,1,0.5,0]},{"ch":"N","ar":0.67,"g":[1,1,1,0.5,0,1,0.75,0.5,0.5,0.5,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1]},{"ch":"W","ar":1.17,"g":[0.67,0,0.5,0,0.67,0.67,0,0.5,0,0.67,0.67,0,0.5,0,0.67,0.67,0,0.5,0,0.67,0.67,0,0.5,0,0.67,0.5,0.5,0.5,0.5,0.5,0.33,1,0.5,1,0.33]},{"ch":"A","ar":0.67,"g":[0,0.67,1,0.67,0,0.5,0.5,0.5,0.5,0.5,1,0.56,0.33,0.56,1,1,1,1,1,1,1,0.56,0.33,0.56,1,1,0.33,0,0.33,1,1,0.33,0,0.33,1]},{"ch":"R","ar":0.67,"g":[1,1,1,0.67,0,1,0.67,0.5,0.5,0.5,1,0.56,0.33,0.44,0.67,1,1,1,0.67,0,1,0.56,0.33,0.44,0.67,1,0.33,0,0.33,1,1,0.33,0,0.33,1]},{"ch":"N","ar":0.67,"g":[1,1,1,0.67,0,1,0.67,0.5,0.5,0.5,1,0.33,0,0.33,1,1,0.33,0,0.33,1,1,0.33,0,0.33,1,1,0.33,0,0.33,1,1,0.33,0,0.33,1]},{"ch":"W","ar":1.3,"g":[0.67,0.12,0.5,0.12,0.67,0.67,0.25,0.67,0.12,0.83,0.67,0.25,0.67,0,0.67,0.67,0.25,0.67,0,0.67,0.67,0.25,0.67,0.12,0.83,0.67,0.62,0.67,0.62,0.67,0.5,0.88,0.5,1,0.33]},{"ch":"Z","ar":0.5,"g":[1,1,1,1,1,0.5,0.5,0.5,1,1,0,0,0,1,1,0.33,0.67,0.67,0.33,0.33,1,1,0.5,0,0,1,1,0.5,0.5,0.5,1,1,1,1,1]},{"ch":"A","ar":0.7,"g":[0.25,0.75,1,0.5,0,0.75,0.75,0.5,0.5,0.5,1,0.5,0.17,0.75,1,1,0.83,0.78,1,1,1,0.75,0.5,0.75,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1]},{"ch":"R","ar":0.8,"g":[0.75,1,1,0.67,0,1,0.83,0.5,0.67,0.25,1,0.67,0,0.67,0.5,1,0.89,0.67,0.67,0.17,1,0.67,0.5,0.5,0.5,1,0.33,0,0.5,1,1,0.33,0,0.5,0.75]},{"ch":"D","ar":0.7,"g":[1,1,1,0.75,0.25,1,0.75,0.5,0.75,0.75,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.75,0.5,0.75,0.75,1,1,1,0.75,0.25]},{"ch":"F","ar":0.7,"g":[1,1,1,1,1,1,0.75,0.5,0.5,0.5,1,0.5,0,0,0,1,0.83,0.67,0.33,0,1,0.75,0.5,0.25,0,1,0.5,0,0,0,1,0.5,0,0,0]},{"ch":"I","ar":0.3,"g":[0,0.5,1,0.75,0.5,0,0.5,1,1,1,0.5,0.75,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.5,0.75,1,0.75,0.5]},{"ch":"R","ar":0.7,"g":[1,1,1,0.75,0.25,1,0.75,0.5,0.75,0.75,1,0.5,0,0.5,1,1,0.83,0.67,0.83,0.67,1,0.75,0.5,0.75,0.75,1,0.5,0,0.5,1,1,0.5,0,0.5,1]},{"ch":"E","ar":0.7,"g":[1,1,1,1,1,1,0.75,0.5,0.5,0.5,1,0.5,0,0,0,1,0.83,0.67,0.33,0,1,0.75,0.5,0.25,0,1,0.75,0.5,0.5,0.5,1,1,1,1,1]},{"ch":"/","ar":0.6,"g":[0,0,0,0.5,1,0,0,0,0.5,1,0,0.33,0.67,0.5,0.33,0,0.5,1,0.5,0,0.33,0.83,0.83,0.33,0,0.75,1,0.5,0,0,0.75,1,0.5,0,0]},{"ch":"P","ar":0.8,"g":[0.5,1,1,0.67,0,0.5,0.83,0.5,0.5,0.5,0.75,0.67,0,0.33,1,0.67,0.89,0.67,0.56,0.33,0.75,0.83,0.5,0.33,0,1,0.67,0,0,0,0.75,0.67,0,0,0]},{"ch":"O","ar":0.8,"g":[0,0.67,1,0.5,0,0.5,0.5,0.5,0.67,0.25,1,0.33,0,0.5,0.75,1,0.33,0,0.56,1,1,0.33,0,0.67,1,0.5,0.5,0.5,0.67,0.5,0,0.67,1,0.67,0]},{"ch":"S","ar":0.7,"g":[0.25,0.75,1,1,1,0.75,0.75,0.5,0.5,0.5,1,0.5,0,0,0,0.5,0.67,0.67,0.5,0.17,0,0.25,0.5,0.75,0.75,0.5,0.5,0.5,0.75,0.75,1,1,1,0.75,0.25]},{"ch":"W","ar":1.12,"g":[0.5,0.33,0.33,0,0.5,1,0.33,0.67,0.33,0.5,1,0.33,0.67,0.33,0.5,1,0.33,0.67,0.33,0.5,1,0.33,0.67,0.33,0.5,0.5,1,1,1,1,0,0.67,0.33,0.67,0.5]},{"ch":"I","ar":0.25,"g":[0,0,0.5,1,1,0,0,0.5,1,1,0,0,0.5,1,1,0,0,0.5,1,1,0,0,0.5,1,1,1,1,1,1,1,0,0,0.5,1,1]},{"ch":"Z","ar":0.5,"g":[1,1,1,1,1,1,1,1,1,1,0,0,0.5,1,1,0,0.5,1,0.5,0,1,1,0.5,0,0,1,1,1,1,1,1,1,1,1,1]},{"ch":"A","ar":0.62,"g":[0,0,1,1,0,0,1,1,1,0,1,1,0,0,1,1,1,1,1,1,1,1,0,1,1,1,1,0,0,1,1,0,0,0,1]},{"ch":"R","ar":0.62,"g":[0,1,1,1,0,1,1,1,1,1,1,1,0,0,1,1,1,1,1,0,1,1,0,0,1,1,1,0,0,1,1,1,0,0,1]},{"ch":"D","ar":0.75,"g":[0.5,1,1,0.5,0,1,1,1,1,0.5,0.5,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,0.5,1,1,1,0.5,0.5,1,1,0.5,0]},{"ch":"F","ar":0.62,"g":[1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0]},{"ch":"R","ar":0.75,"g":[0.5,1,1,0.5,0,0.5,1,1,1,0.5,0.5,0.5,0,0.5,1,0.5,1,1,0.5,0,0.5,0.5,0,0.5,0.5,1,0.5,0,0.5,1,0.5,0.5,0,0.5,0.5]},{"ch":"E","ar":0.62,"g":[1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,0,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1]},{"ch":"/","ar":0.5,"g":[0,0,0.5,1,1,0,0,0.5,1,1,0,0.25,0.75,0.75,0.5,0,0.5,1,0.5,0,0.5,0.75,0.75,0.25,0,1,0.75,0.25,0,0,1,0.5,0,0,0]},{"ch":"P","ar":0.62,"g":[1,1,1,1,0,1,1,1,1,0,1,0,0,0,1,1,1,1,1,0,1,1,0,0,0,1,0,0,0,0,1,0,0,0,0]},{"ch":"O","ar":0.62,"g":[0,0,1,1,0,0,1,1,1,0,1,1,0,0,1,1,1,0,0,1,1,1,0,0,1,0,1,1,1,1,0,0,1,1,0]},{"ch":"I","ar":0.25,"g":[0,0,0.5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},{"ch":"S","ar":0.62,"g":[0,1,1,1,1,0,1,1,1,1,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0]},{"ch":"N","ar":0.75,"g":[0.5,1,1,0.5,0,1,1,1,1,0.5,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,1,1,0.5,0,0.5,0.5]}];
 const jobOf = () => JOBS[S.char.job] || JOBS[S.char.cls] || JOBS.beginner;
-function jobOptions(sel){
-  return Object.keys(CLASS_LABEL).map(c => `<optgroup label="${CLASS_LABEL[c]}">${Object.entries(JOBS).filter(([,j]) => j.cls === c).map(([k,j]) => `<option value="${k}" ${k===sel?'selected':''}>${j.label}</option>`).join("")}</optgroup>`).join("");
+/* the class read from your stat window (or, for older saves, from your highest stat): the job list stays inside it */
+function statClass(){
+  if (!S.statWin || !S.charImported) return null;
+  if (S.statWin.cls) return S.statWin.cls;
+  const c = S.char, m = Math.max(c.str||0, c.dex||0, c.int||0, c.luk||0);
+  if (m < 20) return null;
+  return m === c.int ? "magician" : m === c.luk ? "thief" : m === c.dex ? "bowman" : "warrior";
+}
+function defaultJobFor(cls){
+  if (S.statWin && S.statWin.job && JOBS[S.statWin.job] && JOBS[S.statWin.job].cls === cls) return S.statWin.job;
+  const list = Object.entries(JOBS).filter(([,x]) => x.cls === cls);
+  const want = S.level >= 70 ? list.find(([,x]) => x.third) : S.level >= 30 ? list.find(([,x]) => x.sub && !x.third) : null;
+  return (want || list[0])[0];
+}
+function jobOptions(sel, onlyCls){
+  return Object.keys(CLASS_LABEL).filter(c => !onlyCls || c === onlyCls).map(c => `<optgroup label="${CLASS_LABEL[c]}">${Object.entries(JOBS).filter(([,j]) => j.cls === c).map(([k,j]) => `<option value="${k}" ${k===sel?'selected':''}>${j.label}</option>`).join("")}</optgroup>`).join("");
 }
 function letterCost(g, ch){
   const ts = JOB_TPL.filter(t => t.ch === ch);
@@ -1565,7 +1579,7 @@ function charCard(){
     <button class="btn primary small" id="ccImport">📷 Add stat window</button></div>`;
   const d = new Date(S.charImported);
   const mainStats = c.cls === "magician" ? `INT ${c.int} · LUK ${c.luk} · Magic ${c.magic}` : c.cls === "bowman" ? `DEX ${c.dex} · STR ${c.str} · Attack ${c.atkMin}–${c.atkMax}` : c.cls === "thief" ? `LUK ${c.luk} · DEX ${c.dex} · STR ${c.str} · Attack ${c.atkMin}–${c.atkMax}` : `STR ${c.str} · DEX ${c.dex} · Attack ${c.atkMin}–${c.atkMax}`;
-  return `<div class="charcard">${IMGS.stat ? `<img class="ccimg" src="${IMGS.stat.src}" data-gimg="stat" alt="" title="Click to enlarge">` : ''}<div style="flex:1;min-width:0"><div class="cctitle">👤 <select id="ccJob" class="txt">${jobOptions(c.job)}</select> <b>Lv ${S.level}${S.statWin && S.statWin.levelSrc === "derived" && S.level === S.statWin.level ? ' <span class="note" title="Calculated from your base stats">(≈ from stats)</span>' : ''}</b></div>
+  return `<div class="charcard">${IMGS.stat ? `<img class="ccimg" src="${IMGS.stat.src}" data-gimg="stat" alt="" title="Click to enlarge">` : ''}<div style="flex:1;min-width:0"><div class="cctitle">👤 <select id="ccJob" class="txt" title="Job from your stat window — only jobs of your class">${jobOptions(c.job, statClass())}</select> <b>Lv ${S.level}${S.statWin && S.statWin.levelSrc === "derived" && S.level === S.statWin.level ? ' <span class="note" title="Calculated from your base stats">(≈ from stats)</span>' : ''}</b></div>
       <div class="note">${mainStats} · ACC ${S.baseAcc}${S.statWin && S.statWin.accSrc === 'derived' && S.baseAcc === S.statWin.acc ? ' (≈ from stats)' : ''} · Crit ${c.critRate}% / ${c.critDmg}% · from your stat window, ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}</div></div>
     <button class="btn small" id="ccImport" title="Paste or choose a new stat window screenshot">📷 Update</button></div>`;
 }
@@ -2374,7 +2388,7 @@ const setVal = (id, v) => { const el = $(id); if (document.activeElement !== el)
 function renderChar(){
   const ch = S.char, sk = RR.sk, at = RR.at;
   setVal("inLevel", S.level); setVal("inAcc", S.baseAcc); setVal("inExtra", S.extraAcc); setVal("cSkillLv", S.skillLv);
-  $("inPotion").value = String(S.potion); $("cCls").innerHTML = jobOptions(ch.job);
+  $("inPotion").value = String(S.potion); $("cCls").innerHTML = jobOptions(ch.job, statClass());
   const list = skillsForJob();
   $("cSkill").innerHTML = list.map(s => `<option value="${s.k}" ${s.k===S.skill?'selected':''}>${esc(s.name)} · ${esc(s.job)}</option>`).join("");
   $("skillInfo").innerHTML = `<b>${Math.round(at.S*100)}%</b>${at.hits>1?`×${at.hits}`:''} ${elPill(sk.el)} <span class="note">raw ${fmt(RR.min)}–${fmt(RR.max)}</span>`;
@@ -2594,6 +2608,8 @@ function renderPage(){
 }
 function renderAll(){
   if (!S.gear) S.gear = {}; if (!S.gearFilter) S.gearFilter = "all";
+  // the stat window decides the class: a job from another class is switched back
+  { const sc = statClass(); if (sc && S.char.cls !== sc) setJob(defaultJobFor(sc)); }
   normSkill();
   const page = renderPage();
   renderHeaderGear();
@@ -2762,6 +2778,7 @@ function applyStatValues(v, job){
   sw.level = Math.max(1, Math.min(200, sw.level));
   if (v.accuracy !== undefined){ sw.acc = v.accuracy; sw.accSrc = "stat"; }
   else { sw.acc = accFromStatWindow(c.cls, sw.level, c); sw.accSrc = "derived"; }
+  sw.cls = c.cls; sw.job = c.job;
   S.level = sw.level; S.baseAcc = sw.acc; S.statWin = sw;
   S.bPrimary = c.cls === "magician" ? (c.int || S.bPrimary) : (c.dex || S.bPrimary); S.bLuk = c.luk || S.bLuk;
   S.charImported = Date.now();
