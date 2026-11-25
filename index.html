@@ -1816,6 +1816,7 @@ async function handleGearFiles(files, forceSlot){
     else msgs.push(`<span class="bad">✕ Couldn't read that tooltip.</span> Use an uncropped PNG screenshot with the whole tooltip visible.`);
   }
   $("gearMsg").innerHTML = msgs.join("<br>");
+  clearTimeout(window.__gmT); window.__gmT = setTimeout(() => { const m = $("gearMsg"); if (m) m.innerHTML = ""; }, 6000);   // confirmation fades after a few seconds
   S.gearEdit = null; renderAll();
 }
 document.addEventListener("click", ev => {
