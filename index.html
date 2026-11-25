@@ -86,7 +86,8 @@ select,.txt{width:100%;height:40px;background:var(--panel2);border:1px solid var
 .ttfold{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:12px;padding:0}
 .ttlist{display:grid;gap:6px}.ttrow{display:grid;grid-template-columns:26px 1fr 90px 80px 80px 96px 24px;gap:10px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer}
 .ttrow:hover{border-color:var(--line2)}.ttrank{font:800 13px var(--mono);color:var(--accent);text-align:center}.ttname{font-weight:700;min-width:0}.ttname small{display:block;font-weight:500;color:var(--muted);font-size:11px}
-.ttplan{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-weight:500;font-size:11.5px;color:var(--muted)}.ttplan b{color:var(--text);font-weight:700}.ttplan i{font-style:normal;opacity:.75}
+.ttplan{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-weight:500;font-size:11.5px;color:var(--muted)}.ttplan b{color:var(--text);font-weight:700}.ttplan .fit{font-weight:700}.fit-good{color:var(--good)}.fit-poor{color:var(--bad)}.fit-ok{color:var(--muted)}
+.ttplan i{font-style:normal;opacity:.75}
 .ttstat{text-align:right;font-family:var(--mono)}.ttstat b{display:block;font-size:13px}.ttstat small{font-size:10px;color:var(--muted)}
 @media (max-width:700px){.ttrow{grid-template-columns:22px 1fr 80px 24px}.ttrow .ttstat:nth-of-type(n+4){display:none}}
 .blchip{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}.blchip:hover{border-color:var(--good);color:var(--good)}
@@ -1331,25 +1332,38 @@ function detectJob(info, v){
 /* best map per monster (MeowDB map data: spawns of that monster / all spawns on the map, respawn rate) */
 const MOB_MAP = {}; "Snail=Snail Hunting Ground I~Maple Road~40~40~0.7|Blue Snail=Snail Hunting Ground III~Maple Road~21~42~0.8|Shroom=Mushroom Garden~Rainbow Street~23~35~1|Red Snail=The Field West of Amherst~Rainbow Street~24~66~0.5|Stump=The Tree That Grew II~Victoria Road~28~70~1|Slime=The Tree That Grew II~Victoria Road~30~70~1|Pig=Thicket Around the Beach II~Victoria Road~18~48~1|Orange Mushroom=Mushroom Garden~Hidden Street~15~34~1.3|Ribbon Pig=L Forest I~Victoria Road~21~73~1|Dark Stump=West Domain of Perion~Victoria Road~21~65~1|Octopus=Damp Tree-Forest~Dungeon~19~46~0.8|Green Mushroom=West Rocky Mountain III~Victoria Road~32~67~0.9|Bubbling=Line 1 <Area 1>~Kerning City Subway~64~64~0.8|Axe Stump=The Forest North of Ellinia~Victoria Road~13~69~1|Blue Mushroom=The Blue Mushroom Forest~Hidden Street~16~32~1|Ghost Stump=Excavation Site I~Victoria Road~23~33~1.2|Stirge=Transfer Area~Kerning City Subway~38~38~0.7|Mano=Thicket Around the Beach III~Victoria Road~1~35~1.5|Jr. Necki=Dangerous Croko I~Warning Street~27~54~1|Horny Mushroom=Ant Tunnel IV~Dungeon~41~64~0.6|Dark Axe Stump=East Rocky Mountain V~Victoria Road~25~51~1.2|Wooden Mask=Excavation Site II~Victoria Road~30~53~0.8|Zombie Mushroom=Ant Tunnel III~Dungeon~61~99~0.6|Rocky Mask=Excavation Site III~Victoria Road~17~25~1.2|Wild Boar=The Land of Wild Boar II~Hidden Street~23~33~1|Evil Eye=The Cave of Evil Eye III~Dungeon~38~40~1.1|Iron Hog=Pig Park II~Hidden Street~22~22~0.7|Fairy=Lingering Regret~Deep Passage~5~42~0.5|Ligator=The Swamp of Despair I~Warning Street~41~63~1|Fire Boar=The Burnt Land V~Warning Street~26~48~0.9|Curse Eye=Sleepy Dungeon V~Dungeon~23~88~0.4|Jr. Wraith=Line 2 <Area 1>~Kerning City Subway~83~97~0.9|Jr. Boogie 1=Sleepy Dungeon V~Dungeon~5~88~0.4|Jr. Boogie 2=Sleepy Dungeon V~Dungeon~5~88~0.4|Stumpy=Parched Land~Victoria Road~1~10~1|Lupin=Monkey Swamp I~Hidden Street~28~31~1|Lorang=A Look-Out Shed Around the Beach~Florina Road~36~63~1|Glowshroom=Hanging Gardens of Rot~Hidden Street~21~69~0.5|Cold Eye=The Tunnel That Lost Light I~Dungeon~32~52~0.8|Raffle=Forgotten Entrance II~Shallow Passage~14~32~0.8|Mushmom=Someone Else's House~Hidden Street~1~16~1.3|Zombie Lupin=Monkey Swamp III~Hidden Street~31~42~1|Golden Stirge=Primeval Forest II~Shallow Passage~6~19~1.1|Aqumander=Hanging Gardens of Rot~Hidden Street~29~69~0.5|Skeledog=Remains <Tomb> I~Victoria Road~16~23~1.1|Copper Drake=East Rocky Mountain VII~Victoria Road~22~57~0.8|Echopus=Lingering Regret~Deep Passage~16~42~0.5|Tortie=Hot Sand~Florina Road~25~38~1|Rafflesia=Hanging Gardens of Rot~Hidden Street~19~69~0.5|Mummydog=Remains <Tomb> III~Victoria Road~15~21~1.4|Wraith=Line 2 <Area 3>~Kerning City Subway~68~68~0.9|Shade=Cabin of the Forsaken~Hidden Street~1~1~1|Clang=Lorang and Clang~Florina Road~29~47~0.9|Drake=Drake's Meal Table~Dungeon~23~56~0.6|Duskmander=Forbidden Entrance~Shallow Passage~12~32~0.6|Croco=Dangerous Croko II~Warning Street~24~54~1|Myewood=Lingering Regret~Deep Passage~21~42~0.5|Malady=The Forest of Evil II~Hidden Street~23~39~1|Zombie Mushmom=The Grave of Mushmom~Dungeon~1~16~1|Stone Golem=Golem's Temple III~Victoria Road~10~23~1.3|Rotten Mushroom=Another Sanctuary~Deep Passage~15~27~0.9|Skeleton Soldier=Camp 1~Victoria Road~20~25~1|Dark Stone Golem=Sleepy Dungeon V~Dungeon~19~88~0.4|Sporewood=Dilapidated Tomb~Deep Passage~8~24~0.7|Red Drake=Dangerous Valley II~Hidden Street~17~30~1|Rotten Mushmom=Someone Else's Grave~Hidden Street~1~8~1|Wild Kargo=Wild Kargo's Area~Dungeon~14~31~1|Officer Skeleton=Camp 3~Victoria Road~14~20~1.1|Tauromacis=Sanctuary Entrance I~Dungeon~4~17~0.8|Commander Skeleton=Remains <Cliff>~Victoria Road~14~17~0.6|Taurospear=Sanctuary Entrance IV~Dungeon~5~12~0.8|Jr. Balrog=The Cursed Sanctuary~Dungeon~1~1~0.8".split("|").forEach(p => { const i = p.indexOf("="), [map, street, n, total, rate] = p.slice(i+1).split("~"); MOB_MAP[p.slice(0, i)] = {map, street, n:+n, total:+total, rate:+rate}; });
 function mobMap(e){ return MOB_MAP[e.name] || MOB_MAP[String(e.name).replace(/\s*\(.*\)$/, "")] || null; }
-/* the ideal way to train on a monster: map, solo/party size, spawns per person and which classes fit */
+/* the ideal way to train on a monster for YOUR class: map, solo/party size, spawns per person,
+   how well it suits your job/skill, and which classes make good party partners */
 function trainPlan(e){
   const m = mobMap(e); if (!m) return null;
   const boss = e.isBoss || m.n <= 1;
   const party = boss ? Math.min(6, Math.max(2, Math.ceil(e.hp / 20000))) : Math.max(1, Math.min(6, Math.round(m.n / 9)));
   const per = m.n / party;
-  const cls = [];
-  if (e.fire === 1) cls.push("F/P mage");
-  if (e.ice === 1) cls.push("I/L mage");
-  if (e.isUndead || (e.el && e.el.holy === 1)) cls.push("Cleric / Priest (Heal)");
-  if (e.avoid >= 25 && !cls.some(c => /mage|Cleric/.test(c))) cls.push("mages (spells don't miss)");
-  if ((e.mdef || 0) >= (e.pdef || 0) + 15) cls.push("physical classes (high M.DEF)");
-  if ((e.pdef || 0) >= (e.mdef || 0) + 15 && !cls.some(c => /mage/.test(c))) cls.push("mages (high P.DEF)");
-  if (!boss && m.n >= 20) cls.push("mobbers (Ranger/Sniper, F/P, I/L, Crusader)");
-  if (fire_resist(e)) cls.push("not F/P (resists fire)");
-  if (e.ice === -1) cls.push("not I/L (resists ice)");
-  return {m, party, per, boss, cls:[...new Set(cls)].slice(0, 3)};
+  const j = jobOf(), sk = RR.sk, magic = RR.type === "magic", el = sk.el;
+  const healer = /Cleric|Priest/.test(j.label), mobSkill = (RR.at && RR.at.mobs > 1) || /bolt|blizzard|explosion|arrow bomb|strafe|panic|crusher|avenger|savage|meteor|thunder|poison mist/i.test(sk.name || "");
+  // how it suits you
+  const pro = [], con = [];
+  if (el && e[el] === 1) pro.push(`weak to your ${el}`);
+  if (el && e[el] === -1) con.push(`resists your ${el}`);
+  if (healer && e.isUndead) pro.push("undead: your Heal hits it");
+  if (magic && e.avoid >= 25) pro.push("your spells don't miss");
+  if (!magic && e.raw < 1) con.push("you don't always hit it");
+  const myDef = magic ? (e.mdef || 0) : (e.pdef || 0), otherDef = magic ? (e.pdef || 0) : (e.mdef || 0);
+  if (myDef >= 25) con.push(`high ${magic ? "M" : "P"}.DEF`); else if (otherDef >= 25 && myDef < 10) pro.push(`low ${magic ? "M" : "P"}.DEF`);
+  if (!boss && m.n >= 20 && mobSkill) pro.push("many spawns for your mobbing skill");
+  const fit = con.length && !pro.length ? "poor" : pro.length > con.length ? "good" : "ok";
+  // good party partners (other classes)
+  const mates = [];
+  const mine = c => (c === "F/P mage" && /Fire\/Poison/.test(j.label)) || (c === "I/L mage" && /Ice\/Lightning/.test(j.label)) || (c === "Cleric / Priest" && healer)
+    || (c === "mages" && j.cls === "magician") || (c === "physical classes" && j.cls !== "magician");
+  if (e.fire === 1) mates.push("F/P mage");
+  if (e.ice === 1) mates.push("I/L mage");
+  if (e.isUndead || (e.el && e.el.holy === 1)) mates.push("Cleric / Priest");
+  if ((e.mdef || 0) >= (e.pdef || 0) + 15) mates.push("physical classes");
+  if ((e.pdef || 0) >= (e.mdef || 0) + 15 || e.avoid >= 25) mates.push("mages");
+  if (!boss && m.n >= 20) mates.push("mobbers (Ranger/Sniper, Crusader)");
+  return {m, party, per, boss, fit, pro, con, me:j.label.replace(/ \(3rd\)| \(1st job\)/, ""), mates:[...new Set(mates.filter(c => !mine(c)))].slice(0, 3)};
 }
-function fire_resist(e){ return e.fire === -1; }
 
 
 /* Item icons from maplestory.io (GMS v83). MSCW item IDs (MeowDB) are mapped to the GMS ID of the item with the same name. MeowDB's CDN blocks use from other sites. */
@@ -2507,7 +2521,8 @@ function renderSummary(){
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         return `<span class="ttplan"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
-          <span>👥 ${t.boss ? `boss: party of ${t.party}` : t.party === 1 ? 'best solo' : `party of ${t.party}`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} per person</span>${t.cls.length ? `<span>⭐ ${t.cls.map(esc).join(' · ')}</span>` : ''}</span>`; })()}</span>
+          <span>👥 ${t.boss ? `boss: party of ${t.party}` : t.party === 1 ? 'best solo' : `party of ${t.party}`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} per person${t.party > 1 && t.mates.length ? ` · with ${t.mates.map(esc).join(', ')}` : ''}</span>
+          <span class="fit fit-${t.fit}">${t.fit === 'good' ? '✓' : t.fit === 'poor' ? '✕' : '•'} For you (${esc(t.me)}): ${[...t.pro.map(x => '+ ' + esc(x)), ...t.con.map(x => '− ' + esc(x))].join(' · ') || 'nothing special'}</span></span>`; })()}</span>
       <span class="ttstat"><b>${fmt(Math.round(e.exp / e.dmg.ko))}</b><small>EXP / hit</small></span>
       <span class="ttstat"><b>${e.dmg.ko}</b><small>hit${e.dmg.ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
