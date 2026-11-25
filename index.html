@@ -332,7 +332,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .tcond{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:6px;border:1px solid var(--line2)}.tcond.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}.tcond.warn{color:#f5a524;border-color:#f5a52466}.tcond.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
 .livebox{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:-4px 0 12px;font-size:12.5px}.livebox .btn{margin-left:auto}.livebox .btn#liveStart{margin-left:0}
 .livedot{width:9px;height:9px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px #e5484d33;animation:lvp 1.2s infinite}@keyframes lvp{50%{opacity:.35}}.livemsg{flex-basis:100%;color:var(--good);font-weight:600}
-.setwhy{font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:0 0 10px}.setwhy b{color:var(--text)}.setwhy b.ok{color:var(--good)}
+.setwhy{font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:0 0 10px}.setwhy b{color:var(--text)}.setwhy .sgoal{margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--line)}.setwhy b.ok{color:var(--good)}
 </style>
 </head>
 <body>
@@ -2261,6 +2261,12 @@ function setWhy(R){
   else if (bk === "none") focus = `you play ${B.l}, so it puts everything into ${main} and ${atk} and only picks gear you can wear without adding ${sec}`;
   else if (bk === "low") focus = `you play ${B.l}, so it goes for ${main} and ${atk} and only uses ${sec} where an item needs it`;
   else focus = `you play ${B ? B.l : "your build"}, so it goes for ${main} and ${atk}, using the ${sec} you keep for gear to wear the best items for Lv ${S.level}`;
+  // the build's goal and why this kind of set suits it
+  const M = main, SE = sec;
+  const goal = !G ? "" : (gk === "bandit" && bk === "str") ? `Goal of a STR bandit: the most damage per hit. Bandit damage comes from LUK, and STR-requirement daggers hit harder than DEX ones, so every point that isn't needed for a dagger goes into LUK; DEX gives a bandit almost nothing, so it's left out.`
+    : bk === "none" ? `Goal of ${B.l}: the highest possible damage. Every AP in ${M} raises your damage directly, while ${SE} only unlocks gear. The trade-off is that items with a ${SE} requirement only fit through ${SE} on other gear, so the set picks what you can actually wear.`
+    : bk === "low" ? `Goal of ${B.l}: more damage than a standard build, while still wearing the items that matter. ${SE} is only raised for specific gear, so more AP ends up in ${M}; the set uses ${SE} only where an item asks for it.`
+    : `Goal of ${B.l}: the most flexible build. Keeping ${SE} near your level − 10 lets you wear every ${CLASS_LABEL[S.char.cls] ? CLASS_LABEL[S.char.cls].toLowerCase() : ''} item as soon as you reach its level, so the set can simply take the strongest item for each slot and fill it with ${M} and ${atk}.`;
   // biggest single gains
   const gains = [];
   for (const [slot, label] of SLOTS){ const p = R.pick[slot]; if (!p || p.keep) continue;
@@ -2268,7 +2274,7 @@ function setWhy(R){
   gains.sort((a, b) => b[1] - a[1]);
   const pct = R.withScrolls.pct, d = deltaLine(R.withScrolls.d);
   const koTxt = R.withScrolls.ko && R.base.ko && R.withScrolls.ko !== R.base.ko ? ` · ${esc(R.mob.name)} goes from <b>${R.base.ko}</b> to <b>${R.withScrolls.ko}</b> hit${R.withScrolls.ko > 1 ? 's' : ''} to kill` : '';
-  return `<div class="setwhy"><b>Why this set:</b> ${focus}.
+  return `<div class="setwhy">${goal ? `<div class="sgoal"><b>🧭 Build goal:</b> ${goal}</div>` : ''}<b>Why this set:</b> ${focus}.
     ${pct > 0.0005 ? `Compared to what you wear it adds ${d || 'stats'} → <b class="ok">+${(pct*100).toFixed(1)}% damage</b>${koTxt}.` : `Your current gear is already the best for this build — nothing here beats it.`}
     ${gains.length ? `Biggest gains: ${gains.slice(0, 3).map(([l, g, n]) => `${esc(n)} (${l.toLowerCase()}, +${(g*100).toFixed(1)}%)`).join(', ')}.` : ''}</div>`;
 }
