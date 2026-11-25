@@ -1731,9 +1731,11 @@ function guessName(g, v){
   if (!keys.some(k => rd(k))) return "";
   let best = null, bs = Infinity, tie = false;
   ITEMS.filter(it => it.sub === g.sub).forEach(it => {
-    if (!keys.every(k => (it.st[k] || 0) <= rd(k) + 0.1)) return;
-    let sc = 0; keys.forEach(k => { const d = rd(k) - (it.st[k] || 0); sc += (k === "wdef" || k === "mdef") ? d * 0.3 : d; });
-    if (["wdef","mdef"].some(k => rd(k) && !(it.st[k]))) sc += 50;
+    const hasDef = it.st.wdef || it.st.mdef, ks = hasDef ? keys : keys.filter(k => k !== "wdef" && k !== "mdef");   // no defense data for this item: compare the other stats only
+    if (!ks.every(k => (it.st[k] || 0) <= rd(k) + 0.1)) return;
+    let sc = hasDef ? 0 : 3; ks.forEach(k => { const d = rd(k) - (it.st[k] || 0); sc += (k === "wdef" || k === "mdef") ? d * 0.3 : d; });
+    if (hasDef && ["wdef","mdef"].some(k => rd(k) && !(it.st[k]))) sc += 50;
+    if (it.lv > S.level) sc += 30;
     if (sc < bs - 0.01){ bs = sc; best = it; tie = false; } else if (Math.abs(sc - bs) <= 0.01) tie = true;
   });
   return best && !tie && bs <= 25 ? best.name : "";
@@ -1822,7 +1824,7 @@ function readTipCanvas(c, forceSlot, res, live){
 
 /* ---------- live screen share: find the item tooltip on the shared Maple window ---------- */
 const LIVE = {stream:null, video:null, timer:null, last:"", busy:false, n:0, msg:""};
-const isTipBg = (r, g, b) => b >= 35 && b <= 175 && b - r >= 12 && b - g >= 10 && r < 120 && g < 120;
+const isTipBg = (r, g, b) => { const mx = Math.max(r, g, b), l = 0.3*r + 0.59*g + 0.11*b; return mx <= 150 && l < 95 && b >= r - 4 && b >= g - 12 && b >= 28; };   // dark, bluish/neutral (the tooltip is semi-transparent navy)
 function findTooltip(c){
   const W = c.width, H = c.height, s = 4, gw = Math.floor(W / s), gh = Math.floor(H / s);
   const px = c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
@@ -1840,17 +1842,17 @@ function findTooltip(c){
       for (const q of [p-1, p+1, p-gw, p+gw]) if (q >= 0 && q < gw*gh && d[q] && !seen[q] && !(q === p-1 && x === 0) && !(q === p+1 && x === gw-1)){ seen[q] = 1; st.push(q); } }
     const bw = (bx-ax+1) * s, bh = (by-ay+1) * s;
     if (bw < 150 || bh < 120 || bw > 900 || bh > 1100) continue;
-    if (n < (bx-ax+1)*(by-ay+1) * 0.7 || raw < n * 0.3) continue;   // must be a filled navy box
+    if (n < (bx-ax+1)*(by-ay+1) * 0.5 || raw < n * 0.3) continue;   // must be a filled navy box
     if (!best || n > best.n) best = {x:rx0*s, y:ry0*s, w:(rx1-rx0+1)*s, h:(ry1-ry0+1)*s, n};   // box of the navy cells themselves (not the gap-filled area)
   }
   if (!best) return null;
   // trim edges at full resolution: drop rows / columns that are mostly not tooltip background
   const frac = (x0, y0, x1, y1) => { let k = 0, t = 0; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++){ const o = (y*W + x)*4; t++; if (isTipBg(px[o], px[o+1], px[o+2])) k++; } return t ? k / t : 0; };
   let {x, y, w, h} = best, x1 = Math.min(W-1, x + w - 1), y1 = Math.min(H-1, y + h - 1);
-  while (x1 - x > 100 && frac(x, y, x, y1) < 0.25) x++;
-  while (x1 - x > 100 && frac(x1, y, x1, y1) < 0.25) x1--;
-  while (y1 - y > 80 && frac(x, y, x1, y) < 0.25) y++;
-  while (y1 - y > 80 && frac(x, y1, x1, y1) < 0.25) y1--;
+  while (x1 - x > 100 && frac(x, y, x, y1) < 0.45) x++;
+  while (x1 - x > 100 && frac(x1, y, x1, y1) < 0.45) x1--;
+  while (y1 - y > 80 && frac(x, y, x1, y) < 0.45) y++;
+  while (y1 - y > 80 && frac(x, y1, x1, y1) < 0.45) y1--;
   return {x, y, w: x1 - x + 1, h: y1 - y + 1, n: best.n};
 }
 function liveTick(){
