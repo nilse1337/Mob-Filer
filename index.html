@@ -2411,8 +2411,26 @@ function goalValue(x, goal){
   if (goal === "accuracy"){ const a = (RR.sk.type === "magic" ? 0 : (d.acc || 0)) + accFromStats(d); return (a ? f(a) + ' ACC' : '') + (x.hit != null && x.hit < 0.999 ? ' · hit ' + (x.hit*100).toFixed(1) + '%' : ''); }
   return '';
 }
+/* the best possible set as if you were wearing it (scrolls applied) */
+function setAsGear(R){
+  const g = {};
+  for (const [slot] of SLOTS){
+    const p = R.pick[slot], v = R.loadScrolled[slot]; if (!p || !v) continue;
+    const sr = R.scrollRows[slot], scrolled = sr && sr.bestSc && sr.free > 0;
+    const cur = S.gear[slot];
+    g[slot] = {sub:v.sub, st:Object.assign({}, v.st), slots: scrolled ? 0 : (p.keep && cur ? (cur.slots || 0) : (p.it ? p.it.slots : 0)), name: p.keep && cur ? (cur.name || "") : (p.it ? p.it.name : (p.name || ""))};
+  }
+  return g;
+}
+function usefulOnSet(R){
+  const keep = S.gear;
+  try { S.gear = setAsGear(R); const R2 = computeSets(); return usefulList(R2); }
+  finally { S.gear = keep; }
+}
 function usefulColumn(R){
-  const L = usefulList(R), goal = S.usefulGoal || "damage";
+  const onSet = S.gearView === "set";
+  const L = onSet ? usefulOnSet(R) : usefulList(R), goal = S.usefulGoal || "damage";
+  if (!L.length && onSet) return `<div class="empty">Nothing beats the best possible set for this goal — try another goal or scroll % above.</div>`;
   if (!L.length) return `<div class="empty">${(S.usefulGrade === 0) ? "Without scrolls no item beats what you wear now. Pick a scroll % above to see what scrolling adds." : "Nothing found that adds damage right now."}</div>`;
   const max = Math.max(...L.map(x => x.g));
   return L.map((x, i) => {
@@ -2461,7 +2479,7 @@ function renderSets(){
   $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, R.base.ko, R.base.ko, "current");
   $("colSetHead").innerHTML = colHead("Best possible set", "best item per slot for your level and build, all slots free, with the scrolls you pick", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
   const ug = S.usefulGrade === undefined ? 60 : S.usefulGrade;
-  $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
+  $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">${S.gearView === "set" ? '<b style="color:var(--accent)">on top of the Best possible set</b> · ' : ''}single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
     <div class="ugrade"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
     <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div>
     <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${l}</button>`).join("")}</div></div></div></div>`;
