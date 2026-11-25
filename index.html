@@ -83,6 +83,7 @@ select,.txt{width:100%;height:40px;background:var(--panel2);border:1px solid var
 .ttcaret{font-size:10px;color:var(--accent);margin-left:4px;font-weight:700}.tile.open{border-color:var(--accent)}
 .tile .blbtn{position:absolute;top:8px;right:8px;width:22px;height:22px;font-size:11px}
 .toptrain{padding:12px 14px;margin-bottom:14px}.tthead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.toptrain.collapsed .tthead{margin-bottom:0}
+.kmode button{padding:4px 10px;font-size:12px}
 .ttfold{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:12px;padding:0}
 .ttlist{display:grid;gap:6px}.ttrow{display:grid;grid-template-columns:26px 1fr 90px 80px 80px 96px 24px;gap:10px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer}
 .ttrow:hover{border-color:var(--line2)}.ttrank{font:800 13px var(--mono);color:var(--accent);text-align:center}.ttname{font-weight:700;min-width:0}.ttname small{display:block;font-weight:500;color:var(--muted);font-size:11px}
@@ -2417,6 +2418,7 @@ function renderBlacklist(){
   const L = S.blacklist || [];
   el.innerHTML = L.length ? L.map(id => { const m = BYID.get(id); return `<button class="blchip" data-unbl="${esc(id)}" title="Show again">↺ ${esc(m ? m.name : id)}</button>`; }).join("") + (L.length > 1 ? `<button class="blchip" data-unbl-all="1">Show all again</button>` : '') : '<span class="note">None hidden.</span>';
 }
+document.addEventListener("click", ev => { const k = ev.target.closest("[data-kmode]"); if (k){ ev.stopPropagation(); S.koMode = k.dataset.kmode; renderAll(); } }, true);
 document.addEventListener("click", ev => { if (ev.target.closest("[data-ttfold]") && !ev.target.closest("[data-bl]")){ ev.stopPropagation(); S.topCollapsed = S.topCollapsed === false ? true : false; renderAll(); } }, true);
 document.addEventListener("click", ev => { if (ev.target.closest("[data-unbl-all]")){ S.blacklist = []; renderAll(); renderBlacklist(); } });
 function passFilters(e){
@@ -2504,8 +2506,12 @@ function renderSummary(){
   const sk = RR.sk;
   // best training target: weak to skill (or any) at 100% hit, fewest hits, highest exp per hit
   const bl = new Set(S.blacklist || []);
-  const pool = all.filter(e => !bl.has(e.id) && (e.raw >= 1 || RR.type === "magic") && Number.isFinite(e.dmg.ko) && Math.abs(e.level - S.level) <= 15);
-  pool.sort((a,b) => (b.exp / b.dmg.ko) - (a.exp / a.dmg.ko));
+  // hits to kill from the low end, the average or the high end of your damage range (stat window range for physical classes)
+  const km = S.koMode || "low";
+  const kof = e => km === "low" ? e.dmg.worst : km === "high" ? (e.dmg.hi > 0 ? Math.ceil(e.hp / (e.dmg.hi * RR.at.hits)) : Infinity) : e.dmg.ko;
+  const pool = all.filter(e => !bl.has(e.id) && (e.raw >= 1 || RR.type === "magic") && Number.isFinite(kof(e)) && Math.abs(e.level - S.level) <= 15);
+  pool.forEach(e => e._ko = kof(e));
+  pool.sort((a,b) => (b.exp / b._ko) - (a.exp / a._ko) || b.exp - a.exp);
   const train = pool[0];
   const weakPool = all.filter(e => e.myWeak && (e.raw >= 1 || RR.type === "magic")).sort((a,b) => b.level - a.level);
   const weakBest = weakPool[0];
@@ -2514,20 +2520,22 @@ function renderSummary(){
   $("summary").innerHTML = `
     <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length}</div><div class="s">monsters · click to filter</div></div>
     <div class="panel tile" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span><div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
-    <div class="panel tile ${S.topCollapsed === false ? 'open' : ''}" data-ttfold="1" title="Click to ${S.topCollapsed === false ? 'hide' : 'show'} the top 5"><span class="lbl">Best EXP per hit (±15 Lv) <span class="ttcaret">${S.topCollapsed === false ? '▴' : '▾'} top 5</span></span>${train ? `<button class="blbtn" data-bl="${esc(train.id)}" title="Don't suggest ${esc(train.name)} any more (undo in Settings)">✕</button>` : ''}<div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train.dmg.ko} hit${train.dmg.ko>1?'s':''} to kill · ${fmt(train.exp)} EXP`:'Set your stats first'}</div></div>
+    <div class="panel tile ${S.topCollapsed === false ? 'open' : ''}" data-ttfold="1" title="Click to ${S.topCollapsed === false ? 'hide' : 'show'} the top 5"><span class="lbl">Best EXP per hit (±15 Lv) <span class="ttcaret">${S.topCollapsed === false ? '▴' : '▾'} top 5</span></span>${train ? `<button class="blbtn" data-bl="${esc(train.id)}" title="Don't suggest ${esc(train.name)} any more (undo in Settings)">✕</button>` : ''}<div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${fmt(train.exp)} EXP`:'Set your stats first'}</div></div>
     <div class="panel tile ${sk.el==='ice'?'ice':'fire'}" ${sk.el?`data-quick="mine"`:`data-quick="any"`}><span class="lbl">${weakLbl}</span><div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} · click to filter` : 'pick a fire/ice skill to compare'}</div></div>`;
   const top = pool.slice(0, 5);
   const tc = S.topCollapsed !== false;   // closed by default; opens from the "Best EXP per hit" tile
   $("topTrain").style.display = tc ? "none" : "";
-  $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 Best EXP per hit</b><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
+  $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 Best EXP per hit</b>
+    <div class="seg kmode" title="Which part of your damage range to use for hits to kill">${[["low","Low end"],["avg","Average"],["high","High end"]].map(([k,l]) => `<button data-kmode="${k}" class="${km===k?'on':''}">${l}</button>`).join("")}</div>
+    <span class="note">${RR.type === "magic" ? `spell ${fmt(RR.min)}–${fmt(RR.max)}` : `range ${fmt(RR.min)}–${fmt(RR.max)} (stat window ${S.char.atkMin}–${S.char.atkMax})`}</span><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         return `<span class="ttplan"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
           <span>👥 ${t.boss ? `boss: party of ${t.party}` : t.party === 1 ? 'best solo' : `party of ${t.party}`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} per person</span>
           ${t.pro.length || t.con.length ? `<span>${[...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)].join(' · ')}</span>` : ''}
           ${t.mates.length ? `<span>🤝 party: ${t.mates.map(([c, w]) => `<b>${esc(c)}</b> <i>(${esc(w)})</i>`).join(', ')}</span>` : ''}</span>`; })()}</span>
-      <span class="ttstat"><b>${fmt(Math.round(e.exp / e.dmg.ko))}</b><small>EXP / hit</small></span>
-      <span class="ttstat"><b>${e.dmg.ko}</b><small>hit${e.dmg.ko > 1 ? 's' : ''} to kill</small></span>
+      <span class="ttstat"><b>${fmt(Math.round(e.exp / e._ko))}</b><small>EXP / hit</small></span>
+      <span class="ttstat" title="low ${e.dmg.worst} · avg ${e.dmg.ko} · high ${e.dmg.hi > 0 ? Math.ceil(e.hp / (e.dmg.hi * RR.at.hits)) : '∞'}"><b>${e._ko}</b><small>hit${e._ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
       <span class="ttstat" title="Damage after this monster's ${RR.type === 'magic' ? 'magic' : 'physical'} defense"><b>${RR.type === 'magic' ? 'M' : 'P'}.DEF ${e.dmg.def || 0}</b><small>${e.dmg.def ? '−' + Math.round((1 - e.dmg.defF) * 100) + '% dmg' : 'no defense'}</small></span>
       <button class="blbtn" data-bl="${esc(e.id)}" title="Don't suggest ${esc(e.name)} any more (undo in Settings)">✕</button></div>`).join("")}</div>`
