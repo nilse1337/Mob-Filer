@@ -1365,7 +1365,7 @@ function trainPlan(e){
   const mates = [];   // [class, why]
   if (e.fire === 1) mates.push(["F/P mage", "weak to fire"]);
   if (e.ice === 1) mates.push(["I/L mage", "weak to ice"]);
-  if (e.isUndead) mates.push(["Cleric / Priest", ""]); else if (e.el && e.el.holy === 1) mates.push(["Cleric / Priest", "weak to holy"]);
+  if (e.isUndead) mates.push(["Cleric / Priest", "undead"]); else if (e.el && e.el.holy === 1) mates.push(["Cleric / Priest", "weak to holy"]);
   if ((e.mdef || 0) >= (e.pdef || 0) + 15) mates.push(["physical classes", `M.DEF ${e.mdef} vs P.DEF ${e.pdef || 0}`]);
   if ((e.pdef || 0) >= (e.mdef || 0) + 15) mates.push(["mages", `P.DEF ${e.pdef} vs M.DEF ${e.mdef || 0}`]);
   else if (e.avoid >= 25) mates.push(["mages", `avoid ${e.avoid}: spells don't miss`]);
