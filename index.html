@@ -330,6 +330,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .ttplan{display:flex!important;flex-direction:column;gap:2px!important;margin-top:3px!important}.tpl{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:center}
 .ttag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;border:1px solid var(--line2);color:var(--text);margin-left:4px;vertical-align:1px}
 .tcond{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:6px;border:1px solid var(--line2)}.tcond.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}.tcond.warn{color:#f5a524;border-color:#f5a52466}.tcond.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.livebox{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:-4px 0 12px;font-size:12.5px}.livebox .btn{margin-left:auto}.livebox .btn#liveStart{margin-left:0}
+.livedot{width:9px;height:9px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px #e5484d33;animation:lvp 1.2s infinite}@keyframes lvp{50%{opacity:.35}}.livemsg{flex-basis:100%;color:var(--good);font-weight:600}
 </style>
 </head>
 <body>
@@ -434,6 +436,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
     <div id="charCard"></div>
     <div class="gtool">
       <label class="gpaste small" id="gearDrop"><b>📋 Paste item tooltip (Ctrl+V)</b> · or drop / click<input type="file" id="gearFile" accept="image/*" multiple hidden></label>
+      <div class="livebox" id="liveBox"></div>
     </div>
     <div id="gearMsg"></div>
   </section>
@@ -1684,7 +1687,8 @@ function equipWindow(){
 function renderGear(){
   $("charCard").innerHTML = charCard() + buildCard();
   fillMissingIcons();
-  try { renderSets(); } catch(e){ console.error(e); }
+  renderLive();
+  try { renderSets(); } catch(e){ console.error(e); const m = `<div class="note" style="color:var(--bad);padding:10px">Something went wrong here: ${esc(String(e && e.message || e))}. Please send a screenshot of this message.</div>`; if ($("setList")) $("setList").innerHTML = m; if ($("scrollList")) $("scrollList").innerHTML = m; }
   try { renderKillGoals(); } catch(e){ console.error(e); }
   if (!S.gearSel || (S.gearSel !== "stars" && !S.gear[S.gearSel] && S.gearEdit !== S.gearSel && !EQUIP_LAYOUT.some(e => e[0] === S.gearSel))){
     const first = SLOTS.find(([k]) => S.gear[k]); S.gearSel = first ? first[0] : "weapon";
@@ -1773,8 +1777,21 @@ function readTipFile(file, forceSlot){
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = () => {
       const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
-      const x = c.getContext("2d", {willReadFrequently:true}); x.drawImage(img, 0, 0); URL.revokeObjectURL(url);
+      c.getContext("2d", {willReadFrequently:true}).drawImage(img, 0, 0); URL.revokeObjectURL(url);
+      readTipCanvas(c, forceSlot, res);
+    };
+    img.onerror = () => res({ok:false});
+    img.src = url;
+  });
+}
+function readTipCanvas(c, forceSlot, res, live){
+      const x = c.getContext("2d", {willReadFrequently:true});
       let r = tipBest(c), cc = r.canvas || c;
+      if (live){   // screen share: only take clear equipment tooltips
+        const g = r.values.type ? gearFromTip(r) : null;
+        if (!g){ res({ok:false}); return; }
+        const slot = placeGear(g, null); IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); return;
+      }
       // stars slot selected: a throwing-star tooltip → match the stars by their W.ATK
       const starSel = (forceSlot || S.gearSel) === "stars";
       if (typeof STARS !== "undefined" && (starSel || (!r.values.type && usesStars()))){
@@ -1801,11 +1818,88 @@ function readTipFile(file, forceSlot){
         let sv = null; try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){}
         res({ok:false, stat: sv && sv.values && sv.values.level ? true : false});
       }
-    };
-    img.onerror = () => res({ok:false});
-    img.src = url;
-  });
 }
+
+/* ---------- live screen share: find the item tooltip on the shared Maple window ---------- */
+const LIVE = {stream:null, video:null, timer:null, last:"", busy:false, n:0, msg:""};
+const isTipBg = (r, g, b) => b >= 35 && b <= 175 && b - r >= 12 && b - g >= 10 && r < 120 && g < 120;
+function findTooltip(c){
+  const W = c.width, H = c.height, s = 4, gw = Math.floor(W / s), gh = Math.floor(H / s);
+  const px = c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
+  const m = new Uint8Array(gw * gh);
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++){ const o = ((y*s+2) * W + (x*s+2)) * 4; if (isTipBg(px[o], px[o+1], px[o+2])) m[y*gw+x] = 1; }
+  // close small gaps (text, icons) so the tooltip is one block
+  const d = new Uint8Array(gw * gh);
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++){ let k = 0; for (let dy = -1; dy <= 1 && !k; dy++) for (let dx = -1; dx <= 1; dx++){ const yy = y+dy, xx = x+dx; if (yy >= 0 && yy < gh && xx >= 0 && xx < gw && m[yy*gw+xx]){ k = 1; break; } } d[y*gw+x] = k; }
+  const seen = new Uint8Array(gw * gh); let best = null;
+  for (let i = 0; i < gw*gh; i++){
+    if (!d[i] || seen[i]) continue;
+    const st = [i]; seen[i] = 1; let ax = gw, ay = gh, bx = 0, by = 0, n = 0, raw = 0, rx0 = gw, ry0 = gh, rx1 = 0, ry1 = 0;
+    while (st.length){ const p = st.pop(), x = p % gw, y = (p / gw) | 0; n++; raw += m[p]; if (x<ax) ax=x; if (x>bx) bx=x; if (y<ay) ay=y; if (y>by) by=y;
+      if (m[p]){ if (x<rx0) rx0=x; if (x>rx1) rx1=x; if (y<ry0) ry0=y; if (y>ry1) ry1=y; }
+      for (const q of [p-1, p+1, p-gw, p+gw]) if (q >= 0 && q < gw*gh && d[q] && !seen[q] && !(q === p-1 && x === 0) && !(q === p+1 && x === gw-1)){ seen[q] = 1; st.push(q); } }
+    const bw = (bx-ax+1) * s, bh = (by-ay+1) * s;
+    if (bw < 150 || bh < 120 || bw > 900 || bh > 1100) continue;
+    if (n < (bx-ax+1)*(by-ay+1) * 0.7 || raw < n * 0.3) continue;   // must be a filled navy box
+    if (!best || n > best.n) best = {x:rx0*s, y:ry0*s, w:(rx1-rx0+1)*s, h:(ry1-ry0+1)*s, n};   // box of the navy cells themselves (not the gap-filled area)
+  }
+  if (!best) return null;
+  // trim edges at full resolution: drop rows / columns that are mostly not tooltip background
+  const frac = (x0, y0, x1, y1) => { let k = 0, t = 0; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++){ const o = (y*W + x)*4; t++; if (isTipBg(px[o], px[o+1], px[o+2])) k++; } return t ? k / t : 0; };
+  let {x, y, w, h} = best, x1 = Math.min(W-1, x + w - 1), y1 = Math.min(H-1, y + h - 1);
+  while (x1 - x > 100 && frac(x, y, x, y1) < 0.25) x++;
+  while (x1 - x > 100 && frac(x1, y, x1, y1) < 0.25) x1--;
+  while (y1 - y > 80 && frac(x, y, x1, y) < 0.25) y++;
+  while (y1 - y > 80 && frac(x, y1, x1, y1) < 0.25) y1--;
+  return {x, y, w: x1 - x + 1, h: y1 - y + 1, n: best.n};
+}
+function liveTick(){
+  if (!LIVE.video || LIVE.busy || LIVE.video.readyState < 2) return;
+  const v = LIVE.video, W = v.videoWidth, H = v.videoHeight; if (!W || !H) return;
+  LIVE.busy = true;
+  try {
+    const f = document.createElement("canvas"); f.width = W; f.height = H; f.getContext("2d", {willReadFrequently:true}).drawImage(v, 0, 0);
+    const b = findTooltip(f);
+    if (!b){ LIVE.busy = false; return; }
+    const pad = 2, x0 = Math.max(0, b.x - pad), y0 = Math.max(0, b.y - pad), w = Math.min(W - x0, b.w + pad*2), h = Math.min(H - y0, b.h + pad*2);
+    const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d", {willReadFrequently:true}).drawImage(f, x0, y0, w, h, 0, 0, w, h);
+    // same tooltip as last time? skip
+    const sm = document.createElement("canvas"); sm.width = 24; sm.height = 24; const sx = sm.getContext("2d", {willReadFrequently:true}); sx.drawImage(c, 0, 0, 24, 24);
+    const sig = Array.from(sx.getImageData(0, 0, 24, 24).data.filter((_, i) => i % 4 === 1), v => v >> 5).join("");
+    if (sig === LIVE.last){ LIVE.busy = false; return; }
+    LIVE.last = sig;
+    readTipCanvas(c, null, r => {
+      LIVE.busy = false;
+      if (!r.ok) return;
+      LIVE.n++; const g = S.gear[r.slot];
+      LIVE.msg = `✓ ${SLOTS.find(s => s[0] === r.slot)[1]}${g.name ? ' — ' + g.name : ''}: ${statLine(g.st) || 'no attack stats'}`;
+      S.gearEdit = null; renderAll();
+    }, true);
+  } catch(e){ console.error(e); LIVE.busy = false; }
+}
+async function liveStart(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){ alert("Your browser can't share a screen here. Use Chrome or Edge on a computer."); return; }
+  try {
+    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:5}, audio:false});
+    LIVE.stream = st; LIVE.video = document.createElement("video"); LIVE.video.muted = true; LIVE.video.playsInline = true; LIVE.video.srcObject = st; await LIVE.video.play();
+    LIVE.last = ""; LIVE.n = 0; LIVE.msg = "";
+    st.getVideoTracks()[0].addEventListener("ended", liveStop);
+    LIVE.timer = setInterval(liveTick, 600);
+  } catch(e){ LIVE.stream = null; }
+  renderLive();
+}
+function liveStop(){
+  clearInterval(LIVE.timer); LIVE.timer = null;
+  if (LIVE.stream) LIVE.stream.getTracks().forEach(t => t.stop());
+  LIVE.stream = null; LIVE.video = null; renderLive();
+}
+function renderLive(){
+  const el = $("liveBox"); if (!el) return;
+  el.innerHTML = LIVE.stream
+    ? `<span class="livedot"></span><b>Sharing your screen</b> · hover your items in MapleStory one by one — each tooltip is read automatically${LIVE.n ? ` · ${LIVE.n} read` : ''}${LIVE.msg ? `<div class="livemsg">${esc(LIVE.msg)}</div>` : ''}<button class="btn small" id="liveStop">Stop sharing</button>`
+    : `<button class="btn small" id="liveStart">🖥 Share Maple screen</button><span class="note">pick your MapleStory window, then hover each item — no screenshots needed</span>`;
+}
+document.addEventListener("click", ev => { if (ev.target.closest("#liveStart")) liveStart(); else if (ev.target.closest("#liveStop")) liveStop(); });
 async function handleGearFiles(files, forceSlot){
   const msgs = [];
   for (const f of files){
@@ -2403,7 +2497,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 
 const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],["fly","🪽 Flying", e => e.isFly],
