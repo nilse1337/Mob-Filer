@@ -327,6 +327,10 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .eqslots{position:absolute;right:2px;bottom:1px;font:800 10px var(--mono);color:#0f8a5f;background:rgba(255,255,255,.85);border-radius:4px;padding:0 3px}
 .eqdetail .gcard{min-height:0}
 .kmlbl{font-size:12px;color:var(--muted,#9aa4b2);margin-right:2px;white-space:nowrap}
+.ttplan{display:grid!important;grid-template-columns:auto 1fr;gap:3px 10px;margin-top:6px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.tpk{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding-top:2px;white-space:nowrap}.tpv{min-width:0;display:flex;flex-wrap:wrap;gap:3px 8px;align-items:center}
+.ttag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;border:1px solid var(--line2);color:var(--text);margin-left:4px;vertical-align:1px}
+.tcond{font-size:11px;font-weight:600;padding:1px 7px;border-radius:6px;border:1px solid var(--line2)}.tcond.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}.tcond.warn{color:#f5a524;border-color:#f5a52466}.tcond.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
 </style>
 </head>
 <body>
@@ -1036,6 +1040,8 @@ const RAW = [
 ["m700001", "Jr. Balrog", 80, 49, "Victoria Island", 1, "Hp!", 325400, 15, 15, 2188]
 ];
 
+/* monsters that fly (MeowDB "fly" pose) */
+const FLYING_MOBS = new Set(["stirge","golden stirge","malady","flyeye"]);
 const ELEMENTS = ["fire","ice","lightning","holy","poison"];
 function parseEl(code){
   const out = {fire:0, ice:0, lightning:0, holy:0, poison:0}; code = code || "";
@@ -1220,7 +1226,7 @@ function monsters(){
     const el = parseEl(code);
     const fire = ov && ov.fire !== undefined ? ov.fire : el.fire, ice = ov && ov.ice !== undefined ? ov.ice : el.ice;
     return {
-      id, name, region, isBoss:!!(flags&1), isUndead:!!(flags&2), isPQ:!!(flags&4), isCustom:false,
+      id, name, region, isBoss:!!(flags&1), isUndead:!!(flags&2), isPQ:!!(flags&4), isFly:FLYING_MOBS.has(String(name).replace(/\s*\(.*\)\s*$/,"").trim().toLowerCase()), isCustom:false,
       def:{level, avoid, fire:el.fire, ice:el.ice, hp, pdef, mdef},
       level: ov ? clamp(ov.level,1,200,level) : level,
       avoid: ov ? clamp(ov.avoid,0,999,avoid) : avoid,
@@ -1366,7 +1372,17 @@ function trainPlan(e){
   else if (e.avoid >= 25) mates.push(["mages", `avoid ${e.avoid}: spells don't miss`]);
   if (!boss && m.n >= 20) mates.push(["mobbers (Ranger/Sniper, Crusader)", `${m.n} spawns to hit at once`]);
   const seen = new Set(), mateList = mates.filter(([c]) => !mine(c) && !seen.has(c) && seen.add(c)).slice(0, 3);
-  return {m, party, per, boss, fit, pro, con, me:j.label.replace(/ \(3rd\)| \(1st job\)/, ""), mates:mateList};
+  // conditions to train here
+  const cond = [];   // [level ok|warn|bad, text]
+  const isWar = j.cls === "warrior", isBandit = /BANDIT/.test(j.sub || "");
+  if (e.isFly) cond.push(isWar ? ["bad", "🪽 Flying — not doable for warriors (too little speed & jump)"]
+    : isBandit ? ["warn", "🪽 Flying — only with max Haste"]
+    : ["ok", `🪽 Flying — fine for ${magic ? "spells" : "ranged attacks"}`]);
+  if (boss) cond.push(["warn", `👑 Boss — party of ${party} + potions`]);
+  if (e.isUndead && healer) cond.push(["ok", "💀 Undead — your Heal damages it"]);
+  if (el && e[el] === -1) cond.push(["warn", `resists ${el} — use a non-${el} skill`]);
+  if (!cond.length) cond.push(["ok", "✓ No special conditions"]);
+  return {m, party, per, boss, fit, pro, con, cond, me:j.label.replace(/ \(3rd\)| \(1st job\)/, ""), mates:mateList};
 }
 
 
@@ -2373,7 +2389,7 @@ document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.s
 window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 
-const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],
+const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],["fly","🪽 Flying", e => e.isFly],
   ["fh","🌲 Forgotten Hollow", e => e.region === "Forgotten Hollow"],["fw","🔥 Weak to fire", e => e.fire === 1],["iw","❄ Weak to ice", e => e.ice === 1],["hw","✨ Weak to holy", e => e.el && e.el.holy === 1],
   ["fs","🔥 Resists fire", e => e.fire === -1],["is","❄ Resists ice", e => e.ice === -1],["miss","❌ Can't hit 100%", e => e.raw < 1],["hidden","✕ Hidden by you", e => (S.blacklist || []).includes(e.id)]];
 const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["any","🔥/❄ Weak to either"],["hw","✨ Weak to holy"],["undead","💀 Undead"],["fs","Resists fire"],["is","Resists ice"]];
@@ -2513,7 +2529,8 @@ function renderSummary(){
   // hidden monsters stay out by name too, so an "(alt)" copy of the same monster doesn't take its place
   const baseName = n => String(n).replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
   const blNames = new Set(all.filter(e => bl.has(e.id)).map(e => baseName(e.name)));
-  let pool = all.filter(e => !bl.has(e.id) && !blNames.has(baseName(e.name)) && (e.raw >= 1 || RR.type === "magic") && Number.isFinite(kof(e)) && Math.abs(e.level - S.level) <= 15);
+  const noFly = jobOf().cls === "warrior";
+  let pool = all.filter(e => !(noFly && e.isFly) && !bl.has(e.id) && !blNames.has(baseName(e.name)) && (e.raw >= 1 || RR.type === "magic") && Number.isFinite(kof(e)) && Math.abs(e.level - S.level) <= 15);
   pool.forEach(e => e._ko = kof(e));
   pool.sort((a,b) => (b.exp / b._ko) - (a.exp / a._ko) || b.exp - a.exp);
   { const seen = new Set(); pool = pool.filter(e => { const k = baseName(e.name); if (seen.has(k)) return false; seen.add(k); return true; }); }   // one row per monster
@@ -2532,13 +2549,16 @@ function renderSummary(){
   $("topTrain").style.display = tc ? "none" : "";
   $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 Best EXP per hit</b>
     <span class="kmlbl">Damage range:</span><div class="seg kmode" title="Which part of your damage range to use for hits to kill">${[["low","Lowest hit"],["avg","Average hit"],["high","Highest hit"]].map(([k,l]) => `<button data-kmode="${k}" class="${km===k?'on':''}">${l}</button>`).join("")}</div>
-    <span class="note">${RR.type === "magic" ? `your spell damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit` : `your damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit (stat window ${S.char.atkMin}–${S.char.atkMax})`}</span><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
+    <span class="note">${RR.type === "magic" ? `your spell damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit` : `your damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit (stat window ${S.char.atkMin}–${S.char.atkMax})`}</span><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level${noFly ? ' · flying monsters skipped (warriors can\'t reach them)' : ''} · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
-      <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
-        return `<span class="ttplan"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
-          <span>👥 ${t.boss ? `boss: party of ${t.party}` : t.party === 1 ? 'best solo' : `party of ${t.party}`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} per person</span>
-          ${t.pro.length || t.con.length ? `<span>${[...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)].join(' · ')}</span>` : ''}
-          ${t.mates.length ? `<span>🤝 party: ${t.mates.map(([c, w]) => `<b>${esc(c)}</b> <i>(${esc(w)})</i>`).join(', ')}</span>` : ''}</span>`; })()}</span>
+      <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
+        const row = (k, v) => v ? `<span class="tpk">${k}</span><span class="tpv">${v}</span>` : '';
+        return `<span class="ttplan">
+          ${row('Map', `<span title="Map with the most ${esc(e.name)} (MeowDB)"><b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>`)}
+          ${row('Party', `<span>${t.boss ? `boss: party of <b>${t.party}</b>` : t.party === 1 ? '<b>solo</b>' : `party of <b>${t.party}</b>`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} mobs per person</span>`)}
+          ${row('Conditions', t.cond.map(([l, x]) => `<span class="tcond ${l}">${esc(x)}</span>`).join(''))}
+          ${row('Pros / cons', [...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)].join(' · '))}
+          ${row('Bring', t.mates.map(([c, w]) => `<b>${esc(c)}</b> <i>(${esc(w)})</i>`).join(', '))}</span>`; })()}</span>
       <span class="ttstat"><b>${fmt(Math.round(e.exp / e._ko))}</b><small>EXP / hit</small></span>
       <span class="ttstat" title="low ${e.dmg.worst} · avg ${e.dmg.ko} · high ${e.dmg.hi > 0 ? Math.ceil(e.hp / (e.dmg.hi * RR.at.hits)) : '∞'}"><b>${e._ko}</b><small>hit${e._ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
