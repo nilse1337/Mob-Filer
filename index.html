@@ -1365,7 +1365,7 @@ function trainPlan(e){
   const mates = [];   // [class, why]
   if (e.fire === 1) mates.push(["F/P mage", "weak to fire"]);
   if (e.ice === 1) mates.push(["I/L mage", "weak to ice"]);
-  if (e.isUndead) mates.push(["Cleric / Priest", "undead: Heal damages it"]); else if (e.el && e.el.holy === 1) mates.push(["Cleric / Priest", "weak to holy"]);
+  if (e.isUndead) mates.push(["Cleric / Priest", ""]); else if (e.el && e.el.holy === 1) mates.push(["Cleric / Priest", "weak to holy"]);
   if ((e.mdef || 0) >= (e.pdef || 0) + 15) mates.push(["physical classes", `M.DEF ${e.mdef} vs P.DEF ${e.pdef || 0}`]);
   if ((e.pdef || 0) >= (e.mdef || 0) + 15) mates.push(["mages", `P.DEF ${e.pdef} vs M.DEF ${e.mdef || 0}`]);
   else if (e.avoid >= 25) mates.push(["mages", `avoid ${e.avoid}: spells don't miss`]);
@@ -2556,7 +2556,7 @@ function renderSummary(){
         return `<span class="ttplan"><span class="tpl"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n}×${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
           <span>👥 ${t.boss ? `boss: party of <b>${t.party}</b>` : t.party === 1 ? '<b>solo</b>' : `party of <b>${t.party}</b>`} · ≈${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)}/person</span>
           ${cond.length ? cond.map(([l, x]) => `<span class="tcond ${l}">${esc(x)}</span>`).join('') : ''}</span>
-          ${pc.length || t.mates.length ? `<span class="tpl">${pc.join(' ')}${t.mates.length ? `<span title="${esc(t.mates.map(([c, w]) => c + ': ' + w).join(' · '))}">🤝 ${t.mates.map(([c, w]) => `<b>${esc(c)}</b> <i>(${esc(w)})</i>`).join(', ')}</span>` : ''}</span>` : ''}</span>`; })()}</span>
+          ${pc.length || t.mates.length ? `<span class="tpl">${pc.join(' ')}${t.mates.length ? `<span title="${esc(t.mates.map(([c, w]) => w ? c + ': ' + w : c).join(' · '))}">🤝 ${t.mates.map(([c, w]) => `<b>${esc(c)}</b>${w ? ` <i>(${esc(w)})</i>` : ''}`).join(', ')}</span>` : ''}</span>` : ''}</span>`; })()}</span>
       <span class="ttstat"><b>${fmt(Math.round(e.exp / e._ko))}</b><small>EXP / hit</small></span>
       <span class="ttstat" title="low ${e.dmg.worst} · avg ${e.dmg.ko} · high ${e.dmg.hi > 0 ? Math.ceil(e.hp / (e.dmg.hi * RR.at.hits)) : '∞'}"><b>${e._ko}</b><small>hit${e._ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
