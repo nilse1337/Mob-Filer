@@ -84,7 +84,7 @@ select,.txt{width:100%;height:40px;background:var(--panel2);border:1px solid var
 .tile .blbtn{position:absolute;top:8px;right:8px;width:22px;height:22px;font-size:11px}
 .toptrain{padding:12px 14px;margin-bottom:14px}.tthead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.toptrain.collapsed .tthead{margin-bottom:0}
 .ttfold{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:12px;padding:0}
-.ttlist{display:grid;gap:6px}.ttrow{display:grid;grid-template-columns:26px 1fr 90px 80px 80px 24px;gap:10px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer}
+.ttlist{display:grid;gap:6px}.ttrow{display:grid;grid-template-columns:26px 1fr 90px 80px 80px 96px 24px;gap:10px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer}
 .ttrow:hover{border-color:var(--line2)}.ttrank{font:800 13px var(--mono);color:var(--accent);text-align:center}.ttname{font-weight:700;min-width:0}.ttname small{display:block;font-weight:500;color:var(--muted);font-size:11px}
 .ttstat{text-align:right;font-family:var(--mono)}.ttstat b{display:block;font-size:13px}.ttstat small{font-size:10px;color:var(--muted)}
 @media (max-width:700px){.ttrow{grid-template-columns:22px 1fr 80px 24px}.ttrow .ttstat:nth-of-type(n+4){display:none}}
@@ -2479,12 +2479,13 @@ function renderSummary(){
   const top = pool.slice(0, 5);
   const tc = S.topCollapsed !== false;   // closed by default; opens from the "Best EXP per hit" tile
   $("topTrain").style.display = tc ? "none" : "";
-  $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 Best EXP per hit</b><span class="note">monsters within 15 levels you hit every time${RR.type === "magic" ? '' : ''} · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
+  $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 Best EXP per hit</b><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small></span>
       <span class="ttstat"><b>${fmt(Math.round(e.exp / e.dmg.ko))}</b><small>EXP / hit</small></span>
       <span class="ttstat"><b>${e.dmg.ko}</b><small>hit${e.dmg.ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
+      <span class="ttstat" title="Damage after this monster's ${RR.type === 'magic' ? 'magic' : 'physical'} defense"><b>${RR.type === 'magic' ? 'M' : 'P'}.DEF ${e.dmg.def || 0}</b><small>${e.dmg.def ? '−' + Math.round((1 - e.dmg.defF) * 100) + '% dmg' : 'no defense'}</small></span>
       <button class="blbtn" data-bl="${esc(e.id)}" title="Don't suggest ${esc(e.name)} any more (undo in Settings)">✕</button></div>`).join("")}</div>`
     : `<div class="note">No monster within 15 levels that you can hit every time${bl.size ? ' (some are hidden — see Settings)' : ''}.</div>`}`;
 }
