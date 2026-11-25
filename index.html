@@ -85,7 +85,7 @@ select,.txt{width:100%;height:40px;background:var(--panel2);border:1px solid var
 .toptrain{padding:12px 14px;margin-bottom:14px}.tthead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.toptrain.collapsed .tthead{margin-bottom:0}
 .kmode button{padding:4px 10px;font-size:12px}
 .ttfold{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:12px;padding:0}
-.ttlist{display:grid;gap:6px}.ttrow{display:grid;grid-template-columns:26px 1fr 90px 80px 80px 96px 24px;gap:10px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer}
+.ttlist{display:grid;gap:6px}.ttrow{display:grid;grid-template-columns:26px 1fr 90px 80px 80px 96px 24px;gap:10px;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer}
 .ttrow:hover{border-color:var(--line2)}.ttrank{font:800 13px var(--mono);color:var(--accent);text-align:center}.ttname{font-weight:700;min-width:0}.ttname small{display:block;font-weight:500;color:var(--muted);font-size:11px}
 .ttplan{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-weight:500;font-size:11.5px;color:var(--muted)}.ttplan b{color:var(--text);font-weight:700}.ttplan .fit{font-weight:700}.fit-good{color:var(--good)}.fit-poor{color:var(--bad)}.fit-ok{color:var(--muted)}
 .ttplan i{font-style:normal;opacity:.75}
@@ -327,10 +327,9 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .eqslots{position:absolute;right:2px;bottom:1px;font:800 10px var(--mono);color:#0f8a5f;background:rgba(255,255,255,.85);border-radius:4px;padding:0 3px}
 .eqdetail .gcard{min-height:0}
 .kmlbl{font-size:12px;color:var(--muted,#9aa4b2);margin-right:2px;white-space:nowrap}
-.ttplan{display:grid!important;grid-template-columns:auto 1fr;gap:3px 10px;margin-top:6px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
-.tpk{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding-top:2px;white-space:nowrap}.tpv{min-width:0;display:flex;flex-wrap:wrap;gap:3px 8px;align-items:center}
+.ttplan{display:flex!important;flex-direction:column;gap:2px!important;margin-top:3px!important}.tpl{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:center}
 .ttag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;border:1px solid var(--line2);color:var(--text);margin-left:4px;vertical-align:1px}
-.tcond{font-size:11px;font-weight:600;padding:1px 7px;border-radius:6px;border:1px solid var(--line2)}.tcond.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}.tcond.warn{color:#f5a524;border-color:#f5a52466}.tcond.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.tcond{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:6px;border:1px solid var(--line2)}.tcond.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}.tcond.warn{color:#f5a524;border-color:#f5a52466}.tcond.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
 </style>
 </head>
 <body>
@@ -2552,13 +2551,12 @@ function renderSummary(){
     <span class="note">${RR.type === "magic" ? `your spell damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit` : `your damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit (stat window ${S.char.atkMin}–${S.char.atkMax})`}</span><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level${noFly ? ' · flying monsters skipped (warriors can\'t reach them)' : ''} · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
-        const row = (k, v) => v ? `<span class="tpk">${k}</span><span class="tpv">${v}</span>` : '';
-        return `<span class="ttplan">
-          ${row('Map', `<span title="Map with the most ${esc(e.name)} (MeowDB)"><b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>`)}
-          ${row('Party', `<span>${t.boss ? `boss: party of <b>${t.party}</b>` : t.party === 1 ? '<b>solo</b>' : `party of <b>${t.party}</b>`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} mobs per person</span>`)}
-          ${row('Conditions', t.cond.map(([l, x]) => `<span class="tcond ${l}">${esc(x)}</span>`).join(''))}
-          ${row('Pros / cons', [...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)].join(' · '))}
-          ${row('Bring', t.mates.map(([c, w]) => `<b>${esc(c)}</b> <i>(${esc(w)})</i>`).join(', '))}</span>`; })()}</span>
+        const cond = t.cond.filter(([l]) => l !== "ok" || !/No special/.test(t.cond[0][1]));
+        const pc = [...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)];
+        return `<span class="ttplan"><span class="tpl"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n}×${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
+          <span>👥 ${t.boss ? `boss: party of <b>${t.party}</b>` : t.party === 1 ? '<b>solo</b>' : `party of <b>${t.party}</b>`} · ≈${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)}/person</span>
+          ${cond.length ? cond.map(([l, x]) => `<span class="tcond ${l}">${esc(x)}</span>`).join('') : ''}</span>
+          ${pc.length || t.mates.length ? `<span class="tpl">${pc.join(' ')}${t.mates.length ? `<span title="${esc(t.mates.map(([c, w]) => c + ': ' + w).join(' · '))}">🤝 ${t.mates.map(([c, w]) => `<b>${esc(c)}</b> <i>(${esc(w)})</i>`).join(', ')}</span>` : ''}</span>` : ''}</span>`; })()}</span>
       <span class="ttstat"><b>${fmt(Math.round(e.exp / e._ko))}</b><small>EXP / hit</small></span>
       <span class="ttstat" title="low ${e.dmg.worst} · avg ${e.dmg.ko} · high ${e.dmg.hi > 0 ? Math.ceil(e.hp / (e.dmg.hi * RR.at.hits)) : '∞'}"><b>${e._ko}</b><small>hit${e._ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
