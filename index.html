@@ -383,11 +383,10 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
             <div><label class="lbl">Crit damage %</label><input class="txt mono" data-char="critDmg" inputmode="numeric"></div>
           </div>
         </div>
-        <div class="group"><h4>Extra accuracy</h4>
-          <label class="lbl">ACC potion</label>
-          <select id="inPotion">
-            <option value="0">None</option><option value="5">Sniper Potion (+5)</option><option value="7">Supreme Sniper (+7)</option><option value="10">Sniper Pill (+10)</option>
-          </select>
+        <div class="group"><h4>Potions</h4>
+          <label class="lbl">Potions &amp; food buffs</label>
+          <select id="inPotion"></select>
+          <div class="chips" id="potChips" style="margin-top:6px"></div>
           <label class="lbl" style="margin-top:10px">Extra gear / misc ACC</label>
           <div class="step"><button data-step="extraAcc:-1">−</button><input id="inExtra" inputmode="numeric"><button data-step="extraAcc:1">+</button></div>
         </div>
@@ -1161,17 +1160,22 @@ function skillAt(sk, lv){
 function rawRange(){
   const c = S.char, sk = skillByKey(S.skill), at = skillAt(sk, S.skillLv);
   if (sk.type === "magic"){
-    const MT = c.magic + (S.dmgBuffs.meditation ? 25 : 0);
+    const MT = c.magic + (S.dmgBuffs.meditation ? 25 : 0) + potSum("matk");
     const m = (at.ms/10 + 0.1) * 0.7;
     const amp = S.dmgBuffs.amp ? 1.35 : 1;
     return {min: at.S*MT*(1 + c.int*m/125)*amp, max: at.S*MT*(1 + c.int/125)*amp, at, sk, type:"magic"};
   }
+  const potW = potSum("watk");
   if (sk.type === "l7"){
     const Q = c.str + c.dex;
-    const watk = c.atkMax / (1 + (c.luk*2.5 + Q)/100);
+    const watk = c.atkMax / (1 + (c.luk*2.5 + Q)/100) + potW;
     return {min: at.S*watk*(0.8 + (c.luk*0.5*3 + Q)/100), max: at.S*watk*(1 + (c.luk*3 + Q)/100), at, sk, type:"phys"};
   }
-  return {min: c.atkMin*at.S, max: c.atkMax*at.S, at, sk, type:"phys"};
+  // potion W.ATK: attack grows with total W.ATK; estimate your W.ATK from the stat-window attack
+  let f = 1;
+  if (potW){ const cl = c.cls, P = cl === "bowman" ? c.dex : cl === "thief" ? c.luk : c.str, Q = cl === "bowman" ? c.str : cl === "thief" ? c.str + c.dex : c.dex;
+    const mult = cl === "warrior" ? 4.4 : 3.5, W = c.atkMax * 100 / Math.max(1, P * mult + Q); f = 1 + potW / Math.max(1, W); }
+  return {min: c.atkMin*at.S*f, max: c.atkMax*at.S*f, at, sk, type:"phys"};
 }
 function levelScale(charLv, mobLv){
   const gap = mobLv - charLv;
@@ -1189,7 +1193,7 @@ function damageVs(mob, rr, hit){
   const def = rr.type === "magic" ? mob.mdef : mob.pdef;
   const defF = 100/(def + 100), em = elMult(rr.sk, mob), ls = levelScale(S.level, mob.level);
   const k = defF*em*ls;
-  const c = Math.max(0, Math.min(100, S.char.critRate))/100, d = Math.max(0, S.char.critDmg/100 - 1);
+  const c = Math.max(0, Math.min(100, S.char.critRate + potSum("critRate")))/100, d = Math.max(0, (S.char.critDmg + potSum("critDamage"))/100 - 1);
   const lo = clampDmg(rr.min*k), hi = clampDmg(rr.max*k), critHi = clampDmg(rr.max*k*(1+d));
   const avgHit = (lo + hi)/2 * (1 + c*d);
   const hitP = rr.type === "magic" ? 1 : hit;
@@ -1212,6 +1216,7 @@ const DEFAULTS = {
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 try { const raw = localStorage.getItem(KEY); if (raw){ const p = JSON.parse(raw); S = Object.assign({}, S, p, {char:Object.assign({}, DEFAULTS.char, p.char || {})}); } } catch(e){}
+if (!S.pots){ S.pots = S.potion >= 7 ? ["ssniper"] : S.potion >= 5 ? ["sniper"] : []; } S.potion = 0;   // old single ACC-potion setting
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 
 const $ = id => document.getElementById(id);
@@ -1220,8 +1225,18 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">"
 const pct = p => (p*100).toFixed(1) + "%";
 const fmt = n => Number.isFinite(n) ? Math.round(n).toLocaleString("en-US") : "∞";
 
+/* potions & food buffs (MeowDB, MSCW). Different groups stack; within a group the newest one counts */
+const POTIONS = [
+  ["warrior","Warrior Potion","atk",{watk:10}],["drake","Drake's Blood","atk",{watk:12}],["cider","Cider","atk",{watk:15, acc:-5}],["turkey","Turkey Leg (event)","atk",{watk:30}],
+  ["magicpot","Magic Potion","matk",{matk:10}],["sap","Sap of Ancient Tree","matk",{matk:12}],["cranberry","Cranberry Sauce (event)","matk",{matk:30}],
+  ["inkwell","Inkwell's Blessing (event)","both",{watk:50, matk:50}],
+  ["sniper","Sniper Potion","acc",{acc:5}],["ricecake","Moon Bunny's Flower Rice Cake","acc",{acc:5}],["ssniper","Supreme Sniper Potion","acc",{acc:7}],
+  ["sharp","Sharpness Potion","crit",{critRate:3}],["keeneye","GM's Blessing of the Keen Eye","crit",{critRate:10}],
+  ["destruct","Destructive Potion","critd",{critDamage:3}]];
+const POT_GROUPS = {atk:"Weapon attack", matk:"Magic attack", both:"Weapon + magic attack", acc:"Accuracy", crit:"Critical rate", critd:"Critical damage"};
+function potSum(k){ return (S.pots || []).reduce((t, id) => { const p = POTIONS.find(x => x[0] === id); return t + (p && p[3][k] || 0); }, 0); }
 function buffSum(){ return BUFFS.reduce((s,[k,,v]) => s + (S.buffs[k] ? v : 0), 0); }
-function totalAcc(){ return Math.max(0, S.baseAcc + S.potion + buffSum() + S.extraAcc); }
+function totalAcc(){ return Math.max(0, S.baseAcc + potSum("acc") + buffSum() + S.extraAcc); }
 
 function monsters(){
   const base = RAW.map(([id,name,level,avoid,region,flags,code,hp,pdef,mdef,exp]) => {
@@ -2668,7 +2683,10 @@ const setVal = (id, v) => { const el = $(id); if (document.activeElement !== el)
 function renderChar(){
   const ch = S.char, sk = RR.sk, at = RR.at;
   setVal("inLevel", S.level); setVal("inAcc", S.baseAcc); setVal("inExtra", S.extraAcc); setVal("cSkillLv", S.skillLv);
-  $("inPotion").value = String(S.potion); $("cCls").innerHTML = jobOptions(ch.job, statClass());
+  { const mine = S.pots || [], magic = RR && RR.type === "magic";
+    $("inPotion").innerHTML = `<option value="">＋ Add a potion…</option>` + Object.entries(POT_GROUPS).map(([g, gl]) => `<optgroup label="${gl}">` + POTIONS.filter(p => p[2] === g).map(p => `<option value="${p[0]}" ${mine.includes(p[0]) ? 'disabled' : ''}>${esc(p[1])} (${Object.entries(p[3]).map(([k, v]) => (v > 0 ? '+' : '') + v + ' ' + ({watk:"W.ATK", matk:"M.ATK", acc:"ACC", critRate:"crit %", critDamage:"crit dmg %"})[k]).join(', ')})${(g === "atk" && magic) || (g === "matk" && !magic) ? ' — no effect for you' : ''}</option>`).join("") + `</optgroup>`).join("");
+    $("inPotion").value = "";
+    $("potChips").innerHTML = mine.map(id => { const p = POTIONS.find(x => x[0] === id); return p ? `<span class="chip on" data-potdel="${id}" title="Remove">${esc(p[1])} ✕</span>` : ''; }).join(""); } $("cCls").innerHTML = jobOptions(ch.job, statClass());
   const list = skillsForJob();
   $("cSkill").innerHTML = list.map(s => `<option value="${s.k}" ${s.k===S.skill?'selected':''}>${esc(s.name)} · ${esc(s.job)}</option>`).join("");
   $("skillInfo").innerHTML = `<b>${Math.round(at.S*100)}%</b>${at.hits>1?`×${at.hits}`:''} ${elPill(sk.el)} <span class="note">raw ${fmt(RR.min)}–${fmt(RR.max)}</span>`;
@@ -2680,7 +2698,7 @@ function renderChar(){
   };
   $("lvlSrc").innerHTML = sw ? tag(S.level, sw.level, sw.levelSrc, "level") : "";
   $("accSrc").innerHTML = sw ? tag(S.baseAcc, sw.acc, sw.accSrc, "baseAcc") : "";
-  $("accNote").innerHTML = `Total ACC <b class="mono" style="color:var(--accent2)">${totalAcc()}</b>${extra ? ` <span class="note">(${S.baseAcc} + ${extra} from potion/buffs/gear)</span>` : ''}${sk.note ? ` · <span class="note">${sk.note}</span>` : ''}`;
+  $("accNote").innerHTML = `Total ACC <b class="mono" style="color:var(--accent2)">${totalAcc()}</b>${extra ? ` <span class="note">(${S.baseAcc} + ${extra} from potions/buffs/gear)</span>` : ''}${sk.note ? ` · <span class="note">${sk.note}</span>` : ''}`;
   document.querySelectorAll("[data-char]").forEach(el => { if (document.activeElement !== el) el.value = ch[el.dataset.char]; });
   $("buffChips").innerHTML = BUFFS.map(([k,n,v]) => `<span class="chip ${S.buffs[k]?'on':''}" data-buff="${k}">${n} +${v}</span>`).join("");
   $("dmgBuffs").innerHTML = ch.cls === "magician"
@@ -2998,7 +3016,11 @@ document.querySelectorAll("[data-char]").forEach(el => {
 $("cCls").onchange = e => { setJob(e.target.value); renderAll(); };
 $("cSkill").onchange = e => { S.skill = e.target.value; S.skillLv = skillByKey(S.skill).max; renderAll(); };
 $("btnMore").onclick = () => { S.moreOpen = !S.moreOpen; renderAll(); };
-$("inPotion").onchange = e => { S.potion = +e.target.value; renderAll(); };
+$("inPotion").onchange = e => { const id = e.target.value; if (!id) return; const p = POTIONS.find(x => x[0] === id);
+  // same group (or a combined attack buff) replaces the old one, like in game
+  const clash = q => q[2] === p[2] || (p[2] === "both" && (q[2] === "atk" || q[2] === "matk")) || (q[2] === "both" && (p[2] === "atk" || p[2] === "matk"));
+  S.pots = (S.pots || []).filter(x => { const q = POTIONS.find(y => y[0] === x); return q && !clash(q); }).concat(id); renderAll(); };
+document.addEventListener("click", ev => { const d = ev.target.closest("[data-potdel]"); if (d){ S.pots = (S.pots || []).filter(x => x !== d.dataset.potdel); renderAll(); } });
 $("inMode").onchange = e => { S.mode = e.target.value; renderAll(); };
 $("fRegion").onchange = e => { S.region = e.target.value; renderAll(); };
 $("fStatus").onchange = e => { S.status = e.target.value; renderAll(); };
