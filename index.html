@@ -326,6 +326,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .eqcell.blocked .eqlbl{color:#7a2b2b}
 .eqslots{position:absolute;right:2px;bottom:1px;font:800 10px var(--mono);color:#0f8a5f;background:rgba(255,255,255,.85);border-radius:4px;padding:0 3px}
 .eqdetail .gcard{min-height:0}
+.kmlbl{font-size:12px;color:var(--muted,#9aa4b2);margin-right:2px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -2530,8 +2531,8 @@ function renderSummary(){
   const tc = S.topCollapsed !== false;   // closed by default; opens from the "Best EXP per hit" tile
   $("topTrain").style.display = tc ? "none" : "";
   $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 Best EXP per hit</b>
-    <div class="seg kmode" title="Which part of your damage range to use for hits to kill">${[["low","Low end"],["avg","Average"],["high","High end"]].map(([k,l]) => `<button data-kmode="${k}" class="${km===k?'on':''}">${l}</button>`).join("")}</div>
-    <span class="note">${RR.type === "magic" ? `spell ${fmt(RR.min)}–${fmt(RR.max)}` : `range ${fmt(RR.min)}–${fmt(RR.max)} (stat window ${S.char.atkMin}–${S.char.atkMax})`}</span><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
+    <span class="kmlbl">Damage range:</span><div class="seg kmode" title="Which part of your damage range to use for hits to kill">${[["low","Lowest hit"],["avg","Average hit"],["high","Highest hit"]].map(([k,l]) => `<button data-kmode="${k}" class="${km===k?'on':''}">${l}</button>`).join("")}</div>
+    <span class="note">${RR.type === "magic" ? `your spell damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit` : `your damage: <b>${fmt(RR.min)}</b> – <b>${fmt(RR.max)}</b> per hit (stat window ${S.char.atkMin}–${S.char.atkMax})`}</span><span class="note">monsters within 15 levels you hit every time · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         return `<span class="ttplan"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
