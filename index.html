@@ -2509,9 +2509,13 @@ function renderSummary(){
   // hits to kill from the low end, the average or the high end of your damage range (stat window range for physical classes)
   const km = S.koMode || "low";
   const kof = e => km === "low" ? e.dmg.worst : km === "high" ? (e.dmg.hi > 0 ? Math.ceil(e.hp / (e.dmg.hi * RR.at.hits)) : Infinity) : e.dmg.ko;
-  const pool = all.filter(e => !bl.has(e.id) && (e.raw >= 1 || RR.type === "magic") && Number.isFinite(kof(e)) && Math.abs(e.level - S.level) <= 15);
+  // hidden monsters stay out by name too, so an "(alt)" copy of the same monster doesn't take its place
+  const baseName = n => String(n).replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
+  const blNames = new Set(all.filter(e => bl.has(e.id)).map(e => baseName(e.name)));
+  let pool = all.filter(e => !bl.has(e.id) && !blNames.has(baseName(e.name)) && (e.raw >= 1 || RR.type === "magic") && Number.isFinite(kof(e)) && Math.abs(e.level - S.level) <= 15);
   pool.forEach(e => e._ko = kof(e));
   pool.sort((a,b) => (b.exp / b._ko) - (a.exp / a._ko) || b.exp - a.exp);
+  { const seen = new Set(); pool = pool.filter(e => { const k = baseName(e.name); if (seen.has(k)) return false; seen.add(k); return true; }); }   // one row per monster
   const train = pool[0];
   const weakPool = all.filter(e => e.myWeak && (e.raw >= 1 || RR.type === "magic")).sort((a,b) => b.level - a.level);
   const weakBest = weakPool[0];
