@@ -332,7 +332,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .tcond{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:6px;border:1px solid var(--line2)}.tcond.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}.tcond.warn{color:#f5a524;border-color:#f5a52466}.tcond.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
 .livebox{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:-4px 0 12px;font-size:12.5px}.livebox .btn{margin-left:auto}.livebox .btn#liveStart{margin-left:0}
 .livedot{width:9px;height:9px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px #e5484d33;animation:lvp 1.2s infinite}@keyframes lvp{50%{opacity:.35}}.livemsg{flex-basis:100%;color:var(--good);font-weight:600}
-.setwhy{font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:0 0 10px}.setwhy b{color:var(--text)}.setwhy .sgoal{margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--line)}.setwhy b.ok{color:var(--good)}
+.setwhy{font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:0 0 10px}.setwhy b{color:var(--text)}.setwhy.closed{cursor:pointer}.setwhy.closed:hover{border-color:var(--line2)}.whyhead{cursor:pointer;margin-bottom:5px}.whycar{color:var(--accent);font-size:11px}.whyhint{font-size:11px;opacity:.7;margin-left:4px}.setwhy .sgoal{margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--line)}.setwhy b.ok{color:var(--good)}
 </style>
 </head>
 <body>
@@ -2277,7 +2277,9 @@ function setWhy(R){
   gains.sort((a, b) => b[1] - a[1]);
   const pct = R.withScrolls.pct, d = deltaLine(R.withScrolls.d);
   const koTxt = R.withScrolls.ko && R.base.ko && R.withScrolls.ko !== R.base.ko ? ` · ${esc(R.mob.name)} goes from <b>${R.base.ko}</b> to <b>${R.withScrolls.ko}</b> hit${R.withScrolls.ko > 1 ? 's' : ''} to kill` : '';
-  return `<div class="setwhy">${goal ? `<div class="sgoal"><b>🧭 Build goal:</b> ${goal}</div>` : ''}<b>Why this set:</b> ${focus}.
+  const open = S.whyOpen === true;
+  if (!open) return `<div class="setwhy closed" data-whytog="1" title="Show why this set was picked"><span class="whycar">▸</span> <b>🧭 Build goal & why this set</b></div>`;
+  return `<div class="setwhy"><div class="whyhead" data-whytog="1" title="Hide"><span class="whycar">▾</span> <b>🧭 Build goal & why this set</b></div>${goal ? `<div class="sgoal"><b>Build goal:</b> ${goal}</div>` : ''}<b>Why this set:</b> ${focus}.
     ${pct > 0.0005 ? `Compared to what you wear it adds ${d || 'stats'} → <b class="ok">+${(pct*100).toFixed(1)}% damage</b>${koTxt}.` : `Your current gear is already the best for this build — nothing here beats it.`}
     ${gains.length ? `Biggest gains: ${gains.slice(0, 3).map(([l, g, n]) => `${esc(n)} (${l.toLowerCase()}, +${(g*100).toFixed(1)}%)`).join(', ')}.` : ''}</div>`;
 }
@@ -2493,6 +2495,7 @@ function renderSets(){
   return R;
 }
 document.addEventListener("click", ev => {
+  if (ev.target.closest("[data-whytog]")){ S.whyOpen = !S.whyOpen; renderAll(); return; }
   const v = ev.target.closest("[data-gview]"); if (v){ S.gearView = v.dataset.gview; renderAll(); return; }
   const ugo = ev.target.closest("[data-ugoal]"); if (ugo){ S.usefulGoal = ugo.dataset.ugoal; renderAll(); return; }
   const ugb = ev.target.closest("[data-ugrade]"); if (ugb){ S.usefulGrade = +ugb.dataset.ugrade; renderAll(); return; }
