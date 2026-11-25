@@ -2521,8 +2521,9 @@ function renderSummary(){
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}<small>Lv ${e.level}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         return `<span class="ttplan"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
-          <span>👥 ${t.boss ? `boss: party of ${t.party}` : t.party === 1 ? 'best solo' : `party of ${t.party}`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} per person${t.party > 1 && t.mates.length ? ` · with ${t.mates.map(esc).join(', ')}` : ''}</span>
-          <span class="fit fit-${t.fit}">${t.fit === 'good' ? '✓' : t.fit === 'poor' ? '✕' : '•'} For you (${esc(t.me)}): ${[...t.pro.map(x => '+ ' + esc(x)), ...t.con.map(x => '− ' + esc(x))].join(' · ') || 'nothing special'}</span></span>`; })()}</span>
+          <span>👥 ${t.boss ? `boss: party of ${t.party}` : t.party === 1 ? 'best solo' : `party of ${t.party}`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} per person</span>
+          ${t.pro.length || t.con.length ? `<span>${[...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)].join(' · ')}</span>` : ''}
+          ${t.mates.length ? `<span>🤝 party: ${t.mates.map(esc).join(', ')}</span>` : ''}</span>`; })()}</span>
       <span class="ttstat"><b>${fmt(Math.round(e.exp / e.dmg.ko))}</b><small>EXP / hit</small></span>
       <span class="ttstat"><b>${e.dmg.ko}</b><small>hit${e.dmg.ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
