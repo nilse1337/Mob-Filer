@@ -1353,16 +1353,18 @@ function trainPlan(e){
   if (!boss && m.n >= 20 && mobSkill) pro.push("many spawns for your mobbing skill");
   const fit = con.length && !pro.length ? "poor" : pro.length > con.length ? "good" : "ok";
   // good party partners (other classes)
-  const mates = [];
   const mine = c => (c === "F/P mage" && /Fire\/Poison/.test(j.label)) || (c === "I/L mage" && /Ice\/Lightning/.test(j.label)) || (c === "Cleric / Priest" && healer)
     || (c === "mages" && j.cls === "magician") || (c === "physical classes" && j.cls !== "magician");
-  if (e.fire === 1) mates.push("F/P mage");
-  if (e.ice === 1) mates.push("I/L mage");
-  if (e.isUndead || (e.el && e.el.holy === 1)) mates.push("Cleric / Priest");
-  if ((e.mdef || 0) >= (e.pdef || 0) + 15) mates.push("physical classes");
-  if ((e.pdef || 0) >= (e.mdef || 0) + 15 || e.avoid >= 25) mates.push("mages");
-  if (!boss && m.n >= 20) mates.push("mobbers (Ranger/Sniper, Crusader)");
-  return {m, party, per, boss, fit, pro, con, me:j.label.replace(/ \(3rd\)| \(1st job\)/, ""), mates:[...new Set(mates.filter(c => !mine(c)))].slice(0, 3)};
+  const mates = [];   // [class, why]
+  if (e.fire === 1) mates.push(["F/P mage", "weak to fire"]);
+  if (e.ice === 1) mates.push(["I/L mage", "weak to ice"]);
+  if (e.isUndead) mates.push(["Cleric / Priest", "undead: Heal damages it"]); else if (e.el && e.el.holy === 1) mates.push(["Cleric / Priest", "weak to holy"]);
+  if ((e.mdef || 0) >= (e.pdef || 0) + 15) mates.push(["physical classes", `M.DEF ${e.mdef} vs P.DEF ${e.pdef || 0}`]);
+  if ((e.pdef || 0) >= (e.mdef || 0) + 15) mates.push(["mages", `P.DEF ${e.pdef} vs M.DEF ${e.mdef || 0}`]);
+  else if (e.avoid >= 25) mates.push(["mages", `avoid ${e.avoid}: spells don't miss`]);
+  if (!boss && m.n >= 20) mates.push(["mobbers (Ranger/Sniper, Crusader)", `${m.n} spawns to hit at once`]);
+  const seen = new Set(), mateList = mates.filter(([c]) => !mine(c) && !seen.has(c) && seen.add(c)).slice(0, 3);
+  return {m, party, per, boss, fit, pro, con, me:j.label.replace(/ \(3rd\)| \(1st job\)/, ""), mates:mateList};
 }
 
 
@@ -2523,7 +2525,7 @@ function renderSummary(){
         return `<span class="ttplan"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n} ${esc(e.name)}${m.total > m.n ? ` of ${m.total} mobs` : ''}${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
           <span>👥 ${t.boss ? `boss: party of ${t.party}` : t.party === 1 ? 'best solo' : `party of ${t.party}`} · ≈ ${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)} per person</span>
           ${t.pro.length || t.con.length ? `<span>${[...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)].join(' · ')}</span>` : ''}
-          ${t.mates.length ? `<span>🤝 party: ${t.mates.map(esc).join(', ')}</span>` : ''}</span>`; })()}</span>
+          ${t.mates.length ? `<span>🤝 party: ${t.mates.map(([c, w]) => `<b>${esc(c)}</b> <i>(${esc(w)})</i>`).join(', ')}</span>` : ''}</span>`; })()}</span>
       <span class="ttstat"><b>${fmt(Math.round(e.exp / e.dmg.ko))}</b><small>EXP / hit</small></span>
       <span class="ttstat"><b>${e.dmg.ko}</b><small>hit${e.dmg.ko > 1 ? 's' : ''} to kill</small></span>
       <span class="ttstat"><b>${fmt(e.exp)}</b><small>EXP</small></span>
