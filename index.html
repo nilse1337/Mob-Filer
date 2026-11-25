@@ -77,6 +77,9 @@ select,.txt{width:100%;height:40px;background:var(--panel2);border:1px solid var
 .tile{padding:12px 14px;cursor:pointer;position:relative}
 .blbtn{border:1px solid color-mix(in srgb,var(--bad) 45%,transparent);background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad);border-radius:7px;width:24px;height:24px;font-weight:800;cursor:pointer;line-height:1;padding:0;flex:none}
 .blbtn:hover{background:var(--bad);color:#fff}
+.exwrap{position:relative}.exbtn.on{border-color:var(--bad);color:var(--bad)}
+.expop{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:50;min-width:210px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px;box-shadow:0 10px 28px rgba(0,0,0,.4)}
+.expop.open{display:block}.exrow{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap}.exrow:hover{background:var(--panel2)}
 .ttcaret{font-size:10px;color:var(--accent);margin-left:4px;font-weight:700}.tile.open{border-color:var(--accent)}
 .tile .blbtn{position:absolute;top:8px;right:8px;width:22px;height:22px;font-size:11px}
 .toptrain{padding:12px 14px;margin-bottom:14px}.tthead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.toptrain.collapsed .tthead{margin-bottom:0}
@@ -390,6 +393,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
     <div class="panel list">
       <div class="toolbar">
         <input class="txt" id="inSearch" placeholder="🔍 Search monster…">
+        <div class="exwrap"><button class="btn small exbtn" id="btnExclude" type="button">🚫 Exclude<span id="exCount"></span> ▾</button><div class="expop" id="exPop"></div></div>
         <select id="fRegion">
           <option value="all">All regions</option><option value="mv">Maple &amp; Victoria</option><option value="fh">Forgotten Hollow</option>
           <option value="pq">PQ / Job Test</option><option value="boss">Bosses</option><option value="undead">Undead</option><option value="pinned">★ Pinned</option>
@@ -2322,6 +2326,9 @@ document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.s
 window.__mf = {computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 
+const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],
+  ["fh","🌲 Forgotten Hollow", e => e.region === "Forgotten Hollow"],["fw","🔥 Weak to fire", e => e.fire === 1],["iw","❄ Weak to ice", e => e.ice === 1],["hw","✨ Weak to holy", e => e.el && e.el.holy === 1],
+  ["fs","🔥 Resists fire", e => e.fire === -1],["is","❄ Resists ice", e => e.ice === -1],["miss","❌ Can't hit 100%", e => e.raw < 1],["hidden","✕ Hidden by you", e => (S.blacklist || []).includes(e.id)]];
 const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["any","🔥/❄ Weak to either"],["hw","✨ Weak to holy"],["undead","💀 Undead"],["fs","Resists fire"],["is","Resists ice"]];
 const COLS = [["name","Monster"],["level","Lv"],["hp","HP"],["avoid","Avoid"],["hit","Hit rate"],["missing","ACC"],["ko","Hits to kill"]];
 const LIMITS = {level:[1,200], baseAcc:[0,9999], extraAcc:[-999,9999], darkness:[0,100], skillLv:[1,30], bPrimary:[0,9999], bLuk:[0,9999], bGear:[0,9999]};
@@ -2354,6 +2361,12 @@ document.addEventListener("click", ev => {
   if (u){ ev.preventDefault(); S.blacklist = (S.blacklist || []).filter(x => x !== u.dataset.unbl); renderAll(); renderBlacklist(); return; }
   if (ev.target.closest("[data-openset]")){ ev.preventDefault(); ev.stopPropagation(); renderBlacklist(); $("setModal").classList.add("open"); }
 }, true);
+$("btnExclude").onclick = ev => { ev.stopPropagation(); $("exPop").classList.toggle("open"); };
+document.addEventListener("change", ev => { const c = ev.target.closest("[data-ex]"); if (!c) return; const k = c.dataset.ex; S.exclude = (S.exclude || []).filter(x => x !== k); if (c.checked) S.exclude.push(k); renderAll(); $("exPop").classList.add("open"); });
+document.addEventListener("click", ev => {
+  if (ev.target.closest("[data-exclear]")){ S.exclude = []; renderAll(); $("exPop").classList.add("open"); return; }
+  if (!ev.target.closest(".exwrap")) $("exPop").classList.remove("open");
+});
 function renderBlacklist(){
   const el = $("blList"); if (!el) return;
   const L = S.blacklist || [];
@@ -2362,6 +2375,8 @@ function renderBlacklist(){
 document.addEventListener("click", ev => { if (ev.target.closest("[data-ttfold]") && !ev.target.closest("[data-bl]")){ ev.stopPropagation(); S.topCollapsed = S.topCollapsed === false ? true : false; renderAll(); } }, true);
 document.addEventListener("click", ev => { if (ev.target.closest("[data-unbl-all]")){ S.blacklist = []; renderAll(); renderBlacklist(); } });
 function passFilters(e){
+  const ex = S.exclude || [];
+  for (const [k,, f] of EXCLUDES) if (ex.includes(k) && f(e)) return false;
   const q = S.search.trim().toLowerCase();
   if (q){
     const hay = [e.name, e.region, e.isBoss?"boss":"", e.isUndead?"undead":"", e.fire===1?"fire":"", e.ice===1?"ice":"", e.el && e.el.holy===1?"holy":""].join(" ").toLowerCase();
@@ -2472,6 +2487,8 @@ function renderSummary(){
 /* ---------- render: list ---------- */
 function renderList(){
   setVal("inSearch", S.search);
+  { const ex = S.exclude || []; $("exCount").textContent = ex.length ? ` (${ex.length})` : ""; $("btnExclude").classList.toggle("on", ex.length > 0);
+    $("exPop").innerHTML = `<div class="note" style="padding:2px 4px 6px">Hide these from the list:</div>` + EXCLUDES.map(([k,l]) => `<label class="exrow"><input type="checkbox" data-ex="${k}" ${ex.includes(k)?'checked':''}> ${l}</label>`).join("") + (ex.length ? `<button class="btn small" data-exclear="1" style="margin-top:6px;width:100%">Clear</button>` : ''); }
   $("fRegion").value = S.region; $("fStatus").value = S.status;
   const sk = RR.sk;
   $("fElement").innerHTML = ELEMENT_FILTERS.filter(([k]) => k !== "mine" || sk.el).map(([k,l]) => `<option value="${k}" ${S.elFilter===k?'selected':''}>${k==="mine"?`✔ Weak to ${sk.el}`:l}</option>`).join("");
@@ -2725,7 +2742,7 @@ $("btnSettings").onclick = () => { renderBlacklist(); $("setModal").classList.ad
 $("btnTheme").onclick = () => { S.theme = S.theme === "light" ? "dark" : "light"; renderAll(); };
 $("btnApplyEst").onclick = () => { S.baseAcc = classAcc(S.bClass, S.level, S.bPrimary, S.bLuk) + S.bGear; renderAll(); };
 $("btnResetAll").onclick = () => { const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), keep); $("setModal").classList.remove("open"); renderAll(); };
-$("btnResetFilters").onclick = () => { Object.assign(S, {search:"", region:"all", status:"all", elFilter:"all"}); $("inSearch").value = ""; renderAll(); };
+$("btnResetFilters").onclick = () => { Object.assign(S, {search:"", region:"all", status:"all", elFilter:"all", exclude:[]}); $("inSearch").value = ""; renderAll(); };
 document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open")); });
 
