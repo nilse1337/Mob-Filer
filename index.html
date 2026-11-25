@@ -917,7 +917,7 @@ const TipOCR = (function(){
       while (st.length){ const p=st.pop(), x=p%w, y=(p/w)|0; n++; if(x<ax)ax=x; if(x>bx)bx=x; if(y<ay)ay=y; if(y>by)by=y;
         for (const q of [p-1,p+1,p-w,p+w]) if (q>=0 && q<w*h && mask[q] && !seen[q] && !(q===p-1 && x===0) && !(q===p+1 && x===w-1)){ seen[q]=1; st.push(q); } }
       const bw=bx-ax+1, bh=by-ay+1;
-      if (bw < 36 || bh < 36 || bw > 200 || bh > 200 || bw/bh > 1.35 || bh/bw > 1.35 || n < bw*bh*0.3) continue;
+      if (bw < 36 || bh < 36 || bw > 200 || bh > 200 || bw/bh > 1.35 || bh/bw > 1.35 || n < bw*bh*0.18) continue;
       if (!best || n > best.n) best = {x:ax+x0, y:ay+y0, w:bw, h:bh, n};
     }
     return best;
@@ -1720,11 +1720,28 @@ function renderGear(){
 }
 
 /* ---------- events ---------- */
+/* name the item from its read stats: same type, base stats ≤ read stats (scrolls only add), defenses must be close */
+function guessName(g, v){
+  const keys = [...GSTATS.map(([k]) => k), "wdef", "mdef"];
+  const rd = k => (k === "wdef" || k === "mdef") ? (v[k] || 0) : (g.st[k] || 0);
+  if (!keys.some(k => rd(k))) return "";
+  let best = null, bs = Infinity, tie = false;
+  ITEMS.filter(it => it.sub === g.sub).forEach(it => {
+    if (!keys.every(k => (it.st[k] || 0) <= rd(k) + 0.1)) return;
+    let sc = 0; keys.forEach(k => { const d = rd(k) - (it.st[k] || 0); sc += (k === "wdef" || k === "mdef") ? d * 0.3 : d; });
+    if (["wdef","mdef"].some(k => rd(k) && !(it.st[k]))) sc += 50;
+    if (sc < bs - 0.01){ bs = sc; best = it; tie = false; } else if (Math.abs(sc - bs) <= 0.01) tie = true;
+  });
+  return best && !tie && bs <= 25 ? best.name : "";
+}
 function gearFromTip(res){
   const v = res.values; const sub = TYPE_TO_SUB[v.type];
   if (sub === undefined) return null;
   const st = {}; GSTATS.forEach(([k]) => { if (v[k]) st[k] = v[k]; });
-  return {sub, st, slots: v.slots || 0, name: ""};
+  const g = {sub, st, slots: v.slots || 0, name: ""};
+  g.name = guessName(g, v);
+  if (g.name && v.slots === undefined){ const it = ITEMS.find(i => i.name === g.name); if (it) g.slots = it.slots; }   // slots line not read: assume unscrolled
+  return g;
 }
 function placeGear(g, forceSlot){
   const slot = forceSlot || SUB_TO_SLOT(g.sub);
@@ -1741,7 +1758,7 @@ function tipBest(c){
   const score = r => (r.values.type ? 5 : 0) + Object.keys(r.values).length + (r.values.slots !== undefined ? 1 : 0)
     - Object.values(r.values).filter(v => typeof v === "number" && v > 999).length * 4;
   let best = {values:{}, lines:[]}, bs = -99;
-  for (const k of [1, 2, 1.5]){
+  for (const k of [1, 2, 1.5, 2.5, 3]){
     let cv = c;
     if (k !== 1){ if (c.width * k > 2400) continue; cv = document.createElement("canvas"); cv.width = Math.round(c.width*k); cv.height = Math.round(c.height*k);
       const x2 = cv.getContext("2d", {willReadFrequently:true}); x2.imageSmoothingEnabled = true; x2.imageSmoothingQuality = "high"; x2.drawImage(c, 0, 0, cv.width, cv.height); }
@@ -1778,7 +1795,7 @@ function readTipFile(file, forceSlot){
       if (sv && Object.keys(sv.values).length >= 5){ applyStat(sv); IMGS.stat = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stat:true}); return; }
       const g = gearFromTip(r);
       if (g){ const slot = placeGear(g, forceSlot && SLOT_SUBS[forceSlot].includes(g.sub) ? forceSlot : null); IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); }
-      else if (r.lines.length && forceSlot){ IMGS[forceSlot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; saveImgs(); S.gear[forceSlot] = {sub:SLOT_SUBS[forceSlot][0], st:Object.fromEntries(GSTATS.filter(([k]) => r.values[k]).map(([k]) => [k, r.values[k]])), slots:r.values.slots || 0, name:""}; res({ok:true, slot:forceSlot}); }
+      else if (r.lines.length && forceSlot){ IMGS[forceSlot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; saveImgs(); S.gear[forceSlot] = {sub:SLOT_SUBS[forceSlot][0], st:Object.fromEntries(GSTATS.filter(([k]) => r.values[k]).map(([k]) => [k, r.values[k]])), slots:r.values.slots || 0, name:""}; S.gear[forceSlot].name = guessName(S.gear[forceSlot], r.values); res({ok:true, slot:forceSlot}); }
       else {
         // maybe it's the character stat window
         let sv = null; try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){}
