@@ -452,6 +452,11 @@ html.touring,html.touring body{overflow:hidden}
 .tile .tmore{position:absolute;right:10px;bottom:9px;font:600 11.5px/1 inherit;color:var(--muted);background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:6px 9px;cursor:pointer;text-decoration:none;opacity:1}
 .tile .tmore,.tile.open .tmore{text-decoration:none!important}.tile .tmore:hover,.tile.open .tmore{color:var(--text);border-color:var(--accent)}
 .ttrow2{grid-template-columns:26px 64px 1fr 76px 92px 92px 92px!important}
+.impitems .impedit{float:right;margin:-3px -4px 0 6px;padding:3px 8px;font-size:11.5px}
+.impalts{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px}
+.altpick{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--text);cursor:pointer;font:600 12px inherit}
+.altpick img{width:22px;height:22px;object-fit:contain}.altpick.on,.altpick:hover{border-color:var(--accent)}
+.impform{margin-top:8px}.impform .gcard{margin:0}
 </style>
 </head>
 <body>
@@ -2128,6 +2133,32 @@ function readTipFile(file, forceSlot){
     img.src = url;
   });
 }
+/* the dark game background next to a tooltip can look like tooltip too: cut to the tooltip's own size.
+   A MapleStory item tooltip is about 15 text lines wide and ends one line below its last bullet. */
+function trimTip(c){
+  try {
+    let bs = [], k = 1;
+    for (const sc of [1, 2, 2.5]){   // small (shared-screen) tooltips: read them bigger, then scale back
+      const u = document.createElement("canvas"); u.width = Math.round(c.width*sc); u.height = Math.round(c.height*sc);
+      const ux = u.getContext("2d", {willReadFrequently:true}); ux.imageSmoothingQuality = "high"; ux.drawImage(c, 0, 0, u.width, u.height);
+      const r = TipOCR.read(ux.getImageData(0, 0, u.width, u.height)); if ((r.bs || []).length >= 3){ bs = r.bs; k = sc; break; } }
+    if (bs.length < 3){   // no bullets found (very small): the orange job row (BEGINNER … THIEF) spans the tooltip's width
+      const W = c.width, H = c.height, px = c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
+      let best = null;
+      for (let y = 0; y < H; y++){ let n = 0, x1 = -1; for (let x = 0; x < W; x++){ const o = (y*W + x)*4, r = px[o], g = px[o+1], b = px[o+2]; if (r > 70 && r - g > 25 && r - b > 15){ n++; x1 = x; } } if (y > H*0.25 && y < H*0.8 && n > 20 && (!best || n > best.n)) best = {n, x1}; }
+      if (!best) return c;
+      const w = Math.min(W, Math.round(best.x1 * 1.07) + 2); if (w >= W - 2) return c;
+      const o = document.createElement("canvas"); o.width = w; o.height = H; o.getContext("2d", {willReadFrequently:true}).drawImage(c, 0, 0, w, H, 0, 0, w, H); return o;
+    }
+    bs = bs.map(b => ({cx: b.cx / k, cy: b.cy / k}));
+    const d = bs.slice(1).map((b, i) => b.cy - bs[i].cy).sort((a, b) => a - b), pitch = d[d.length >> 1];
+    if (!(pitch > 4)) return c;
+    const w = Math.min(c.width, Math.round(bs[0].cx + 14.6 * pitch)), h = Math.min(c.height, Math.round(bs[bs.length - 1].cy + 1.2 * pitch));
+    if (w >= c.width - 2 && h >= c.height - 2) return c;
+    const o = document.createElement("canvas"); o.width = w; o.height = h; o.getContext("2d", {willReadFrequently:true}).drawImage(c, 0, 0, w, h, 0, 0, w, h);
+    return o;
+  } catch(e){ return c; }
+}
 function readTipCanvas(c, forceSlot, res, live){
       const x = c.getContext("2d", {willReadFrequently:true});
       let r = tipBest(c), cc = r.canvas || c;
@@ -2238,7 +2269,7 @@ function liveTick(){
     const sig = Array.from(sx.getImageData(0, 0, 24, 24).data.filter((_, i) => i % 4 === 1), v => v >> 5).join("");
     if (sig === LIVE.last){ LIVE.busy = false; return; }
     LIVE.last = sig;
-    readTipCanvas(c, null, r => {
+    readTipCanvas(trimTip(c), null, r => {
       LIVE.busy = false;
       if (!r.ok) return;
       if (r.slot && S.gear[r.slot]){   // several reads of the same item: keep the stats read most often
@@ -2320,8 +2351,14 @@ function renderImp(){
   set("impSumStat", at >= 2 ? `<span>✓</span><span><b>Stats</b> · ${esc(jobOf().label)} · Lv ${S.level} · STR ${c.str} · DEX ${c.dex} · INT ${c.int} · LUK ${c.luk} · ACC ${S.baseAcc}</span><button class="btn small" data-impgo="check">Change</button>` : "");
   const got = Object.keys(IMPW.slots || {}).filter(k => k === "stars" || S.gear[k]);
   if (st === "gear"){
+    const itemRow = k => { const g = S.gear[k];
+      const alts = (g.alts || []).filter(n => n !== g.name);
+      return `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${g.name ? ' · ' + esc(g.name) : ' · <i class="near">name unknown</i>'} <span class="s">${esc([GSTATS.filter(([q]) => g.st[q]).map(([q,l]) => `${l} ${g.st[q] > 0 ? '+' : ''}${g.st[q]}`).join(' · '), EXSTATS.filter(([q]) => g.ex && g.ex[q]).map(([q,l]) => `${l} +${g.ex[q]}`).join(' · ')].filter(Boolean).join(' · ') || 'no stats')}${g.slots ? ' · ' + g.slots + ' slots' : ''}</span>
+        <button class="btn ghost small impedit" data-impedit="${k}" title="Change the name or stats">✎ Edit</button>
+        ${alts.length && (!g.name || g.alts.length > 1) ? `<div class="impalts"><span class="near">Not sure which item this is — pick it:</span> ${(g.name ? [g.name] : []).concat(alts).map(n => `<button class="altpick ${n === g.name ? 'on' : ''}" data-impname="${k}|${esc(n)}">${itemIconId(n) ? `<img src="https://maplestory.io/api/GMS/83/item/${itemIconId(n)}/icon" alt="" onerror="this.style.display='none'">` : ''}${esc(n)}</button>`).join('')}</div>` : ''}
+        ${IMPW.edit === k ? `<div class="impform">${slotCard(k, SLOTS.find(x => x[0] === k)[1], SLOTS.find(x => x[0] === k)[2])}</div>` : ''}</div>`; };
     const items = got.map(k => k === "stars" ? `<div><b>${ammoName()}</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
-      : `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${S.gear[k].name ? ' · ' + esc(S.gear[k].name) : ''} <span class="s">${esc([GSTATS.filter(([q]) => S.gear[k].st[q]).map(([q,l]) => `${l} ${S.gear[k].st[q] > 0 ? '+' : ''}${S.gear[k].st[q]}`).join(' · '), EXSTATS.filter(([q]) => S.gear[k].ex && S.gear[k].ex[q]).map(([q,l]) => `${l} +${S.gear[k].ex[q]}`).join(' · ')].filter(Boolean).join(' · ') || 'no stats')}${S.gear[k].slots ? ' · ' + S.gear[k].slots + ' slots' : ''}</span></div>`).join("");
+      : itemRow(k)).join("");
     const head = !got.length
       ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
       : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
@@ -2359,6 +2396,13 @@ function gearNotice(){
 }
 document.addEventListener("click", ev => {
   const go = ev.target.closest("[data-impgo]");
+  const nm = ev.target.closest("[data-impname]");
+  if (nm){ const [k, n] = nm.dataset.impname.split("|"); const g = S.gear[k]; const it = ITEMS.find(x => x.name === n);
+    if (g && it){ g.name = n; GSTATS.forEach(([q]) => { const b = it.st[q] || 0; if (b > 0 && (g.st[q] || 0) < b) g.st[q] = b; }); g.alts = [n]; }
+    save(); renderAll(); renderLive(); return; }
+  const ie = ev.target.closest("[data-impedit]");
+  if (ie){ const k = ie.dataset.impedit; IMPW.edit = IMPW.edit === k ? null : k; S.gearSel = k; S.gearEdit = IMPW.edit; renderLive(); return; }
+  if (IMPW.live && ev.target.closest("#impGear [data-gsave], #impGear [data-gcancel]")){ setTimeout(() => { IMPW.edit = null; renderLive(); }, 0); }
   const ib = ev.target.closest("[data-impbuild]");
   if (ib){ const [gk, k] = ib.dataset.impbuild.split(":"); S.builds = S.builds || {}; if (k === detectBuild()) delete S.builds[gk]; else S.builds[gk] = k; renderAll(); renderLive(); return; }
   if (go){ let st = go.dataset.impgo; if (st === "build" && !buildGroup()) st = "done"; IMPW.step = st;
@@ -2451,14 +2495,19 @@ async function nameFromIcon(slot){
   const cands = ITEMS.filter(it => it.sub === g.sub && it.lv <= S.level + 10 && itemIconId(it.name));
   if (cands.length > 160) return;
   const feats = await Promise.all(cands.map(it => loadIconFeat(itemIconId(it.name))));
-  let best = null, second = null;
+  let best = null, second = null; const rank = [];
   cands.forEach((it, i) => { const ft = feats[i]; if (!ft) return;
     // stats only grow with scrolls: an item whose base stats don't fit gets a penalty, not a ban (blurry reads miss lines)
     const d = featDist(mine, ft) + fitPenalty(it, g);   // the picture, double-checked against the item's stats, defense and slots
+    rank.push({it, d});
     if (!best || d < best.d){ second = best; best = {it, d}; } else if (!second || d < second.d) second = {it, d}; });
   // confident if close, or clearly closer than any other item (blurry or partly covered pictures score higher)
   const ok = best && (best.d <= 0.45 || (best.d <= 0.65 && (!second || second.d - best.d >= 0.12)));
   if (S.gear[slot] !== g) return;
+  // not sure (no clear winner): keep the closest few so you can pick the right one
+  rank.sort((a, b) => a.d - b.d);
+  if (!ok || (second && second.d - best.d < 0.08)) g.alts = rank.filter(x => x.d <= best.d + 0.25).slice(0, 4).map(x => x.it.name); else delete g.alts;
+  if (typeof save === "function") save();
   if (!ok){   // not sure which item it is, but if the name guessed from stats clearly doesn't look like this picture, drop it
     const gi = g.name ? cands.findIndex(it => it.name === g.name) : -1;
     if (gi >= 0 && feats[gi] && best && featDist(mine, feats[gi]) - best.d > 0.2){ g.name = ""; if (typeof save === "function") save(); }
@@ -3376,7 +3425,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {fitPenalty, IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {trimTip, fitPenalty, IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 /* slow hover tooltips: [data-tip] shows after a short hover, fades out when you leave */
 (() => {
