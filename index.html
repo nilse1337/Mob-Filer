@@ -336,7 +336,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 #scanToasts{position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .scantoast{display:flex;align-items:center;gap:10px;max-width:420px;padding:9px 14px 9px 10px;border-radius:12px;background:#12351f;border:1px solid #2fbf71;color:#c9f7dc;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:1;transform:translateY(0);transition:opacity 3s ease,transform 3s ease;animation:stin .25s ease}
 .scantoast img{width:34px;height:34px;border-radius:6px;background:#eef2f7;image-rendering:pixelated}.scantoast .stok{color:#2fbf71;font-size:18px}
-.scantoast.fade{opacity:0;transform:translateY(8px)}@keyframes stin{from{opacity:0;transform:translateY(10px)}}
+.stcnt{margin-left:auto;padding:1px 7px;border-radius:999px;background:#2fbf71;color:#08210f;font:800 11px var(--mono);flex:none}.scantoast.fade{opacity:0;transform:translateY(8px)}@keyframes stin{from{opacity:0;transform:translateY(10px)}}
 </style>
 </head>
 <body>
@@ -1922,6 +1922,15 @@ function liveTick(){
     readTipCanvas(c, null, r => {
       LIVE.busy = false;
       if (!r.ok) return;
+      if (r.slot && S.gear[r.slot]){   // several reads of the same item: keep the stats read most often
+        const g = S.gear[r.slot], k = r.slot + "|" + g.sub + "|" + (g.name || ""), now = Date.now();
+        const h = (LIVE.hist = LIVE.hist || {})[r.slot];
+        const list = h && h.k === k && now - h.t < 30000 ? h.list : [];
+        list.push(JSON.stringify({st:g.st, slots:g.slots})); LIVE.hist[r.slot] = {k, t:now, list};
+        const cnt = {}; list.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
+        const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || list.lastIndexOf(b[0]) - list.lastIndexOf(a[0]))[0][0];
+        const v = JSON.parse(best); g.st = v.st; g.slots = v.slots;
+      }
       scanToast(r);
       LIVE.n++;
       if (r.stars) LIVE.msg = `✓ Throwing stars — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
@@ -1963,11 +1972,17 @@ function scanToast(r){
   else return;
   let box = document.getElementById("scanToasts");
   if (!box){ box = document.createElement("div"); box.id = "scanToasts"; document.body.appendChild(box); }
-  const t = document.createElement("div"); t.className = "scantoast";
-  t.innerHTML = `${r.slot && IMGS[r.slot] && IMGS[r.slot].icon ? `<img src="${IMGS[r.slot].icon}" alt="">` : '<span class="stok">✓</span>'}<span>${esc(txt)}</span>`;
-  box.appendChild(t);
-  setTimeout(() => t.classList.add("fade"), 2200);
-  setTimeout(() => t.remove(), 5200);
+  const key = r.stars ? "stars" : r.slot;
+  const ico = r.slot && IMGS[r.slot] && IMGS[r.slot].icon ? `<img src="${IMGS[r.slot].icon}" alt="">` : '<span class="stok">✓</span>';
+  // same item scanned again while its notice is still up: one notice, with a counter
+  let t = box.querySelector(`.scantoast[data-k="${key}"]`);
+  if (t){ t.dataset.n = +t.dataset.n + 1; t.classList.remove("fade"); }
+  else { t = document.createElement("div"); t.className = "scantoast"; t.dataset.k = key; t.dataset.n = 1; box.appendChild(t); }
+  const n = +t.dataset.n;
+  t.innerHTML = `${ico}<span>${esc(txt)}</span>${n > 1 ? `<b class="stcnt" title="Confirmed ${n} times">${n}×</b>` : ''}`;
+  clearTimeout(t._f); clearTimeout(t._r);
+  t._f = setTimeout(() => t.classList.add("fade"), 2200);
+  t._r = setTimeout(() => t.remove(), 5200);
 }
 async function handleGearFiles(files, forceSlot){
   const msgs = [];
