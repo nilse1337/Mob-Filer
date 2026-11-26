@@ -360,6 +360,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .ttplan .tpl{gap:4px 6px!important}
 .klv{font-size:12px;color:var(--muted);margin-top:3px}.klv b{color:#f5a524;font-family:var(--mono)}.qmark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--line2);font-size:10px;font-weight:800;color:var(--muted);cursor:help;vertical-align:1px;margin-left:4px}.qmark:hover{color:var(--text);border-color:var(--accent)}
 .tag.t-el-fire{background:rgba(239,68,68,.15);color:#f87171}.tag.t-el-ice{background:rgba(56,189,248,.15);color:#7dd3fc}.tag.t-el-lightning{background:rgba(250,204,21,.15);color:#facc15}.tag.t-el-holy{background:rgba(253,230,138,.14);color:#fde68a}.tag.t-el-poison{background:rgba(132,204,22,.15);color:#a3e635}
+.el.dim{opacity:.45;filter:saturate(.6)}
 </style>
 </head>
 <body>
@@ -2938,11 +2939,12 @@ function myElements(){
   if (/Crossbow|Sniper|Marksman/.test(L)) out.add("ice");
   return out;
 }
-function elIcons(m){
+function elIcons(m, all){
   if (S.showElIcons === false) return "";
   const mine = myElements(), w = k => k === "fire" ? m.fire === 1 : k === "ice" ? m.ice === 1 : m.el && m.el[k] === 1;
   const I = {fire:["🔥","fire"], ice:["❄","ice"], lightning:["⚡","lightning"], holy:["✨","holy"], poison:["☠","poison"]};
-  return Object.keys(I).filter(k => mine.has(k) && w(k)).map(k => `<span class="el" title="Weak to ${I[k][1]} — you can use ${I[k][1]}">${I[k][0]}</span>`).join("");
+  // all = every weakness (monster list); otherwise only the elements your class can use. Usable ones are bright, the rest dimmed.
+  return Object.keys(I).filter(k => w(k) && (all || mine.has(k))).map(k => `<span class="el ${mine.has(k) ? '' : 'dim'}" title="Weak to ${I[k][1]}${mine.has(k) ? ' — you can use ' + I[k][1] : ''}">${I[k][0]}</span>`).join("");
 }
 /* the monster's type as words */
 function typeTags(e){
@@ -3172,7 +3174,7 @@ function renderList(){
     const d = e.dmg, ko = Number.isFinite(d.ko) ? d.ko : null;
     const kc = ko === null ? "bad" : ko <= 3 ? "ok" : ko <= 6 ? "near" : "bad";
     return `<tr data-id="${esc(e.id)}" class="${e.id===S.selectedId?'sel':''} ${e.myWeak?'myweak':''}">
-      <td><span class="pin ${S.pinned[e.id]?'on':''}" data-pin="${esc(e.id)}" title="Pin">★</span><span class="mname">${esc(e.name)}</span>${elIcons(e)}${tags}<div class="msub">${esc(e.region)}</div></td>
+      <td><span class="pin ${S.pinned[e.id]?'on':''}" data-pin="${esc(e.id)}" title="Pin">★</span><span class="mname">${esc(e.name)}</span>${elIcons(e, true)}${tags}<div class="msub">${esc(e.region)}</div></td>
       <td class="num">${e.level}</td>
       <td class="num">${fmt(e.hp)}</td>
       <td class="num">${e.avoid}</td>
