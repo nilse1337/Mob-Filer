@@ -2591,6 +2591,22 @@ function usefulList(R){
       if (goal !== "damage" || g > 0.0005) out.push({kind:"item", slot, g, raw, m:b.m, share: fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1, hit,
         goal: goalWord(fromSt, b.to, slot, it.sub, extra), name:it.name, id:itemIconId(it.name), lv:it.lv, d:diff(b.to, fromSt), sc: b.sc ? {n:it.slots, sc:b.sc, rate:grade} : null});
     }
+    // failed scrolls on what you wear: a fresh copy of the same item, scrolled with all its slots, can beat it
+    { const base = cur && cur.name ? ITEMS.find(it => it.name.toLowerCase() === cur.name.toLowerCase()) : null;
+      const used = base ? base.slots - (cur.slots || 0) : 0;
+      if (base && grade && used > 0){
+        const fresh = bestFor(slot, base.st, base.sub, base.slots, fromSt, extra);
+        const gF = gainOf(Object.assign({}, extra, {[slot]: {st:fresh.to, sub:base.sub}})), hit = lastHit;
+        const gC = cur.slots > 0 && curBest ? gainOf(Object.assign({}, extra, {[slot]: {st:curBest.to, sub:cur.sub}})) : 0;
+        // how much the used slots actually gave, vs what they'd give if every scroll had worked
+        const got = GSTATS.reduce((t, [k]) => t + Math.max(0, (cur.st[k] || 0) - (base.st[k] || 0)), 0);
+        const per = fresh.sc ? Object.values(fresh.sc.st).reduce((a, v) => a + Math.max(0, v), 0) : 0;
+        const failed = per > 0 ? Math.max(0, Math.round(used - got / per)) : 0;
+        if (gF > gC + 0.0005 && failed > 0 && fresh.m > (curBest ? curBest.m : 0) + 1e-9){
+          const raw = gainOf(Object.assign({}, extra, {[slot]: {st:base.st, sub:base.sub}}));
+          out.push({kind:"item", rebuy:true, failed, used, slot, g:gF, raw, m:fresh.m, share: 0, hit, goal: goalWord(fromSt, fresh.to, slot, base.sub, extra), name:base.name, id:itemIconId(base.name), lv:base.lv, d:diff(fresh.to, fromSt), sc: fresh.sc ? {n:base.slots, sc:fresh.sc, rate:grade} : null});
+        }
+      } }
     if (cur && cur.slots > 0 && grade){
       const b = bestFor(slot, cur.st, cur.sub, cur.slots, cur.st, {});
       if (b.sc && b.m > 1e-6){
@@ -2642,9 +2658,9 @@ function usefulColumn(R){
   return L.map((x, i) => {
     const sc = x.sc ? `${x.sc.n}× ${esc(x.sc.sc.target)} ${esc(x.sc.sc.stat)} Scroll ${x.sc.rate}%` : "";
     return `<div class="urow"><div class="urank">${i+1}</div>
-      <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
+      <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : x.rebuy ? `Buy a new ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
         <div class="note">${x.kind === "stars" ? `Throwing stars · W.ATK +${x.d.watk} vs ${esc(curStar()[0])}` : x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
-        ${x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
+        ${x.rebuy ? `<div class="note">yours has ${x.failed} failed scroll${x.failed > 1 ? 's' : ''} (${x.used} slots used) — a fresh one with every scroll working beats it</div>` : x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
         ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
         <div class="ubar">${(() => { const it = x.g * (x.share === undefined ? 1 : x.share), scp = x.g - it; return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item share"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scroll share"></i>` : ''}`; })()}</div></div>
       <div class="upct ${x.g < -0.0005 ? 'neg' : ''}">${x.g >= 0 ? '+' : '−'}${Math.abs(x.g*100).toFixed(1)}%${goal !== "damage" ? `<small>${goalValue(x, goal)}</small>` : ''}</div></div>`;
