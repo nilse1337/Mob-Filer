@@ -445,7 +445,10 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .kodds{display:block;font:600 12px var(--mono);color:var(--muted);margin-top:3px;cursor:help}
 html.touring,html.touring body{overflow:hidden}
 .imptotal{margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);background:color-mix(in srgb,var(--accent) 7%,var(--panel2));font-size:13px}.imptotal span{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}.imptotal b{color:var(--good)}
-.gtool2{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.gtool2 .note{margin:0}
+#pageGear .gpanel{padding:14px 16px}#pageGear .gpanel .buildcard{margin:0;border:0;padding:0;background:none}
+#pageGear .col{padding:16px 18px}
+#pageGear .colhead h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+#pageGear .gtool2{display:flex;gap:8px;justify-content:space-between;margin-top:12px}
 </style>
 </head>
 <body>
@@ -552,20 +555,20 @@ html.touring,html.touring body{overflow:hidden}
 </main>
 
 <main class="page" id="pageGear">
-  <section class="panel" style="padding:14px 16px">
-    <div id="charCard"></div>
-    <div class="gtool2">
-      <button class="btn" id="btnManualGear">✏️ Manual input equipment</button>
-      <span class="note">Pick a slot in the inventory and type its stats in. Pasting a tooltip (Ctrl+V) still works too.</span>
-      <label id="gearDrop" hidden><input type="file" id="gearFile" accept="image/*" multiple hidden></label>
-      <div id="liveBox" hidden></div>
-    </div>
-    <div id="gearMsg"></div>
-  </section>
+  <div class="sechead" id="buildHead"><b>Your build</b><span class="sh-sub">detected from your base stats — pick another one if it's wrong</span></div>
+  <section class="panel gpanel" id="charCard"></section>
+  <div class="sechead"><b>Equipment &amp; upgrades</b><span class="sh-sub">what you wear, the best set for your level and build, and the upgrades that add the most</span></div>
   <section class="sets3">
     <div class="panel col"><div id="colCurHead"></div>
       <div class="gslots one" id="gearSlots"></div>
-      <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn ghost small" id="gearClear">Clear all gear</button></div></div>
+      <div id="gearMsg"></div>
+      <div class="gtool2">
+        <button class="btn small" id="btnManualGear">✏️ Manual input equipment</button>
+        <button class="btn ghost small" id="gearClear">Clear all gear</button>
+        <label id="gearDrop" hidden><input type="file" id="gearFile" accept="image/*" multiple hidden></label>
+        <div id="liveBox" hidden></div>
+      </div>
+      <div class="note" style="margin-top:6px">Pick a slot and type its stats, or paste a tooltip screenshot (Ctrl+V).</div></div>
     <div class="panel col"><div id="colSetHead"></div><div id="setList"></div><div id="setTotals" class="ctot"></div></div>
     <div class="panel col"><div id="colScrHead"></div><div id="scrollList"></div><div id="scrTotals" class="ctot"></div></div>
   </section>
@@ -1998,12 +2001,12 @@ function equipWindow(){
   }).join("");
   return `<div class="eqwin"><div class="eqtitle">EQUIPMENT INVENTORY</div>
     <div class="eqbody">
-      <svg class="eqfig" viewBox="0 0 300 300" aria-hidden="true"><g fill="currentColor"><circle cx="150" cy="62" r="40"/><path d="M112 108 h76 l22 70 -24 6 -10-36 v92 h-24 v-60 h-4 v60 h-24 v-92 l-10 36 -24-6z"/><path d="M226 232 q8-22 24-14 q10-14 22 0 q10 8 2 22 q2 18-18 18 h-14 q-20 0-16-26z"/></g></svg>
+      <svg class="eqfig" viewBox="0 0 300 300" aria-hidden="true"><g fill="currentColor"><circle cx="150" cy="62" r="40"/><path d="M112 108 h76 l22 70 -24 6 -10-36 v92 h-24 v-60 h-4 v60 h-24 v-92 l-10 36 -24-6z"/></g></svg>
       <div class="eqgrid">${cells}${typeof starCell === "function" ? starCell() : ""}</div>
     </div></div>`;
 }
 function renderGear(){
-  $("charCard").innerHTML = buildCard();   // the character itself is shown on the Monsters page
+  { const bc = buildCard(); $("charCard").innerHTML = bc; $("charCard").style.display = bc ? "" : "none"; $("buildHead").style.display = bc ? "" : "none"; }   // the character itself is shown on the Monsters page
   fillMissingIcons();
   nameOldItems();
   renderLive();
