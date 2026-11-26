@@ -359,6 +359,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .pchip.map{font-weight:700}.pchip.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 35%,transparent)}.pchip.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}.pchip.slow{color:#f5a524;border-color:#f5a52455}.pchip.mate{color:var(--muted)}
 .ttplan .tpl{gap:4px 6px!important}
 .klv{font-size:12px;color:var(--muted);margin-top:3px}.klv b{color:#f5a524;font-family:var(--mono)}.qmark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--line2);font-size:10px;font-weight:800;color:var(--muted);cursor:help;vertical-align:1px;margin-left:4px}.qmark:hover{color:var(--text);border-color:var(--accent)}
+.tag.t-elw{background:rgba(34,197,94,.14);color:#4ade80}.tag.t-elr{background:rgba(148,163,184,.14);color:#94a3b8}.tag.t-eli{background:rgba(148,163,184,.08);color:#64748b;text-decoration:line-through}
 </style>
 </head>
 <body>
@@ -2914,7 +2915,7 @@ const TIP_EXP = `<b>EXP — how it's ranked</b><ul><li><b>EXP / hit</b> = the mo
 const TIP_MESOS = `<b>Mesos — how it's estimated</b><ul><li><b>Mesos / kill</b> = average of the min–max drop players reported on MeowDB × the drop chance. A <b>~</b> means no reports yet: estimated at ≈ 2.15 × the monster's level.</li><li><b>Mesos / hr</b> = mesos per kill × kills per hour. Kills per hour: your hits to kill × ≈0.8 s per attack (0.9 s for spells) + 1 s to move and loot, more for mobbing skills, capped by how fast your share of the map respawns (party size, ≈7 s respawn × map rate).</li><li>A rough guide, not a promise: no meso-up, no Pickpocket and <b>no potion use</b> (no attack potions unless you turned them on under Settings → Potions, and no time or mesos spent on HP/MP potions).</li></ul>`;
 const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],["fly","🪽 Flying", e => e.isFly],
   ["fh","🌲 Forgotten Hollow", e => e.region === "Forgotten Hollow"],["fw","🔥 Weak to fire", e => e.fire === 1],["iw","❄ Weak to ice", e => e.ice === 1],["hw","✨ Weak to holy", e => e.el && e.el.holy === 1],
-  ["fs","🔥 Resists fire", e => e.fire === -1],["is","❄ Resists ice", e => e.ice === -1],["miss","❌ Can't hit 100%", e => e.raw < 1],["hidden","✕ Hidden by you", e => (S.blacklist || []).includes(e.id)]];
+  ["fs","🔥 Resists fire", e => e.fire === -1],["is","❄ Resists ice", e => e.ice === -1],["miss","❌ Can't hit 100%", e => e.raw < 1],["hit","✅ Can hit 100%", e => e.raw >= 1],["hidden","✕ Hidden by you", e => (S.blacklist || []).includes(e.id)]];
 const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["any","🔥/❄ Weak to either"],["hw","✨ Weak to holy"],["undead","💀 Undead"],["fs","Resists fire"],["is","Resists ice"]];
 const COLS = [["name","Monster"],["level","Lv"],["hp","HP"],["avoid","Avoid"],["hit","Hit rate"],["missing","ACC"],["ko","Hits to kill"]];
 const LIMITS = {level:[1,200], baseAcc:[0,9999], extraAcc:[-999,9999], darkness:[0,100], skillLv:[1,30], bPrimary:[0,9999], bLuk:[0,9999], bGear:[0,9999]};
@@ -2943,7 +2944,9 @@ function elIcons(m){
 /* the monster's type as words */
 function typeTags(e){
   if (S.showTypeTags === false) return (e.isCustom?'<span class="tag t-cus">CUSTOM</span>':'') + (e.isEdited?'<span class="tag t-cus">EDITED</span>':'');
-  return (e.isBoss?'<span class="tag t-boss">BOSS</span>':'') + (e.isUndead?'<span class="tag t-und">UNDEAD</span>':'') + (e.isFly?'<span class="tag t-fly">FLYING</span>':'')
+  const EL = [["fire","FIRE"],["ice","ICE"],["lightning","LIGHTNING"],["holy","HOLY"],["poison","POISON"]];
+  const elw = EL.map(([k, l]) => { const v = k === "fire" ? e.fire : k === "ice" ? e.ice : e.el && e.el[k]; return v === 1 ? `<span class="tag t-elw" title="Takes ×1.25 damage from ${k}">WEAK ${l}</span>` : v === -2 ? `<span class="tag t-eli" title="Takes no damage from ${k}">IMMUNE ${l}</span>` : v === -1 ? `<span class="tag t-elr" title="Takes ×0.75 damage from ${k}">RESIST ${l}</span>` : ''; }).join('');
+  return elw + (e.isBoss?'<span class="tag t-boss">BOSS</span>':'') + (e.isUndead?'<span class="tag t-und">UNDEAD</span>':'') + (e.isFly?'<span class="tag t-fly">FLYING</span>':'')
     + (e.isPQ?`<span class="tag t-pq">${e.name.includes('Job Test')?'JOB TEST':'PQ'}</span>`:'') + (e.isCustom?'<span class="tag t-cus">CUSTOM</span>':'') + (e.isEdited?'<span class="tag t-cus">EDITED</span>':'');
 }
 function elPill(el){
@@ -3144,7 +3147,7 @@ function renderList(){
   { const ex = S.exclude || []; $("exCount").textContent = ex.length ? ` (${ex.length})` : ""; $("btnExclude").classList.toggle("on", ex.length > 0);
     $("exPop").innerHTML = `<div class="note" style="padding:2px 4px 6px">Hide these monsters:</div>` + EXCLUDES.map(([k,l]) => `<label class="exrow"><input type="checkbox" data-ex="${k}" ${ex.includes(k)?'checked':''}> ${l}</label>`).join("") + (ex.length ? `<button class="btn small" data-exclear="1" style="margin-top:6px;width:100%">Clear</button>` : '')
       + `<div class="note" style="padding:8px 4px 6px;border-top:1px solid var(--line);margin-top:6px">Hide in the list:</div>`
-      + `<label class="exrow"><input type="checkbox" data-show="showElIcons" ${S.showElIcons === false ? 'checked' : ''}> 🔥 Weakness icons</label><label class="exrow"><input type="checkbox" data-show="showTypeTags" ${S.showTypeTags === false ? 'checked' : ''}> 🏷 Type words (BOSS, UNDEAD…)</label>`;
+      + `<label class="exrow"><input type="checkbox" data-show="showElIcons" ${S.showElIcons === false ? 'checked' : ''}> 🔥 Weakness icons</label><label class="exrow"><input type="checkbox" data-show="showTypeTags" ${S.showTypeTags === false ? 'checked' : ''}> 🏷 Type & element words (BOSS, WEAK FIRE…)</label>`;
     $("exCount").textContent = (ex.length + (S.showElIcons === false) + (S.showTypeTags === false)) ? ` (${ex.length + (S.showElIcons === false) + (S.showTypeTags === false)})` : ""; }
   $("fRegion").value = S.region; $("fStatus").value = S.status;
   const sk = RR.sk;
