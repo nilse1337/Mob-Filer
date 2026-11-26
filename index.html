@@ -457,6 +457,11 @@ html.touring,html.touring body{overflow:hidden}
 .altpick{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--text);cursor:pointer;font:600 12px inherit}
 .altpick img{width:22px;height:22px;object-fit:contain}.altpick.on,.altpick:hover{border-color:var(--accent)}
 .impform{margin-top:8px}.impform .gcard{margin:0}
+.impchoose{padding:12px 14px;margin:0 0 10px;border:2px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--panel2));animation:impPulse 1.8s ease-in-out infinite}
+.impchoose>b{font-size:15px}.chopts{display:grid;gap:6px;margin-top:8px}
+.chopt{display:flex;align-items:center;gap:10px;text-align:left;padding:7px 10px;border-radius:10px;border:1px solid var(--line2);background:var(--panel);color:var(--text);cursor:pointer;font:inherit}
+.chopt:hover{border-color:var(--accent)}.chopt img{width:34px;height:34px;object-fit:contain}.chopt span{display:flex;flex-direction:column}.chopt small{color:var(--muted);font-size:11.5px}
+.chopt.none{justify-content:center;color:var(--muted);font-size:12.5px}
 </style>
 </head>
 <body>
@@ -2273,7 +2278,7 @@ function liveTick(){
       LIVE.busy = false;
       if (!r.ok) return;
       if (r.slot && S.gear[r.slot]){   // several reads of the same item: keep the stats read most often
-        const g = S.gear[r.slot], k = r.slot + "|" + g.sub + "|" + (g.name || ""), now = Date.now();
+        const g = S.gear[r.slot], k = r.slot + "|" + g.sub, now = Date.now();   // not the name: a changing guess must not reset the count
         const h = (LIVE.hist = LIVE.hist || {})[r.slot];
         const list = h && h.k === k && now - h.t < 30000 ? h.list : [];
         list.push(JSON.stringify({st:g.st, slots:g.slots, ex:g.ex || {}, plus:g.plus})); LIVE.hist[r.slot] = {k, t:now, list};
@@ -2281,7 +2286,12 @@ function liveTick(){
         const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || list.lastIndexOf(b[0]) - list.lastIndexOf(a[0]))[0][0];
         const v = JSON.parse(best); g.st = v.st; g.slots = v.slots; g.ex = v.ex; if (v.plus !== undefined) g.plus = v.plus;
       }
-      if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => { scanToast(r); renderAll(); renderLive(); }); else scanToast(r);
+      if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => {
+        const g = S.gear[r.slot], pk = (LIVE.picked || {})[r.slot];
+        if (g && pk && pk.sub === g.sub){   // you already told us which item this is: keep it
+          const it = ITEMS.find(x => x.name === pk.name); if (it && fitPenalty(it, g) < 0.25){ g.name = pk.name; g.alts = [pk.name]; GSTATS.forEach(([q]) => { const b = it.st[q] || 0; if (b > 0 && (g.st[q] || 0) < b) g.st[q] = b; }); save(); } }
+        else if (g && g.alts && g.alts.length > 1 && IMPW.live && IMPW.step === "gear"){ LIVE.mode = "choose"; IMPW.choose = r.slot; }   // not sure: stop and let you pick
+        scanToast(r); renderAll(); renderLive(); }); else scanToast(r);
       LIVE.n++; if (IMPW.live && IMPW.step === "gear") IMPW.slots[r.stars ? "stars" : r.slot] = 1;
       if (r.stars) LIVE.msg = `✓ ${ammoName()} — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
       else { const g = S.gear[r.slot]; LIVE.msg = `✓ ${SLOTS.find(s => s[0] === r.slot)[1]}${g.name ? ' — ' + g.name : ''}: ${statLine(g.st) || 'no attack stats'}`; }
@@ -2355,15 +2365,21 @@ function renderImp(){
       const alts = (g.alts || []).filter(n => n !== g.name);
       return `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${g.name ? ' · ' + esc(g.name) : ' · <i class="near">name unknown</i>'} <span class="s">${esc([GSTATS.filter(([q]) => g.st[q]).map(([q,l]) => `${l} ${g.st[q] > 0 ? '+' : ''}${g.st[q]}`).join(' · '), EXSTATS.filter(([q]) => g.ex && g.ex[q]).map(([q,l]) => `${l} +${g.ex[q]}`).join(' · ')].filter(Boolean).join(' · ') || 'no stats')}${g.slots ? ' · ' + g.slots + ' slots' : ''}</span>
         <button class="btn ghost small impedit" data-impedit="${k}" title="Change the name or stats">✎ Edit</button>
-        ${alts.length && (!g.name || g.alts.length > 1) ? `<div class="impalts"><span class="near">Not sure which item this is — pick it:</span> ${(g.name ? [g.name] : []).concat(alts).map(n => `<button class="altpick ${n === g.name ? 'on' : ''}" data-impname="${k}|${esc(n)}">${itemIconId(n) ? `<img src="https://cdn.meowdb.com/icons/${itemIconId(n)}.png" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'">` : ''}${esc(n)}</button>`).join('')}</div>` : ''}
+        ${alts.length && (!g.name || g.alts.length > 1) && !(LIVE.mode === "choose" && IMPW.choose === k) ? `<div class="impalts"><span class="near">Not sure which item this is — pick it:</span> ${(g.name ? [g.name] : []).concat(alts).map(n => `<button class="altpick ${n === g.name ? 'on' : ''}" data-impname="${k}|${esc(n)}">${itemIconId(n) ? `<img src="https://cdn.meowdb.com/icons/${itemIconId(n)}.png" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'">` : ''}${esc(n)}</button>`).join('')}</div>` : ''}
         ${IMPW.edit === k ? `<div class="impform">${slotCard(k, SLOTS.find(x => x[0] === k)[1], SLOTS.find(x => x[0] === k)[2])}</div>` : ''}</div>`; };
     const items = got.map(k => k === "stars" ? `<div><b>${ammoName()}</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
       : itemRow(k)).join("");
+    const ch = IMPW.choose && S.gear[IMPW.choose] && LIVE.mode === "choose" ? IMPW.choose : null;
+    const choosePanel = ch ? (() => { const g = S.gear[ch], lbl = SLOTS.find(x => x[0] === ch)[1];
+      return `<div class="impchoose"><b>Which ${esc(lbl.toLowerCase())} is this?</b><div class="note">The picture and stats fit more than one item. Pick the right one — scanning continues after that.</div>
+        <div class="chopts">${g.alts.map(n => { const it = ITEMS.find(x => x.name === n) || {st:{}, lv:0, slots:0}, id = itemIconId(n);
+          return `<button class="chopt" data-impname="${ch}|${esc(n)}">${id ? `<img src="https://cdn.meowdb.com/icons/${id}.png" referrerpolicy="no-referrer" alt="" onerror="this.style.visibility='hidden'">` : ''}<span><b>${esc(n)}</b><small>Lv ${it.lv} · ${esc(statLine(it.st))} · ${it.slots} slots</small></span></button>`; }).join("")}
+        <button class="chopt none" data-impname="${ch}|">None of these — keep it without a name</button></div></div>`; })() : '';
     const head = !got.length
       ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
       : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
     set("impGear", `<div class="impgearwrap"><div class="impeq">${equipWindow()}${!got.length ? `<div class="impov"><div><b>👉 Open your EQUIPMENT inventory in MapleStory</b><div class="note">Press <kbd>E</kbd> in game, then hover your mouse over your items one by one${usesStars() ? ` (and your ${ammoName().toLowerCase()})` : ''}.<br>Each one is read and shows up here.</div></div></div>` : ''}</div>
-      <div>${head}<div class="impitems">${items}</div>${got.length ? (() => {   // everything your equipment adds up to
+      <div>${choosePanel || head}<div class="impitems">${items}</div>${got.length ? (() => {   // everything your equipment adds up to
         const gs = Object.values(S.gear).filter(Boolean), tot = {}, ex = {};
         gs.forEach(g => { Object.entries(g.st || {}).forEach(([k, v]) => tot[k] = (tot[k] || 0) + v); Object.entries(g.ex || {}).forEach(([k, v]) => ex[k] = (ex[k] || 0) + v); });
         if (usesStars() && got.includes("stars")) tot.watk = (tot.watk || 0) + curStar()[1];
@@ -2399,6 +2415,9 @@ document.addEventListener("click", ev => {
   const nm = ev.target.closest("[data-impname]");
   if (nm){ const [k, n] = nm.dataset.impname.split("|"); const g = S.gear[k]; const it = ITEMS.find(x => x.name === n);
     if (g && it){ g.name = n; GSTATS.forEach(([q]) => { const b = it.st[q] || 0; if (b > 0 && (g.st[q] || 0) < b) g.st[q] = b; }); g.alts = [n]; }
+    else if (g && !n){ g.name = ""; g.alts = []; }
+    if (g){ (LIVE.picked = LIVE.picked || {})[k] = {name: n, sub: g.sub}; }
+    if (LIVE.mode === "choose"){ LIVE.mode = "gear"; LIVE.last = ""; IMPW.choose = null; }   // go on scanning
     save(); renderAll(); renderLive(); return; }
   const ie = ev.target.closest("[data-impedit]");
   if (ie){ const k = ie.dataset.impedit; IMPW.edit = IMPW.edit === k ? null : k; S.gearSel = k; S.gearEdit = IMPW.edit; renderLive(); return; }
@@ -3425,7 +3444,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {trimTip, fitPenalty, IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {LIVE, IMPW, trimTip, fitPenalty, IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 /* slow hover tooltips: [data-tip] shows after a short hover, fades out when you leave */
 (() => {
