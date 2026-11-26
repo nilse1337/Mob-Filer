@@ -2032,13 +2032,20 @@ async function nameFromIcon(slot){
   const cands = ITEMS.filter(it => it.sub === g.sub && it.lv <= S.level + 10 && itemIconId(it.name));
   if (cands.length > 160) return;
   const feats = await Promise.all(cands.map(it => loadIconFeat(itemIconId(it.name))));
-  let best = null;
+  let best = null, second = null;
   cands.forEach((it, i) => { const ft = feats[i]; if (!ft) return;
     // stats only grow with scrolls: an item whose base stats don't fit gets a penalty, not a ban (blurry reads miss lines)
     let pen = 0; GSTATS.forEach(([k]) => { if ((it.st[k] || 0) > (g.st[k] || 0) + 0.1) pen += 0.04; });
     const d = featDist(mine, ft) + pen;
-    if (!best || d < best.d) best = {it, d}; });
-  if (!best || best.d > 0.45 || S.gear[slot] !== g) return;   // tested: Blue Calas 0.32 vs Dark Calas 0.43; Emerald 0.39 vs next 0.72
+    if (!best || d < best.d){ second = best; best = {it, d}; } else if (!second || d < second.d) second = {it, d}; });
+  // confident if close, or clearly closer than any other item (blurry or partly covered pictures score higher)
+  const ok = best && (best.d <= 0.45 || (best.d <= 0.65 && (!second || second.d - best.d >= 0.12)));
+  if (S.gear[slot] !== g) return;
+  if (!ok){   // not sure which item it is, but if the name guessed from stats clearly doesn't look like this picture, drop it
+    const gi = g.name ? cands.findIndex(it => it.name === g.name) : -1;
+    if (gi >= 0 && feats[gi] && best && featDist(mine, feats[gi]) - best.d > 0.2){ g.name = ""; if (typeof save === "function") save(); }
+    return;
+  }   // tested: Blue Calas 0.32 vs Dark Calas 0.43; Emerald 0.39 vs next 0.72
   if (g.name !== best.it.name){ g.name = best.it.name; }
   // a blurry read can miss a stat line: the item has at least its base stats
   GSTATS.forEach(([k]) => { const b = best.it.st[k] || 0; if (b > 0 && (g.st[k] || 0) < b) g.st[k] = b; });
