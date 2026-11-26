@@ -347,9 +347,9 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .ftip{position:fixed;z-index:10000;display:none;padding:10px 12px;border-radius:10px;background:#0f1522;border:1px solid var(--line2);color:var(--text);font-size:12.5px;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.45);opacity:0;transform:translateY(4px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
 .ftip.on{opacity:1;transform:translateY(0)}.ftip ul{margin:6px 0 0;padding-left:16px}.ftip li{margin:3px 0;color:var(--muted)}.ftip li b,.ftip>b{color:var(--text)}
 .gplus{color:#f5a524;font-weight:800}
-.rcol{position:sticky;top:66px;max-height:calc(100vh - 80px);overflow:auto;display:flex;flex-direction:column;gap:12px}.rcol .insp{position:static;max-height:none;overflow:visible}
+.rcol{display:flex;flex-direction:column;gap:12px;align-self:start}.rcol .insp{position:static;max-height:none;overflow:visible}
 .kside{padding:14px 16px}.kside .kgrid{grid-template-columns:1fr;gap:8px}.kside .khead{display:flex;flex-direction:column;gap:6px}.kside h3{margin:0;font-size:15px}
-.kside .kcard{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;padding:9px 12px}.kside .kcard h4{grid-row:span 3;margin:0;font-size:22px;font-family:var(--mono);color:var(--accent);text-align:center;min-width:42px;line-height:1}.kside .kcard h4 small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.kside .kcard{display:flex;gap:12px;align-items:center;padding:9px 12px}.kside .kbody{flex:1;min-width:0}.kside .kcard h4{flex:none;margin:0;font-size:22px;font-family:var(--mono);color:var(--accent);text-align:center;min-width:42px;line-height:1}.kside .kcard h4 small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:.04em}
 .kside .kcard.done h4{color:var(--good)}.kside .need{font-size:12.5px}.knum{color:var(--accent2,#7dd3fc);font-weight:800}.kneed{color:#f5a524;font-weight:800}.kbig{color:var(--text);font-weight:800;font-family:var(--mono)}
 @media (max-width:1180px){.rcol{position:static;max-height:none}}
 .tag.t-fly{background:color-mix(in srgb,#7dd3fc 18%,transparent);color:#7dd3fc}
@@ -2872,12 +2872,12 @@ function renderKillGoals(){
     const lvTip = `<b>Levels to get there with AP alone</b><ul><li>You get 5 AP per level. Your build keeps about ${5 - apPer === 0 ? 'none' : (5 - apPer) + ' AP per level'} for its second stat, so new gear (and weapons that may come out later) stays wearable — that leaves ≈ ${apPer} AP per level for ${prim.toUpperCase()}.</li><li>Counts only the AP: no new gear, scrolls or skill levels on the way. Leveling up also makes the monster's level gap smaller, so the real number can be a bit lower.</li></ul>`;
     const lvS = (v, w) => v === null || S.level + v > 200 ? `<span class="bad">not by leveling</span> (${w})` : `<b>+${v}</b> level${v > 1 ? 's' : ''} (${w})`;
     const lvLine = (lvA || lvM) ? `<div class="klv">⬆ ${lvA ? lvS(lvA, 'average') : ''}${lvA && lvM ? ' · ' : ''}${lvM ? lvS(lvM, 'every time') : ''} <span class="qmark" data-tip="${esc(lvTip)}">?</span></div>` : '';
-    return `<div class="kcard ${avgOk ? 'done' : ''}"><h4>${n}<small>HIT${n > 1 ? 'S' : ''}</small></h4>
+    return `<div class="kcard ${avgOk ? 'done' : ''}"><h4>${n}<small>HIT${n > 1 ? 'S' : ''}</small></h4><div class="kbody">
       <div class="note">needs <span class="kbig">${fmt(perCast)}</span> damage per ${hits > 1 ? `cast (${fmt(perCast/hits)} per hit)` : 'hit'} on average</div>
       <div class="need">${avgOk ? '<span class="ok">✓ you already do this on average</span>' : `Average: ${avgNeed.map(x => x.replace(/^\+(\d+)/, '<span class="kneed">+$1</span>')).join('<span class="or">or</span>')}`}</div>
       <div class="need">${minOk ? '<span class="ok">✓ every time, even on a low roll</span>' : `Every time: ${minNeed.map(x => x.replace(/^\+(\d+)/, '<span class="kneed">+$1</span>')).join('<span class="or">or</span>')}`}</div>
       ${lvLine}
-    </div>`;
+    </div></div>`;
   }).join("");
   $("killPanel").innerHTML = `<div class="khead"><h3>What it takes to 1-, 2- or 3-hit <span class="note" style="font-weight:600">${esc(mob.name)}</span></h3></div>
     <div class="kgrid">${cards}</div>
