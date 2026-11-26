@@ -344,6 +344,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .livebox{border:1px solid var(--line);background:var(--panel2)}.livebox.on{border-color:#2fbf71;background:#10261a}
 .livebox .btn{margin-left:auto;flex:none}.livebox .btn.go{background:var(--accent);color:#1a1200;border-color:var(--accent);font-weight:800}
 .livemsg{color:var(--good);font-weight:600;font-size:12px}
+.ftip{position:fixed;z-index:10000;display:none;padding:10px 12px;border-radius:10px;background:#0f1522;border:1px solid var(--line2);color:var(--text);font-size:12.5px;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.45);opacity:0;transform:translateY(4px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
+.ftip.on{opacity:1;transform:translateY(0)}.ftip ul{margin:6px 0 0;padding-left:16px}.ftip li{margin:3px 0;color:var(--muted)}.ftip li b,.ftip>b{color:var(--text)}
 </style>
 </head>
 <body>
@@ -2506,7 +2508,25 @@ function setColumn(R){
 /* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
 const GOALS = [["damage","Damage"],["attack","Attack"],["accuracy","Accuracy"],["crit","Crit"],["main","Main stat"]];
 const goalLabel = (k, l) => k === "attack" && S.char.cls === "magician" ? "Magic Attack" : l;
-const GOAL_TIP = {damage:"Everything that raises your damage per hit: main stat, attack, crit, accuracy — all counted together", attack:"Only Weapon / Magic Attack on the item", accuracy:"Hit the monster more often", crit:"Critical rate and damage", main:"Your main stat only"};
+/* hover help for the goal buttons, worded for your class and build */
+function goalTip(k){
+  const c = S.char.cls, magic = c === "magician";
+  const gk = typeof buildGroup === "function" ? buildGroup() : null, G = gk ? BUILDS[gk] : null;
+  const main = G ? G.main.toUpperCase() : ({warrior:"STR", bowman:"DEX", thief:"LUK"}[c] || "INT");
+  const sec = G ? G.stat.toUpperCase() : "";
+  const atk = magic ? "Magic Attack" : "Attack", atkS = magic ? "M.ATK" : "W.ATK";
+  const head = "<b>Damage vs " + atk + "</b>";
+  const T = {
+    damage: `${head}<ul><li><b>Damage:</b> everything that raises your damage per hit, counted together: your main stat (${main}), ${atkS}, crit and accuracy — the strongest options on top.</li><li><b>${atk}:</b> only the ${atkS} on an item. Handy if you only want to scroll attack.</li></ul>`,
+    attack: `${head}<ul><li><b>${atk}:</b> only the ${atkS} on an item. Handy if you only want to scroll attack.</li><li><b>Damage:</b> everything that raises your damage per hit, counted together: ${main}, ${atkS}, crit and accuracy.</li></ul>`,
+    accuracy: magic
+      ? `<b>Accuracy</b><ul><li>Spells don't use the ACC stat: your magic accuracy comes from <b>INT and LUK</b>.</li><li>Shows the items that add the most INT/LUK, so you miss less on high-avoid monsters.</li></ul>`
+      : `<b>Accuracy</b><ul><li>How often you hit: the ACC stat, plus DEX${c === "thief" ? " and LUK" : ""} (which give ACC too).</li><li>Useful when you don't hit a monster 100% — a miss is 0 damage.</li></ul>`,
+    crit: `<b>Crit</b><ul><li>Critical rate (how often you crit) and critical damage (how hard a crit hits).</li><li>Mostly from gloves and earrings, plus crit scrolls.</li></ul>`,
+    main: `<b>Main stat: ${main}</b><ul><li>Only your main stat${G ? ` for your ${G.list.find(x => x.k === ((S.builds && S.builds[gk]) || detectBuild()))?.l || ""} build` : ""}.</li><li>${main} raises ${magic ? "your spell damage" : "your damage range"} directly${sec ? `; ${sec} is only for wearing gear and isn't counted here` : ""}.</li></ul>`
+  };
+  return T[k] || "";
+}
 /* could your (unnamed) item be this one? base stats fit and the extra fits the slots already used */
 function couldBe(it, cur){
   if (!it || !cur || it.sub !== cur.sub) return false;
@@ -2704,7 +2724,7 @@ function renderSets(){
   $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">${S.gearView === "set" ? '<b style="color:var(--accent)">on top of the Best possible set</b> · ' : ''}single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
     <div class="ugrade"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
     <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div>
-    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" title="${GOAL_TIP[k]}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div></div></div>`;
+    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" data-tip="${esc(goalTip(k))}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div></div></div>`;
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = usefulColumn(R);
   $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
@@ -2777,6 +2797,29 @@ function renderKillGoals(){
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
 window.__mf = {itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+
+/* slow hover tooltips: [data-tip] shows after a short hover, fades out when you leave */
+(() => {
+  let tip = null, timer = null, cur = null;
+  const hide = () => { clearTimeout(timer); timer = null; cur = null; if (tip){ const t = tip; t.classList.remove("on"); setTimeout(() => { if (!t.classList.contains("on")) t.style.display = "none"; }, 350); } };
+  document.addEventListener("mouseover", ev => {
+    const el = ev.target.closest && ev.target.closest("[data-tip]");
+    if (el === cur) return;
+    hide(); if (!el || !el.dataset.tip) return;
+    cur = el;
+    timer = setTimeout(() => {
+      if (!tip){ tip = document.createElement("div"); tip.className = "ftip"; document.body.appendChild(tip); }
+      tip.innerHTML = el.dataset.tip; tip.style.display = "block";
+      const r = el.getBoundingClientRect(), w = Math.min(340, window.innerWidth - 20);
+      tip.style.width = w + "px";
+      tip.style.left = Math.max(10, Math.min(window.innerWidth - w - 10, r.left + r.width/2 - w/2)) + "px";
+      const top = r.bottom + 8, h = tip.offsetHeight;
+      tip.style.top = (top + h > window.innerHeight - 10 ? r.top - h - 8 : top) + "px";
+      requestAnimationFrame(() => tip.classList.add("on"));
+    }, 550);
+  });
+  document.addEventListener("scroll", hide, true);
+})();
 
 
 const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],["fly","🪽 Flying", e => e.isFly],
