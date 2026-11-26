@@ -445,7 +445,6 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
           <option value="missing">Below 100%</option><option value="near">Near my level (±10)</option>
         </select>
         <select id="fElement"></select>
-        <button class="btn" id="btnCustom" title="Add custom monster">＋ Mob</button>
       </div>
       <div class="listfoot"><span class="note" id="countNote"></span><button class="btn ghost small" id="btnResetFilters" style="margin-left:auto">Reset filters</button></div>
       <div class="tablewrap">
@@ -3170,7 +3169,10 @@ function renderList(){
     $("exCount").textContent = (ex.length + (S.showElIcons === false) + (S.showTypeTags === false)) ? ` (${ex.length + (S.showElIcons === false) + (S.showTypeTags === false)})` : ""; }
   $("fRegion").value = S.region; $("fStatus").value = S.status;
   const sk = RR.sk;
-  $("fElement").innerHTML = ELEMENT_FILTERS.filter(([k]) => k !== "mine" || sk.el).map(([k,l]) => `<option value="${k}" ${S.elFilter===k?'selected':''}>${k==="mine"?`✔ Weak to ${sk.el}`:l}</option>`).join("");
+    { const dup = {fire:"fw", ice:"iw", holy:"hw"}[sk.el];   // "weak to my skill" and "weak to fire" are the same list for a fire skill: show it once
+    if (dup && S.elFilter === dup) S.elFilter = "mine";
+    const icon = {fire:"🔥", ice:"❄", holy:"✨", lightning:"⚡", poison:"☠"}[sk.el] || "✔";
+    $("fElement").innerHTML = ELEMENT_FILTERS.filter(([k]) => (k !== "mine" || sk.el) && k !== dup).map(([k,l]) => `<option value="${k}" ${S.elFilter===k?'selected':''}>${k==="mine"?`${icon} Weak to ${sk.el} (your skill)`:l}</option>`).join(""); }
   const [sKey, sDir] = S.sort.split(":");
   $("thead").innerHTML = COLS.map(([k,l]) => `<th data-sort="${k}" class="${sKey===k?'sorted':''}">${l} ${sKey===k?`<span class="arr">${+sDir>0?'▲':'▼'}</span>`:''}</th>`).join("");
   const rows = EVAL.filter(passFilters).sort(sorter());
@@ -3436,7 +3438,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") document.que
 
 // custom mob
 $("mRegion").innerHTML = ["Maple Island","Victoria Island","Forgotten Hollow","Custom"].map(r => `<option ${r==="Custom"?"selected":""}>${r}</option>`).join("");
-$("btnCustom").onclick = () => { $("modal").classList.add("open"); $("mName").focus(); };
+if ($("btnCustom")) $("btnCustom").onclick = () => { $("modal").classList.add("open"); $("mName").focus(); };
 $("mAdd").onclick = () => {
   const name = $("mName").value.trim(); if (!name){ $("mName").focus(); return; }
   const id = "custom-" + Date.now().toString(36);
