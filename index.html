@@ -337,7 +337,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .livedot{width:9px;height:9px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px #e5484d33;animation:lvp 1.2s infinite}@keyframes lvp{50%{opacity:.35}}.livemsg{flex-basis:100%;color:var(--good);font-weight:600}
 .setwhy{font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:0 0 10px}.setwhy b{color:var(--text)}.setwhy.closed{cursor:pointer}.setwhy.closed:hover{border-color:var(--line2)}.whyhead{cursor:pointer;margin-bottom:5px}.whycar{color:var(--accent);font-size:11px}.whyhint{font-size:11px;opacity:.7;margin-left:4px}.setwhy .sgoal{margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--line)}.setwhy b.ok{color:var(--good)}
 #scanToasts{position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.scantoast{display:flex;align-items:center;gap:10px;max-width:420px;padding:9px 14px 9px 10px;border-radius:12px;background:#12351f;border:1px solid #2fbf71;color:#c9f7dc;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:1;transform:translateY(0);transition:opacity 3s ease,transform 3s ease;animation:stin .25s ease}
+.scantoast{display:flex;align-items:center;gap:10px;max-width:420px;padding:9px 14px 9px 10px;border-radius:12px;background:#12351f;border:1px solid #2fbf71;color:#c9f7dc;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:1;transform:translateY(0);transition:opacity .6s ease,transform .6s ease;animation:stin .25s ease}
 .scantoast img{width:34px;height:34px;border-radius:6px;background:#eef2f7;image-rendering:pixelated}.scantoast .stok{color:#2fbf71;font-size:18px}
 .stcnt{margin-left:auto;padding:1px 7px;border-radius:999px;background:#2fbf71;color:#08210f;font:800 11px var(--mono);flex:none}.scantoast.fade{opacity:0;transform:translateY(8px)}@keyframes stin{from{opacity:0;transform:translateY(10px)}}
 .gchip.def{background:transparent;border:1px dashed var(--line2);color:var(--muted)}
@@ -462,6 +462,7 @@ html.touring,html.touring body{overflow:hidden}
 .chopt{display:flex;align-items:center;gap:10px;text-align:left;padding:7px 10px;border-radius:10px;border:1px solid var(--line2);background:var(--panel);color:var(--text);cursor:pointer;font:inherit}
 .chopt:hover{border-color:var(--accent)}.chopt img{width:34px;height:34px;object-fit:contain}.chopt span{display:flex;flex-direction:column}.chopt small{color:var(--muted);font-size:11.5px}
 .chopt.none{justify-content:center;color:var(--muted);font-size:12.5px}
+.editshot{margin:0 0 10px;text-align:center}.editshot img{max-width:100%;max-height:260px;border-radius:8px;border:1px solid var(--line2);cursor:zoom-in}
 </style>
 </head>
 <body>
@@ -1965,7 +1966,7 @@ function slotCard(slot, label, icon){
   if (hidden) return "";
   if (slot === "overall" && !g && (S.gear.top || S.gear.bottom)) return "";
   let body;
-  if (editing) body = gearEditForm(slot, g);
+  if (editing) body = (IMGS[slot] && IMGS[slot].src ? `<div class="editshot"><img src="${IMGS[slot].src}" alt="" data-gimg="${slot}" title="The scanned tooltip — click to enlarge"></div>` : '') + gearEditForm(slot, g);
   else if (g) body = `<div class="gbody">${IMGS[slot] && IMGS[slot].src ? `<img class="gimg" src="${IMGS[slot].src}" data-gimg="${slot}" alt="" title="Click to enlarge">` : ''}<div style="min-width:0"><div class="gname">${itemIconId(g.name) ? iconImg(itemIconId(g.name), "", "iicon") + " " : ""}${esc(g.name || SUBTYPES[g.sub])}${Number.isFinite(g.plus) && g.plus > 0 ? ` <span class="gplus">(+${g.plus})</span>` : ""}</div>
       <div class="gstats">${GSTATS.filter(([k]) => g.st[k]).map(([k,l]) => `<span class="gchip ${k==='int'||k==='matk'?'mag':''}">${l} ${g.st[k]>0?'+':''}${g.st[k]}</span>`).join("")}${EXSTATS.filter(([k]) => g.ex && g.ex[k]).map(([k,l]) => `<span class="gchip def" title="Shown only — doesn't change damage">${l} ${g.ex[k]>0?'+':''}${g.ex[k]}</span>`).join("") || (GSTATS.some(([k]) => g.st[k]) ? '' : '<span class="note">no stats</span>')}</div>
       <div class="note">${g.slots > 0 ? `<b class="ok">${g.slots}</b> upgrade slot${g.slots>1?'s':''} left` : 'no slots left'}</div></div></div>`;
@@ -2291,11 +2292,11 @@ function liveTick(){
         if (g && pk && pk.sub === g.sub){   // you already told us which item this is: keep it
           const it = ITEMS.find(x => x.name === pk.name); if (it && fitPenalty(it, g) < 0.25){ g.name = pk.name; g.alts = [pk.name]; GSTATS.forEach(([q]) => { const b = it.st[q] || 0; if (b > 0 && (g.st[q] || 0) < b) g.st[q] = b; }); save(); } }
         else if (g && g.alts && g.alts.length > 1 && IMPW.live && IMPW.step === "gear"){ LIVE.mode = "choose"; IMPW.choose = r.slot; }   // not sure: stop and let you pick
-        scanToast(r); renderAll(); renderLive(); }); else scanToast(r);
+        scanToast(r); if (IMPW.live && IMPW.step === "gear") renderLive(); else { renderAll(); renderLive(); } }); else scanToast(r);
       LIVE.n++; if (IMPW.live && IMPW.step === "gear") IMPW.slots[r.stars ? "stars" : r.slot] = 1;
       if (r.stars) LIVE.msg = `✓ ${ammoName()} — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
       else { const g = S.gear[r.slot]; LIVE.msg = `✓ ${SLOTS.find(s => s[0] === r.slot)[1]}${g.name ? ' — ' + g.name : ''}: ${statLine(g.st) || 'no attack stats'}`; }
-      S.gearEdit = null; renderAll(); renderLive();
+      S.gearEdit = IMPW.edit || null; if (IMPW.live && IMPW.step === "gear"){ save(); renderLive(); } else { renderAll(); renderLive(); }   // in the import window only that window is redrawn: scanning stays quick
     }, true);
   } catch(e){ console.error(e); LIVE.busy = false; }
 }
@@ -2570,8 +2571,8 @@ function scanToast(r){
   const n = +t.dataset.n;
   t.innerHTML = `${ico}<span>${esc(txt)}</span>${n > 1 ? `<b class="stcnt" title="Confirmed ${n} times">${n}×</b>` : ''}`;
   clearTimeout(t._f); clearTimeout(t._r);
-  t._f = setTimeout(() => t.classList.add("fade"), 2200);
-  t._r = setTimeout(() => t.remove(), 5200);
+  t._f = setTimeout(() => t.classList.add("fade"), 1300);
+  t._r = setTimeout(() => t.remove(), 2000);
 }
 async function handleGearFiles(files, forceSlot){
   const msgs = [];
