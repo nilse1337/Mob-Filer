@@ -3417,7 +3417,11 @@ $("inPotion").onchange = e => { const id = e.target.value; if (!id) return; cons
   S.pots = (S.pots || []).filter(x => { const q = POTIONS.find(y => y[0] === x); return q && !clash(q); }).concat(id); renderAll(); };
 document.addEventListener("click", ev => { const d = ev.target.closest("[data-potdel]"); if (d){ S.pots = (S.pots || []).filter(x => x !== d.dataset.potdel); renderAll(); } });
 $("inMode").onchange = e => { S.mode = e.target.value; renderAll(); };
-$("fRegion").onchange = e => { S.region = e.target.value; renderAll(); };
+$("fRegion").onchange = e => { S.region = e.target.value;
+  // picking a group you had turned off: turn it back on so those monsters show
+  const clash = {pq:["pq"], boss:["boss"], undead:["undead"], fh:["fh"], mv:[], pinned:["hidden"]}[S.region] || [];
+  if (clash.length && (S.exclude || []).some(k => clash.includes(k))){ S.exclude = S.exclude.filter(k => !clash.includes(k)); toast(`Turned "${clash.map(k => (EXCLUDES.find(x => x[0] === k) || [k, k])[1]).join(", ")}" back on so these monsters show.`); }
+  renderAll(); };
 $("fStatus").onchange = e => { S.status = e.target.value; renderAll(); };
 $("fElement").onchange = e => { S.elFilter = e.target.value; renderAll(); };
 $("inSearch").addEventListener("input", e => { S.search = e.target.value; renderAll(); });
