@@ -409,6 +409,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .impov b{display:block;font-size:16px;margin-bottom:6px}.impov .note{font-size:13px}
 .impitems{display:grid;gap:5px;font-size:13px}.impitems div{padding:6px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
 .impitems .s{color:var(--muted);font-size:12px}
+.impitems .impseen{display:flex;gap:9px;align-items:center;border-style:dashed;opacity:.85}.impseen img{width:32px;height:32px;image-rendering:pixelated;border-radius:5px;flex:none}.impseen small{display:block;color:var(--muted);font-size:11.5px}
 .impdone{text-align:center;padding:22px;border:2px solid #2fbf71;border-radius:14px;background:#10261a}
 .impdone h4{margin:0 0 6px;font-size:22px}.impdone .btn{margin-top:12px;font-size:15px;padding:10px 26px}
 .setnotice.left::before{left:28px;right:auto}#navGear.pulse{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent);border-radius:8px}
@@ -2270,6 +2271,92 @@ function findTooltip(c){
   while (y1 - y > 80 && frac(x, y1, x1, y1) < 0.45) y1--;
   return {x, y, w: x1 - x + 1, h: y1 - y + 1, n: best.n};
 }
+/* ---------- EQUIPMENT INVENTORY window: find it on the shared screen and name every worn item from its picture.
+   Stats are NOT taken from here — only from the tooltip when you hover an item. ---------- */
+// cell (row, column) of each slot in the 5-wide grid; 33 px per cell at the game's own size
+const INV_CELLS = {hat:[1,2], earrings:[2,3], cape:[3,0], top:[3,1], weapon:[3,3], shield:[3,4], gloves:[4,0], bottom:[4,1], shoes:[5,1]};
+const INV_BG = [178, 197, 213];   // the grey-blue of a filled slot
+function findEquipWin(f){
+  const W = f.width, H = f.height, px = f.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
+  const red = o => px[o] > 150 && px[o+1] < 75 && px[o+2] < 75;
+  const pink = o => px[o] > 185 && px[o+1] > 60 && px[o+1] < 155 && px[o+2] > 85 && px[o+2] < 175;
+  for (let y = 20; y < H - 150; y += 1){
+    let x = 0;
+    while (x < W){
+      if (!red((y*W + x)*4)){ x += 2; continue; }
+      let a = x; while (a > 0 && red((y*W + a - 1)*4)) a--;
+      let z = x; while (z < W - 1 && red((y*W + z + 1)*4)) z++;
+      const L = z - a + 1; x = z + 2;
+      if (L < 100 || L > 560) continue;   // the red line under the tabs: 168 px at normal size
+      const sc = L / 168;
+      if (!red(((y + Math.max(1, Math.floor(1.5*sc)))*W + a + (L >> 1))*4)) continue;   // it's ~3 px thick
+      // the pink "Equip" tab sits right above its left end
+      let n = 0; const ty0 = Math.round(y - 17*sc), ty1 = Math.round(y - 3*sc), tx0 = Math.round(a + 4*sc), tx1 = Math.round(a + 32*sc);
+      if (ty0 < 0) continue;
+      for (let yy = ty0; yy <= ty1; yy++) for (let xx = tx0; xx <= tx1; xx++) if (pink((yy*W + xx)*4)) n++;
+      if (n < 40*sc*sc) continue;
+      return {x0:a, y0:y, sc, px, W, H};
+    }
+  }
+  return null;
+}
+// picture features of one slot (only the item: the slot's own grey-blue and its label are left out)
+function invCellFeat(win, r, c){
+  const {x0, y0, sc, px, W} = win, cx = Math.round(x0 + (3 + 33*c)*sc), cy = Math.round(y0 + (-6 + 33*r)*sc), cs = Math.round(31*sc);   // inside the grid lines
+  const d = (o) => Math.abs(px[o]-INV_BG[0]) + Math.abs(px[o+1]-INV_BG[1]) + Math.abs(px[o+2]-INV_BG[2]);
+  let bgN = 0; for (let y = cy; y < cy + cs; y++) for (let x = cx; x < cx + cs; x++) if (d((y*W + x)*4) < 24) bgN++;
+  if (bgN < cs*cs*0.08) return null;   // empty (white) or blocked (red) slot
+  // left out: the slot's grey-blue, its label ("HAT"), the grid lines and the shadow under the item — all blue-grey tints
+  const greyBlue = o => { const r = px[o], g = px[o+1], b = px[o+2]; return b >= g - 4 && g >= r - 4 && b - r >= 12 && b - r <= 80 && Math.max(r, g, b) - Math.min(r, g, b) <= 80; };
+  const on = o => d(o) > 70 && !greyBlue(o);
+  let ax = 1e9, ay = 1e9, bx = -1, by = -1;
+  for (let y = cy; y < cy + cs; y++) for (let x = cx; x < cx + cs; x++) if (on((y*W + x)*4)){ if (x < ax) ax = x; if (x > bx) bx = x; if (y < ay) ay = y; if (y > by) by = y; }
+  if (bx < 0 || bx - ax < 6*sc || by - ay < 6*sc) return null;
+  const N = 16, fe = [];
+  for (let gy = 0; gy < N; gy++) for (let gx = 0; gx < N; gx++){
+    const x1 = ax + (bx-ax+1)*gx/N, x2 = ax + (bx-ax+1)*(gx+1)/N, y1 = ay + (by-ay+1)*gy/N, y2 = ay + (by-ay+1)*(gy+1)/N;
+    let rr = 0, gg = 0, bb = 0, n = 0, t = 0;
+    for (let y = Math.floor(y1); y < Math.ceil(y2); y++) for (let x = Math.floor(x1); x < Math.ceil(x2); x++){ const o = (y*W + x)*4; t++; if (on(o)){ rr += px[o]; gg += px[o+1]; bb += px[o+2]; n++; } }
+    fe.push(n / Math.max(1, t) > 0.4 ? [rr/n, gg/n, bb/n] : null);
+  }
+  // small picture of the slot for the list
+  const pc = document.createElement("canvas"); pc.width = pc.height = 32; const pctx = pc.getContext("2d"), id = pctx.createImageData(32, 32);
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++){ const o = ((cy + Math.floor(y*cs/32))*W + cx + Math.floor(x*cs/32))*4, q = (y*32 + x)*4; id.data[q] = px[o]; id.data[q+1] = px[o+1]; id.data[q+2] = px[o+2]; id.data[q+3] = 255; }
+  pctx.putImageData(id, 0, 0);
+  return {f:fe, ar:(bx-ax+1)/(by-ay+1), pic:pc.toDataURL(), sig:fe.map(v => v ? (v[0] >> 5) + "" + (v[1] >> 5) + (v[2] >> 5) : "-").join("")};
+}
+async function scanEquipWin(f){
+  const win = findEquipWin(f); if (!win){ LIVE.invWin = false; return; }
+  LIVE.invWin = true;
+  const cells = {};
+  for (const [slot, [r, c]] of Object.entries(INV_CELLS)){ const fe = invCellFeat(win, r, c); if (fe) cells[slot] = fe; }
+  const sig = Object.entries(cells).map(([k, v]) => k + v.sig).join("|");
+  if (sig === LIVE.invSig) return;   // same items as last time
+  LIVE.invSig = sig;
+  await mscwIcons();
+  const out = {};
+  for (const [slot, fe] of Object.entries(cells)){
+    const want = slot === "top" ? ["top", "overall"] : [slot];
+    let cands = ITEMS.filter(it => want.includes(SUB_TO_SLOT(it.sub)) && (!S.level || it.lv <= S.level + 10) && MSCW_K && MSCW_K[it.name.toLowerCase()]);
+    if (S.char && S.char.cls && typeof usable === "function"){ const u = cands.filter(it => usable(it, S.char.cls)); if (u.length) cands = u; }   // items your job can wear
+    const rk = [];
+    for (const it of cands){ const ft = await loadIconFeat(itemIconId(it.name)); if (ft) rk.push([featDist(fe, ft), it]); }
+    rk.sort((a, b) => a[0] - b[0]); if (!rk.length) continue;
+    const [d0, it0] = rk[0], d1 = rk[1] ? rk[1][0] : 9;
+    if (d0 > 0.85) continue;   // nothing looks like it
+    const sure = d0 < 0.6 || d1 - d0 > 0.05;
+    out[SUB_TO_SLOT(it0.sub)] = {name:it0.name, sub:it0.sub, d:d0, sure, alts: sure ? null : rk.slice(0, 3).filter(([d]) => d - d0 < 0.05).map(([, it]) => it.name), pic:fe.pic};
+  }
+  LIVE.inv = out;
+  if (IMPW.live && IMPW.step === "gear") renderLive(); else renderLive();
+}
+/* the name the equipment window gave this slot, if the hovered tooltip agrees (same type, stats fit the item) */
+function invNameFor(slot, g){
+  const iv = LIVE.inv && LIVE.inv[slot]; if (!iv || !iv.sure || !g || iv.sub !== g.sub) return null;   // only a clear match
+  const it = ITEMS.find(x => x.name === iv.name); if (!it) return null;
+  try { if (fitPenalty(it, g) > 0.45) return null; } catch(e){}
+  return iv;
+}
 function liveTick(){
   if (!LIVE.video || LIVE.busy || LIVE.video.readyState < 2) return;
   const v = LIVE.video, W = v.videoWidth, H = v.videoHeight; if (!W || !H) return;
@@ -2289,6 +2376,8 @@ function liveTick(){
       LIVE.busy = false; return;
     }
     if (LIVE.mode !== "gear"){ LIVE.busy = false; return; }
+    if (Date.now() - (LIVE.invT || 0) > 1500 && !LIVE.invBusy){   // every 1.5 s: is the EQUIPMENT INVENTORY open? name what's worn
+      LIVE.invT = Date.now(); LIVE.invBusy = true; scanEquipWin(f).catch(e => console.error(e)).then(() => { LIVE.invBusy = false; }); }
     let b;
     if (W > 2400){   // big (4K) screens: look for the tooltip on a half-size copy, it's 4× less work
       const hf = document.createElement("canvas"); hf.width = W >> 1; hf.height = H >> 1; const hx = hf.getContext("2d", {willReadFrequently:true}); hx.imageSmoothingEnabled = false; hx.drawImage(f, 0, 0, hf.width, hf.height);
@@ -2318,7 +2407,11 @@ function liveTick(){
       const g0 = r.slot && S.gear[r.slot], lk = g0 ? r.slot + "|" + g0.sub + "|" + JSON.stringify({st:g0.st, slots:g0.slots, ex:g0.ex || {}}) : null;
       const lock = lk && (LIVE.lock = LIVE.lock || {})[r.slot], locked = !!(lock && lock.k === lk && Date.now() - lock.t < 90000);
       if (locked){ g0.name = lock.name; if (lock.alts) g0.alts = lock.alts.slice(); else delete g0.alts; lock.t = Date.now(); }
-      const nm = r.slot && !locked ? nameFromIcon(r.slot).catch(() => {}) : null;
+      // the EQUIPMENT INVENTORY window already named this slot and the stats fit that item: take that name
+      const ivn = !locked && g0 && !(LIVE.picked && LIVE.picked[r.slot]) ? invNameFor(r.slot, g0) : null;
+      const useInv = () => { const g = S.gear[r.slot];   // the tooltip's picture agrees with (or can't tell from) what the equipment window showed
+        if (ivn && g === g0 && (!g.name || g.name === ivn.name || (g.alts || []).includes(ivn.name))){ g.name = ivn.name; delete g.alts; } };
+      const nm = r.slot && !locked ? nameFromIcon(r.slot).catch(() => {}).then(useInv) : null;
       if (nm) nm.then(() => { const g = S.gear[r.slot]; if (g === g0) LIVE.lock[r.slot] = {k:lk, t:Date.now(), name:g.name || "", alts:g.alts ? g.alts.slice() : null};
         setMsg(); if (IMPW.live && IMPW.step === "gear") renderLive(); });   // a late name still shows up
       if (r.slot) Promise.race([nm, new Promise(ok => setTimeout(ok, 700))]).then(() => {   // never keep the scan waiting on slow pictures
@@ -2406,6 +2499,9 @@ function renderImp(){
         ${IMPW.edit === k ? `<div class="impform">${slotCard(k, SLOTS.find(x => x[0] === k)[1], SLOTS.find(x => x[0] === k)[2])}</div>` : ''}</div>`; };
     const items = got.map(k => k === "stars" ? `<div><b>${ammoName()}</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
       : itemRow(k)).join("");
+    // seen in the EQUIPMENT INVENTORY window but not hovered yet: name only, stats come from hovering
+    const seen = Object.entries(LIVE.inv || {}).filter(([k]) => !got.includes(k) && !(k === "overall" && got.includes("top")) && !(k === "top" && got.includes("overall")));
+    const seenRows = seen.map(([k, v]) => `<div class="impseen"><img src="${v.pic}" alt=""><span><b>${esc((SLOTS.find(x => x[0] === k) || [k, k])[1])}</b> · ${esc(v.sure ? v.name : (v.alts || [v.name]).join(' or '))}<small>Seen in your equipment window — hover it in game for its stats</small></span></div>`).join("");
     const ch = IMPW.choose && S.gear[IMPW.choose] && LIVE.mode === "choose" ? IMPW.choose : null;
     const choosePanel = ch ? (() => { const g = S.gear[ch], lbl = SLOTS.find(x => x[0] === ch)[1];
       return `<div class="impchoose"><b>Which ${esc(lbl.toLowerCase())} is this?</b><div class="note">The picture and stats fit more than one item. Pick the right one — scanning continues after that.</div>
@@ -2413,10 +2509,10 @@ function renderImp(){
           return `<button class="chopt" data-impname="${ch}|${esc(n)}">${id ? `<img src="https://cdn.meowdb.com/icons/${id}.png" referrerpolicy="no-referrer" alt="" onerror="this.style.visibility='hidden'">` : ''}<span><b>${esc(n)}</b><small>Lv ${it.lv} · ${esc(statLine(it.st))} · ${it.slots} slots</small></span></button>`; }).join("")}
         <button class="chopt none" data-impname="${ch}|">None of these — keep it without a name</button></div></div>`; })() : '';
     const head = !got.length
-      ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
+      ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>${seen.length ? `Found your equipment window — ${seen.length} item${seen.length > 1 ? 's' : ''} recognised` : 'Waiting for your items…'}</b><div class="note">${seen.length ? 'Now hover each item in MapleStory so its exact stats (scrolls included) are read.' : 'Hover each item in your EQUIPMENT inventory in MapleStory.'}</div></div></div>`
       : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
-    set("impGear", `<div class="impgearwrap"><div class="impeq">${equipWindow()}${!got.length ? `<div class="impov"><div><b>👉 Open your EQUIPMENT inventory in MapleStory</b><div class="note">Press <kbd>E</kbd> in game, then hover your mouse over your items one by one${usesStars() ? ` (and your ${ammoName().toLowerCase()})` : ''}.<br>Each one is read and shows up here.</div></div></div>` : ''}</div>
-      <div>${choosePanel || head}<div class="impitems">${items}</div>${got.length ? (() => {   // everything your equipment adds up to
+    set("impGear", `<div class="impgearwrap"><div class="impeq">${equipWindow()}${!got.length ? `<div class="impov"><div><b>${seen.length ? "✓ Equipment window found — now hover your items" : "👉 Open your EQUIPMENT inventory in MapleStory"}</b><div class="note">Press <kbd>E</kbd> in game, then hover your mouse over your items one by one${usesStars() ? ` (and your ${ammoName().toLowerCase()})` : ''}.<br>Each one is read and shows up here.</div></div></div>` : ''}</div>
+      <div>${choosePanel || head}<div class="impitems">${items}${seenRows}</div>${got.length ? (() => {   // everything your equipment adds up to
         const gs = Object.values(S.gear).filter(Boolean), tot = {}, ex = {};
         gs.forEach(g => { Object.entries(g.st || {}).forEach(([k, v]) => tot[k] = (tot[k] || 0) + v); Object.entries(g.ex || {}).forEach(([k, v]) => ex[k] = (ex[k] || 0) + v); });
         if (usesStars() && got.includes("stars")) tot.watk = (tot.watk || 0) + curStar()[1];
@@ -3482,7 +3578,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {LIVE, IMPW, trimTip, fitPenalty, IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {scanEquipWin, findEquipWin, LIVE, IMPW, trimTip, fitPenalty, IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 /* slow hover tooltips: [data-tip] shows after a short hover, fades out when you leave */
 (() => {
@@ -3508,6 +3604,7 @@ window.__mf = {LIVE, IMPW, trimTip, fitPenalty, IMGS, loadIconFeat, nameFromIcon
 })();
 
 
+const TIP_EXPH = `<b>EXP — how it's ranked</b><ul><li>Only the monster's <b>EXP per kill</b> counts: the most EXP first.</li><li>Ties: the one you kill in fewer hits wins.</li><li>Pick <b>EXP / Hit</b> to also weigh how fast you kill it.</li></ul>`;
 const TIP_EXP = `<b>EXP — how it's ranked</b><ul><li><b>EXP / hit</b> = the monster's EXP ÷ the hits you need to kill it (using the damage range you picked: lowest, average or highest hit).</li><li>Hits to kill include your skill, the monster's defense (M.DEF / P.DEF), element and level difference.</li><li><b>EXP</b> is the base EXP per kill from MeowDB — no party bonus, EXP coupons or events.</li><li><b>Without potions</b> (unless you switched some on under Settings → Potions): attack/magic potions would lower your hits to kill and raise EXP / hit.</li></ul>`;
 const TIP_MESOS = `<b>Mesos — how it's estimated</b><ul><li><b>Mesos / kill</b> = average of the min–max drop players reported on MeowDB × the drop chance. A <b>~</b> means no reports yet: estimated at ≈ 2.15 × the monster's level.</li><li><b>Mesos / hr</b> = mesos per kill × kills per hour. Kills per hour: your hits to kill × ≈0.8 s per attack (0.9 s for spells) + 1 s to move and loot, more for mobbing skills, capped by how fast your share of the map respawns (party size, ≈7 s respawn × map rate).</li><li>A rough guide, not a promise: no meso-up, no Pickpocket and <b>no potion use</b> (no attack potions unless you turned them on under Settings → Potions, and no time or mesos spent on HP/MP potions).</li></ul>`;
 const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],["fly","🪽 Flying", e => e.isFly],
@@ -3707,9 +3804,10 @@ function renderSummary(){
   pool.forEach(e => { e._ko = kof(e); e._low = e.level < S.level - 15; });
   pool = pool.filter(hkOk);
   const lowerUsed = pool.some(e => e._low);
-  const tg = S.trainGoal || "exp";
-  pool.forEach(e => { const mz = mobMesos(e), pl = trainPlan(e), kph = killsPerHour(e, e._ko, pl); e._mz = mz; e._mph = mz.avg * kph; });
+  const tg = S.trainGoal || "exph";   // exp = most EXP per kill · exph = EXP per hit · mesos = mesos per hour
+  pool.forEach(e => { const mz = mobMesos(e), pl = trainPlan(e), kph = killsPerHour(e, e._ko, pl); e._mz = mz; e._mph = mz.avg * kph; e._eph = e.exp * kph; });
   if (tg === "mesos") pool.sort((a,b) => b._mph - a._mph || a._ko - b._ko);
+  else if (tg === "exp") pool.sort((a,b) => b.exp - a.exp || a._ko - b._ko);   // just the most EXP per kill
   else pool.sort((a,b) => (b.exp / b._ko) - (a.exp / a._ko) || a._ko - b._ko || b.exp - a.exp);
   { const seen = new Set(); pool = pool.filter(e => { const k = baseName(e.name); if (seen.has(k)) return false; seen.add(k); return true; }); }   // one row per monster
   const train = pool[0];
@@ -3720,7 +3818,7 @@ function renderSummary(){
   $("summary").innerHTML = `
     <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length} <span class="vunit">monsters</span></div><div class="s">click to filter</div></div>
     <div class="panel tile ${S.topList === 'acc' ? 'open' : ''}" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span>${target ? (() => { const n = Math.min(5, all.filter(e => e.raw < 1 && !e.isPQ).length); return `<button class="tmore" data-ttfold="acc">${S.topList === 'acc' ? 'Hide ▴' : n > 1 ? `See top ${n} ▾` : 'See details ▾'}</button>`; })() : ''}<div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
-    <div class="panel tile ${S.topList === 'train' ? 'open' : ''}" data-jump="${train?train.id:''}"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"}</span><button class="tmore" data-ttfold="train">${S.topList === 'train' ? 'Hide ▴' : `See top ${Math.max(1, Math.min(5, pool.length))} ▾`}</button><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
+    <div class="panel tile ${S.topList === 'train' ? 'open' : ''}" data-jump="${train?train.id:''}"><span class="lbl">${{exp:"Most EXP", exph:"Best EXP per hit", mesos:"Best mesos per hour"}[tg]}</span><button class="tmore" data-ttfold="train">${S.topList === 'train' ? 'Hide ▴' : `See top ${Math.max(1, Math.min(5, pool.length))} ▾`}</button><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
     <div class="panel tile ${sk.el==='ice'?'ice':'fire'} ${S.topList === 'weak' ? 'open' : ''}" ${sk.el?`data-jump="${weakBest?weakBest.id:''}"`:``}><span class="lbl">${weakLbl}</span>${sk.el && weakPool.length ? `<button class="tmore" data-ttfold="weak">${S.topList === 'weak' ? 'Hide ▴' : `See top ${Math.min(5, weakPool.length)} ▾`}</button>` : ''}<div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} you hit` : 'pick a fire/ice skill to compare'}</div></div>`;
   const top = pool.slice(0, 5);
   const trRow = (e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
@@ -3747,12 +3845,12 @@ function renderSummary(){
         const cEh = `<span class="ttstat" data-tip="${esc(TIP_EXP)}"><b>${fmt(Math.round(e.exp / e._ko))}</b><small>EXP / hit</small></span>`;
         const cKo = `<span class="ttstat" title="low ${e.dmg.worst} · avg ${e.dmg.ko} · high ${e.dmg.hi > 0 ? Math.ceil(e.hp / (e.dmg.hi * RR.at.hits)) : '∞'}"><b>${e._ko}</b><small>hit${e._ko > 1 ? 's' : ''} to kill</small></span>`;
         const cE = `<span class="ttstat" data-tip="${esc(TIP_EXP)}"><b>${fmt(e.exp)}</b><small>EXP</small></span>`;
-        return tg === "mesos" ? cMph + cMk + cKo + cEh : cEh + cKo + cE + cMph; })()}
+        return tg === "mesos" ? cMph + cMk + cKo + cEh : tg === "exp" ? cE + cKo + cEh + cMph : cEh + cKo + cE + cMph; })()}
       <span class="ttstat" title="Damage after this monster's ${RR.type === 'magic' ? 'magic' : 'physical'} defense"><b>${RR.type === 'magic' ? 'M' : 'P'}.DEF ${e.dmg.def || 0}</b><small>${e.dmg.def ? '−' + Math.round((1 - e.dmg.defF) * 100) + '% dmg' : 'no defense'}</small></span>
       <button class="blbtn" data-bl="${esc(e.id)}" title="Don't suggest ${esc(e.name)} any more (undo in Settings)">✕</button></div>`;
   const trCtrls = `    <span class="kmlbl">Damage range:</span><div class="seg kmode" title="Which part of your damage range to use for hits to kill">${[["low","Lowest hit"],["avg","Average hit"],["high","Highest hit"]].map(([k,l]) => `<button data-kmode="${k}" class="${km===k?'on':''}">${l}</button>`).join("")}</div>
     <span class="kmlbl">Hits to kill:</span><div class="seg kmode" title="Only suggest monsters you kill in this many hits">${[[0,"Any"],[1,"1 hit"],[2,"2 hits"],[3,"3+ hits"]].map(([k,l]) => `<button data-hk="${k}" class="${(S.hitsKill||0)===k?'on':''}">${l}</button>`).join("")}</div>
-    <span class="kmlbl">Priority:</span><div class="seg kmode" title="What to rank the monsters by">${[["exp","EXP"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>`;
+    <span class="kmlbl">Priority:</span><div class="seg kmode" title="What to rank the monsters by">${[["exp","EXP"],["exph","EXP / Hit"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXPH : k === "exph" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>`;
   const tc = S.topList !== "train";   // closed by default; opens from the "Best EXP per hit" tile
   if (S.topList === "acc" || S.topList === "weak"){   // the other two tiles: a simple top 5 about their own subject
     const isAcc = S.topList === "acc";
@@ -3777,7 +3875,7 @@ function renderSummary(){
     return;
   }
   $("topTrain").style.display = tc ? "none" : "";
-  $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 ${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"}</b>
+  $("topTrain").innerHTML = tc ? "" : `<div class="tthead"><button class="ttfold" data-ttfold="1" title="Hide the list">▴</button><b data-ttfold="1" style="cursor:pointer">🏆 ${{exp:"Most EXP", exph:"Best EXP per hit", mesos:"Best mesos per hour"}[tg]}</b>
     ${trCtrls}
     </div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map(trRow).join("")}</div>`
