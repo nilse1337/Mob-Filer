@@ -353,6 +353,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .kside .kcard.done h4{color:var(--good)}.kside .need{font-size:12.5px}.knum{color:var(--accent2,#7dd3fc);font-weight:800}.kneed{color:#f5a524;font-weight:800}.kbig{color:var(--text);font-weight:800;font-family:var(--mono)}
 @media (max-width:1180px){.rcol{position:static;max-height:none}}
 .tag.t-fly{background:color-mix(in srgb,#7dd3fc 18%,transparent);color:#7dd3fc}
+.mobpic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;margin-right:8px;vertical-align:middle}.mobpic img{max-width:34px;max-height:30px;image-rendering:pixelated}.mobpic.none{display:none}
 </style>
 </head>
 <body>
@@ -1499,6 +1500,14 @@ function killsPerHour(e, ko, plan){
   if (plan && plan.m && !plan.boss){ k *= Math.min(mobs, Math.max(1, plan.per)); const cap = plan.per * 3600 * (plan.m.rate || 1) / 7; k = Math.min(k, cap); }
   if (e.isBoss) k = Math.min(k, 6);
   return k;
+}
+
+/* monster pictures: maplestory.io by GMS id; MSCW-only monsters use MeowDB's sprite */
+const MOB_GMS = {"Axe Stump":1130100,"Blue Mushroom":2220100,"Blue Snail":100101,"Bubbling":1210103,"Clang":4230104,"Cold Eye":4230100,"Commander Skeleton":7130103,"Copper Drake":4130100,"Croco":5130103,"Curse Eye":3230100,"Dark Axe Stump":2130100,"Dark Stone Golem":5130102,"Dark Stump":1110101,"Drake":5130100,"Evil Eye":2230100,"Fire Boar":3210100,"Ghost Stump":1140100,"Green Mushroom":1110100,"Horny Mushroom":2110200,"Iron Hog":4230103,"Jr. Balrog":6400008,"Jr. Boogie 1":3230300,"Jr. Boogie 2":3230301,"Jr. Necki":2130103,"Jr. Wraith":3230101,"King Slime":9300003,"Ligator":3110100,"Lorang":3230102,"Lupin":3210800,"Malady":5300100,"Mano":2220000,"Mummydog":4230126,"Mushmom":6130101,"Octopus":1120100,"Officer Skeleton":6230602,"Orange Mushroom":1210102,"Pig":1210100,"Red Drake":6130100,"Red Snail":130101,"Ribbon Pig":1210101,"Rocky Mask":2230111,"Shade":5090000,"Shroom":120100,"Skeledog":4230125,"Skeleton Soldier":5150001,"Slime":210100,"Snail":100100,"Stirge":2300100,"Stone Golem":5130101,"Stump":130100,"Stumpy":3220000,"Tauromacis":7130100,"Taurospear":7130101,"Tortie":4130101,"Tutorial Jr. Sentinel":9300018,"Wild Boar":2230102,"Wild Kargo":6230100,"Wooden Mask":2230110,"Wraith":4230102,"Zombie Lupin":4230101,"Zombie Mushmom":6300005,"Zombie Mushroom":2230101};
+function mobPic(e){
+  const base = String(e.name).replace(/\s*\(.*\)\s*$/, "").trim(), g = MOB_GMS[base];
+  const src = g ? `https://maplestory.io/api/GMS/83/mob/${g}/icon` : `https://meowdb.com/msclassic/monsters/sprites/mob_${String(e.id).replace(/^m/, "")}.png`;
+  return `<span class="mobpic"><img src="${src}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('none')"></span>`;
 }
 
 
@@ -3088,7 +3097,7 @@ function renderSummary(){
     <span class="kmlbl">Goal:</span><div class="seg kmode" title="What to rank the monsters by">${[["exp","EXP"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>
     <span class="note">monsters within 15 levels you hit every time (no bosses or PQ / job-test monsters) · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level${lowerUsed ? ` · <b style="color:#f5a524">${hk ? `not enough ${hk}${hk>=3?'+':''}-hit kills` : 'not enough monsters you always hit'} within 15 levels — lower-level monsters added</b>` : ''}${noFly ? ' · flying monsters skipped (warriors can\'t reach them)' : ''} · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
-      <span class="ttrank">${i+1}</span><span class="ttname">${esc(e.name)}${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
+      <span class="ttrank">${i+1}</span><span class="ttname"><span class="ttnm">${mobPic(e)}${esc(e.name)}</span>${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         const cond = t.cond.filter(([l]) => l !== "ok" || !/No special/.test(t.cond[0][1]));
         const pc = [...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)];
         return `<span class="ttplan"><span class="tpl"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 <b>${esc(m.map)}</b> <i>${esc(m.street)}</i> · ${m.n}×${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
