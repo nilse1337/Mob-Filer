@@ -3940,10 +3940,10 @@ $("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $(
 
 /* ---------- site tour: 4 steps on the dimmed page; first visit only (or switched on again in Settings) ---------- */
 const TOUR = [
-  {sel:"#charbar", t:"Your character", x:"Everything on the site is calculated from your character. Import your CHARACTER STAT window here (or try a random example) — level, job, accuracy and damage are filled in for you."},
-  {sel:"#summary", t:"At a glance", x:"The quick answers: how many monsters you hit 100%, your next accuracy goal, the best EXP per hit (see the top 5) and the strongest monster that's weak to your element."},
-  {sel:"#layoutMain", t:"Monsters", x:"Every MSCW monster with your hit rate, the ACC you still need and how many hits it takes. Click one to see its details, elements and where to find it — and the 1-, 2-, 3-hit panel below it."},
-  {sel:"#navGear", t:"Gear & Upgrades", x:"Scan your items (or share your Maple screen) to see the best possible set for your level and build, and the upgrades that add the most damage — with the scrolls you choose."}
+  {sel:"#charbar", t:"Your character", x:"This is the character you just imported: level, job, accuracy and skill. Everything below is calculated from it. Pick another skill or skill level to compare, and open More stats & buffs to add potions and buffs."},
+  {sel:"#summary", t:"At a glance", x:"The quick answers for your character: how many monsters you hit 100%, your next accuracy goal, the best EXP per hit (see the top 5) and the strongest monster that's weak to your element."},
+  {sel:"#layoutMain", t:"Monsters", x:"Every MSCW monster with your hit rate, the ACC you still need and how many hits it takes. Click one for its details, elements and where to find it — the 1-, 2-, 3-hit panel shows what you still need to kill it faster."},
+  {sel:"#navGear", t:"Gear & Upgrades", x:"Your scanned equipment lives here. See the best possible set for your level and build, and the upgrades that add the most damage with the scrolls you choose. Starting over? Use the red Reset all data button."}
 ];
 let tourAt = -1;
 function tourShow(i){
