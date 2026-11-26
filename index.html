@@ -346,6 +346,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .livemsg{color:var(--good);font-weight:600;font-size:12px}
 .ftip{position:fixed;z-index:10000;display:none;padding:10px 12px;border-radius:10px;background:#0f1522;border:1px solid var(--line2);color:var(--text);font-size:12.5px;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.45);opacity:0;transform:translateY(4px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
 .ftip.on{opacity:1;transform:translateY(0)}.ftip ul{margin:6px 0 0;padding-left:16px}.ftip li{margin:3px 0;color:var(--muted)}.ftip li b,.ftip>b{color:var(--text)}
+.gplus{color:#f5a524;font-weight:800}
 </style>
 </head>
 <body>
@@ -930,6 +931,40 @@ const TipOCR = (function(){
     return {label:lm.t.t, key, value:Number.isFinite(n) ? (txt.trim().startsWith("-") ? -n : n) : null, raw:txt, conf:lm.d, dbg};
   }
 
+  /* the "+N" behind the item name (successful scrolls): "Blue Calas (M) (+3)" → 3 */
+  function readPlus(px, W, H, b, pitch){
+    const y0 = Math.max(0, Math.round(b.cy - pitch*0.5)), y1 = Math.min(H-1, Math.round(b.cy + pitch*0.5));
+    const isInk = o => lum(px,o) > 120 && px[o] > px[o+2] + 40;   // orange / yellow title text
+    const xs = b.x1 + 2, cols = [];
+    for (let x=xs; x<W; x++){ let d=0; for (let y=y0;y<=y1;y++) if (isInk((y*W+x)*4)) d++; cols.push(d); }
+    const segs = []; let s=-1;
+    cols.forEach((d,i) => { if (d && s<0) s=i; if (!d && s>=0){ segs.push([s,i-1]); s=-1; } }); if (s>=0) segs.push([s,cols.length-1]);
+    const gl = segs.map(([a,c]) => { let gy0=1e9, gy1=-1; for (let x=xs+a;x<=xs+c;x++) for (let y=y0;y<=y1;y++) if (isInk((y*W+x)*4)){ if(y<gy0)gy0=y; if(y>gy1)gy1=y; }
+      return {x0:xs+a, x1:xs+c, y0:gy0, y1:gy1, w:c-a+1, h:gy1-gy0+1}; }).filter(g => g.y1 >= 0);
+    while (gl.length && (gl[gl.length-1].x1 >= W - 5 || gl[gl.length-1].w <= 1 && gl.length > 1 && gl[gl.length-1].x0 - gl[gl.length-2].x1 > 20)) gl.pop();   // tooltip border
+    if (gl.length < 4) return null;
+    const hs = gl.map(g => g.h).sort((a, b) => a - b), capH = hs[Math.floor(hs.length * 0.75)];   // ignore descenders (g, p, y)
+    // blur can melt "+4" into one blob: split it at the faintest column
+    { const k = gl.length - 2, g = gl[k];
+      if (g && g.w >= g.h * 1.3){ let bx = -1, bv = 1e9;
+        for (let x = g.x0 + Math.round(g.h*0.5); x <= g.x1 - 3; x++){ let v = 0; for (let y = y0; y <= y1; y++){ const o = (y*W + x)*4; if (isInk(o)) v += lum(px,o); } if (v < bv){ bv = v; bx = x; } }
+        if (bx > 0){ const mk = (a, c) => { let gy0=1e9, gy1=-1; for (let x=a;x<=c;x++) for (let y=y0;y<=y1;y++) if (isInk((y*W+x)*4)){ if(y<gy0)gy0=y; if(y>gy1)gy1=y; } return {x0:a, x1:c, y0:gy0, y1:gy1, w:c-a+1, h:gy1-gy0+1}; };
+          gl.splice(k, 1, mk(g.x0, bx - 1), mk(bx + 1, g.x1)); } } }
+    const last = gl[gl.length-1];
+    if (!(last.h >= capH*0.75 && last.w <= capH*0.45)) return null;          // ")"
+    const isPlus = g => g.w >= g.h*0.8 && g.h <= capH*0.9 && g.h >= capH*0.5;
+    let i = gl.length - 2; const digs = [];
+    while (i > 0 && !isPlus(gl[i]) && gl[i].h >= capH*0.6 && gl[i].w < gl[i].h*0.8) { digs.unshift(gl[i]); i--; }
+    const plus = gl[i]; if (!plus || !digs.length || digs.length > 2 || !isPlus(plus)) return null;   // "+"
+    const dH = Math.max(...digs.map(g => g.h)); let t = "";
+    for (const g of digs){
+      let mx = 1; for (let y=g.y0;y<=g.y1;y++) for (let x=g.x0;x<=g.x1;x++){ const l = lum(px,(y*W+x)*4); if (l > mx) mx = l; }
+      const inkAt = (x,y) => { const o=(y*W+x)*4, l = lum(px,o); return px[o] > px[o+2] + 25 ? Math.max(0, Math.min(1, (l/mx - 0.45) / 0.45)) : 0; };   // brightness relative to this orange digit
+      const grid = gridOf(inkAt, {x0:g.x0, x1:g.x1, y0:g.y0, y1:g.y1}, GW, GH), ar = g.w/dH;
+      const dm = bestH(DIGIT_T.map(o => ({ch:o.ch, ar:o.ar, h:0, g:o.g})), grid, ar, g.h); t += ar < 0.36 ? "1" : (dm.t ? (dm.t.ch === "+" ? "1" : dm.t.ch) : "?"); }
+    const n = parseInt(t, 10); return Number.isFinite(n) && n <= 15 ? n : null;
+  }
+
   /* the light square with the item picture, above the first stat line */
   function iconBox(px, W, H, bs){
     if (!bs.length) return null;
@@ -971,6 +1006,14 @@ const TipOCR = (function(){
       if (r.key && values[r.key] === undefined && r.value !== null) values[r.key] = r.value;
     }
     let icon = null; try { icon = iconBox(px, W, H, firstB ? [firstB] : bs); } catch(e){}
+    // a bullet above the first stat line is the item name: read its "+N"
+    try {
+      // the name is the first band of orange text at the top
+      const lim = Math.min(H, Math.round(firstB ? firstB.cy * 0.45 : H * 0.25)), rows = [];
+      for (let y = 0; y < lim; y++){ let k = 0; for (let x = Math.round(W*0.05); x < W - 3; x++){ const o = (y*W + x)*4; if (lum(px,o) > 120 && px[o] > px[o+2] + 40) k++; } rows.push(k); }
+      let a = -1, z = -1; for (let y = 0; y < rows.length; y++){ if (rows[y] >= 3){ if (a < 0) a = y; z = y; } else if (a >= 0 && y - z > 1) break; }
+      if (a >= 0 && z - a >= 5){ const n = readPlus(px, W, H, {x1: Math.round(W*0.05) - 2, cy: (a + z) / 2}, (z - a) + 4); if (n !== null) values.plus = n; }
+    } catch(e){}
     return {lines, values, icon};
   }
   return {read};
@@ -1699,7 +1742,7 @@ function slotCard(slot, label, icon){
   if (slot === "overall" && !g && (S.gear.top || S.gear.bottom)) return "";
   let body;
   if (editing) body = gearEditForm(slot, g);
-  else if (g) body = `<div class="gbody">${IMGS[slot] && IMGS[slot].src ? `<img class="gimg" src="${IMGS[slot].src}" data-gimg="${slot}" alt="" title="Click to enlarge">` : ''}<div style="min-width:0"><div class="gname">${itemIconId(g.name) ? iconImg(itemIconId(g.name), "", "iicon") + " " : ""}${esc(g.name || SUBTYPES[g.sub])}</div>
+  else if (g) body = `<div class="gbody">${IMGS[slot] && IMGS[slot].src ? `<img class="gimg" src="${IMGS[slot].src}" data-gimg="${slot}" alt="" title="Click to enlarge">` : ''}<div style="min-width:0"><div class="gname">${itemIconId(g.name) ? iconImg(itemIconId(g.name), "", "iicon") + " " : ""}${esc(g.name || SUBTYPES[g.sub])}${Number.isFinite(g.plus) && g.plus > 0 ? ` <span class="gplus">(+${g.plus})</span>` : ""}</div>
       <div class="gstats">${GSTATS.filter(([k]) => g.st[k]).map(([k,l]) => `<span class="gchip ${k==='int'||k==='matk'?'mag':''}">${l} ${g.st[k]>0?'+':''}${g.st[k]}</span>`).join("")}${EXSTATS.filter(([k]) => g.ex && g.ex[k]).map(([k,l]) => `<span class="gchip def" title="Shown only — doesn't change damage">${l} ${g.ex[k]>0?'+':''}${g.ex[k]}</span>`).join("") || (GSTATS.some(([k]) => g.st[k]) ? '' : '<span class="note">no stats</span>')}</div>
       <div class="note">${g.slots > 0 ? `<b class="ok">${g.slots}</b> upgrade slot${g.slots>1?'s':''} left` : 'no slots left'}</div></div></div>`;
   else body = `<div class="gempty">Paste a tooltip or <a href="#" data-gedit="${slot}">fill in</a></div>`;
@@ -1813,7 +1856,7 @@ function gearFromTip(res){
   const v = res.values; const sub = TYPE_TO_SUB[v.type];
   if (sub === undefined) return null;
   const st = {}; GSTATS.forEach(([k]) => { if (v[k]) st[k] = v[k]; });
-  const g = {sub, st, slots: v.slots || 0, name: "", ex: exStats(v)};
+  const g = {sub, st, slots: v.slots || 0, name: "", ex: exStats(v)}; if (Number.isFinite(v.plus)) g.plus = v.plus;
   g.name = guessName(g, v);
   if (g.name && v.slots === undefined){ const it = ITEMS.find(i => i.name === g.name); if (it) g.slots = it.slots; }   // slots line not read: assume unscrolled
   return g;
@@ -1955,10 +1998,10 @@ function liveTick(){
         const g = S.gear[r.slot], k = r.slot + "|" + g.sub + "|" + (g.name || ""), now = Date.now();
         const h = (LIVE.hist = LIVE.hist || {})[r.slot];
         const list = h && h.k === k && now - h.t < 30000 ? h.list : [];
-        list.push(JSON.stringify({st:g.st, slots:g.slots, ex:g.ex || {}})); LIVE.hist[r.slot] = {k, t:now, list};
+        list.push(JSON.stringify({st:g.st, slots:g.slots, ex:g.ex || {}, plus:g.plus})); LIVE.hist[r.slot] = {k, t:now, list};
         const cnt = {}; list.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
         const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || list.lastIndexOf(b[0]) - list.lastIndexOf(a[0]))[0][0];
-        const v = JSON.parse(best); g.st = v.st; g.slots = v.slots; g.ex = v.ex;
+        const v = JSON.parse(best); g.st = v.st; g.slots = v.slots; g.ex = v.ex; if (v.plus !== undefined) g.plus = v.plus;
       }
       if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => { scanToast(r); renderAll(); }); else scanToast(r);
       LIVE.n++;
@@ -2481,14 +2524,26 @@ function setColumn(R){
     const meta = [p.it ? `Lv ${p.it.lv}` : "", scrolled ? `${sr.free}× ${esc(sr.bestSc.sc.stat)} ${sr.g}%` : `${sr ? sr.free : p.slots} slots`].filter(Boolean).join(" · ");
     const one = p.keep ? 0 : evalLoadout({[slot]: R.loadScrolled[slot] || {st:p.st, sub:p.sub}}, R.model, R.mob, R.base).pct;
     const ico = iconImg(itemIconId(p.name), p.keep && IMGS[slot] && IMGS[slot].icon, "bimg");
-    rows.push(`<div class="brow ${p.keep ? 'keep' : ''}">
+    const tipTxt = (() => {
+      const cur = S.gear[slot], sr = R.scrollRows[slot], gd = sr && sr.bestSc ? sr.bestSc.sc : null;
+      const rawOne = p.keep ? 0 : evalLoadout({[slot]: {st:p.st, sub:p.sub}}, R.model, R.mob, R.base).pct;
+      const dl = deltaLine(diff(scSt, curSt));
+      if (p.keep) return `<b>Keep your ${esc(p.name)}</b><ul><li>No ${label.toLowerCase()} you can wear at Lv ${S.level} beats it for your build — even a fresh one with every scroll working.</li>${gd && sr.free > 0 ? `<li>Its ${sr.free} free slot${sr.free > 1 ? 's' : ''} with ${esc(gd.target)} ${esc(gd.stat)} ${gd.grade} scrolls are counted in the set total.</li>` : ''}</ul>`;
+      const same = cur && cur.name && cur.name.toLowerCase() === String(p.name).toLowerCase();
+      return `<b>Why ${same ? 'a fresh ' : ''}${esc(p.name)}</b><ul>${same ? `<li>Same item as yours, but new: all ${p.it ? p.it.slots : ''} slots free, so every scroll can still work (yours has failed or used slots).</li>` : ''}
+        <li>${cur ? `Compared to your ${esc(cur.name || SUBTYPES[cur.sub])}` : `You have nothing in this slot`}: ${dl || 'same stats'}.</li>
+        <li><b>${one >= 0 ? '+' : '−'}${Math.abs(one*100).toFixed(1)}%</b> = how much more damage per hit you'd do vs ${esc(R.mob.name)} with only this ${label.toLowerCase()} changed (the rest of your gear as it is now).</li>
+        ${gd && sr.free > 0 ? `<li>Of that, the item itself gives ${rawOne >= 0 ? '+' : '−'}${Math.abs(rawOne*100).toFixed(1)}%; ${sr.free}× ${esc(gd.stat)} scroll${sr.free > 1 ? 's' : ''} (${gd.grade}, all assumed to work) add the rest.</li>` : ''}
+        ${p.it ? `<li>Needs Lv ${p.it.lv}${p.it.req && p.it.req.some(Boolean) ? ' · ' + p.it.req.map((r, j) => r ? REQ_LBL[j] + ' ' + r : '').filter(Boolean).join(' ') : ''}.</li>` : ''}</ul>`;
+    })();
+    rows.push(`<div class="brow ${p.keep ? 'keep' : ''}" data-tip="${esc(tipTxt)}">
       <div class="bico">${ico}</div>
       <div class="bmain">
         <div class="btop"><span class="bslot">${label}</span><b class="bname">${esc(p.name)}</b>${p.keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
         <div class="bchips">${chips}${lost.join("")}</div>
         <div class="bmeta">${meta}${p.it && w && !w.ok ? ` · ${reqLine(p.it, w)}` : ''}</div>
       </div>
-      <div class="bside">${p.keep ? '' : `<span class="bpct ${one > 0.0005 ? 'ok' : one < -0.0005 ? 'bad' : ''}" title="damage vs your current ${label.toLowerCase()}">${one > 0.0005 ? '+' : one < -0.0005 ? '−' : '±'}${Math.abs(one*100).toFixed(1)}%</span>`}${gradeBtns(slot, p)}</div>
+      <div class="bside">${p.keep ? '' : `<span class="bpct ${one > 0.0005 ? 'ok' : one < -0.0005 ? 'bad' : ''}" >${one > 0.0005 ? '+' : one < -0.0005 ? '−' : '±'}${Math.abs(one*100).toFixed(1)}%</span>`}${gradeBtns(slot, p)}</div>
     </div>`);
   }
   if (usesStars() || R.load.stars){
@@ -2622,6 +2677,7 @@ function usefulList(R){
         // fewest successful scrolls that explain the extra stats (the in-game "+N" on the name): per stat, extra ÷ the biggest gain one scroll gives
         const all = SCROLLS.filter(sc => sc.target === SCROLL_TARGET[base.sub] && !sc.destroy);
         let succ = 0;
+        if (Number.isFinite(cur.plus)) succ = cur.plus; else
         GSTATS.forEach(([k]) => { const ex = (cur.st[k] || 0) - (base.st[k] || 0); if (ex <= 0.1) return;
           const mx = Math.max(0, ...all.map(sc => sc.st[k] || 0)); if (mx > 0) succ = Math.max(succ, Math.ceil(ex / mx - 1e-6)); });
         const failed = Math.max(0, used - Math.min(used, succ));
@@ -2646,7 +2702,7 @@ function usefulList(R){
       if (m > 0) out.push({kind:"stars", slot:"stars", g, raw:g, m, share:1, hit, goal:"Attack", name:bs[0], id:bs[2], d:{watk:bs[1] - c[1]}, sc:null}); }
   }
   // other goals: skip changes that cost more than 5% damage
-  return out.filter(x => x.g > 0.0005).sort((a,b) => b.m - a.m).slice(0, 10);   // a change that lowers damage is never useful
+  return out.filter(x => x.g > 0.0005 && (S.usefulNew !== false || x.kind === "scroll")).sort((a,b) => b.m - a.m).slice(0, 10);   // a change that lowers damage is never useful
 }
 function goalValue(x, goal){
   const d = x.d || {}, f = v => (v > 0 ? '+' : '') + (Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1));
@@ -2725,9 +2781,10 @@ function renderSets(){
   $("colSetHead").innerHTML = colHead("Best possible set", "best item per slot for your level and build, all slots free, with the scrolls you pick", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
   const ug = S.usefulGrade === undefined ? 60 : S.usefulGrade;
   $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">${S.gearView === "set" ? '<b style="color:var(--accent)">on top of the Best possible set</b> · ' : ''}single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
-    <div class="ugrade"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
+    <div class="ugrade"><span class="note" style="font-weight:700">Include scrolls</span><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
     <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div>
-    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" data-tip="${esc(goalTip(k))}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div></div></div>`;
+    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" data-tip="${esc(goalTip(k))}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div>
+    <div class="ugrade"><span class="note" style="font-weight:700">Include new items</span><div class="seg">${[[1,"Yes"],[0,"No"]].map(([v,l]) => `<button data-unew="${v}" class="${(S.usefulNew === false ? 0 : 1)===v?'on':''}">${l}</button>`).join("")}</div></div></div></div>`;
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = usefulColumn(R);
   $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
@@ -2736,6 +2793,7 @@ function renderSets(){
 }
 document.addEventListener("click", ev => {
   if (ev.target.closest("[data-whytog]")){ S.whyOpen = !S.whyOpen; renderAll(); return; }
+  const un = ev.target.closest("[data-unew]"); if (un){ S.usefulNew = un.dataset.unew === "1"; renderAll(); return; }
   const v = ev.target.closest("[data-gview]"); if (v){ S.gearView = v.dataset.gview; renderAll(); return; }
   const ugo = ev.target.closest("[data-ugoal]"); if (ugo){ S.usefulGoal = ugo.dataset.ugoal; renderAll(); return; }
   const ugb = ev.target.closest("[data-ugrade]"); if (ugb){ S.usefulGrade = +ugb.dataset.ugrade; renderAll(); return; }
