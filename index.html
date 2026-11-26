@@ -359,7 +359,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .pchip.map{font-weight:700}.pchip.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 35%,transparent)}.pchip.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}.pchip.slow{color:#f5a524;border-color:#f5a52455}.pchip.mate{color:var(--muted)}
 .ttplan .tpl{gap:4px 6px!important}
 .klv{font-size:12px;color:var(--muted);margin-top:3px}.klv b{color:#f5a524;font-family:var(--mono)}.qmark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--line2);font-size:10px;font-weight:800;color:var(--muted);cursor:help;vertical-align:1px;margin-left:4px}.qmark:hover{color:var(--text);border-color:var(--accent)}
-.tag.t-elw{background:rgba(34,197,94,.14);color:#4ade80}.tag.t-elr{background:rgba(148,163,184,.14);color:#94a3b8}.tag.t-eli{background:rgba(148,163,184,.08);color:#64748b;text-decoration:line-through}
+.tag.t-el-fire{background:rgba(239,68,68,.15);color:#f87171}.tag.t-el-ice{background:rgba(56,189,248,.15);color:#7dd3fc}.tag.t-el-lightning{background:rgba(250,204,21,.15);color:#facc15}.tag.t-el-holy{background:rgba(253,230,138,.14);color:#fde68a}.tag.t-el-poison{background:rgba(132,204,22,.15);color:#a3e635}
 </style>
 </head>
 <body>
@@ -2944,10 +2944,15 @@ function elIcons(m){
 /* the monster's type as words */
 function typeTags(e){
   if (S.showTypeTags === false) return (e.isCustom?'<span class="tag t-cus">CUSTOM</span>':'') + (e.isEdited?'<span class="tag t-cus">EDITED</span>':'');
-  const EL = [["fire","FIRE"],["ice","ICE"],["lightning","LIGHTNING"],["holy","HOLY"],["poison","POISON"]];
-  const elw = EL.map(([k, l]) => { const v = k === "fire" ? e.fire : k === "ice" ? e.ice : e.el && e.el[k]; return v === 1 ? `<span class="tag t-elw" title="Takes ×1.25 damage from ${k}">WEAK ${l}</span>` : v === -2 ? `<span class="tag t-eli" title="Takes no damage from ${k}">IMMUNE ${l}</span>` : v === -1 ? `<span class="tag t-elr" title="Takes ×0.75 damage from ${k}">RESIST ${l}</span>` : ''; }).join('');
-  return elw + (e.isBoss?'<span class="tag t-boss">BOSS</span>':'') + (e.isUndead?'<span class="tag t-und">UNDEAD</span>':'') + (e.isFly?'<span class="tag t-fly">FLYING</span>':'')
+  return natureTags(e) + (e.isBoss?'<span class="tag t-boss">BOSS</span>':'') + (e.isUndead?'<span class="tag t-und">UNDEAD</span>':'') + (e.isFly?'<span class="tag t-fly">FLYING</span>':'')
     + (e.isPQ?`<span class="tag t-pq">${e.name.includes('Job Test')?'JOB TEST':'PQ'}</span>`:'') + (e.isCustom?'<span class="tag t-cus">CUSTOM</span>':'') + (e.isEdited?'<span class="tag t-cus">EDITED</span>':'');
+}
+/* the monster's own element: the one it resists or is immune to (a fire monster shrugs off fire) */
+function monsterElements(e){
+  return [["fire","FIRE"],["ice","ICE"],["lightning","LIGHTNING"],["holy","HOLY"],["poison","POISON"]].filter(([k]) => { const v = k === "fire" ? e.fire : k === "ice" ? e.ice : e.el && e.el[k]; return v === -1 || v === -2; });
+}
+function natureTags(e){
+  return monsterElements(e).map(([k, l]) => `<span class="tag t-el-${k}" title="${l.charAt(0) + l.slice(1).toLowerCase()} monster: resists ${k}">${l}</span>`).join('');
 }
 function elPill(el){
   if (!el) return `<span class="elpill none">neutral</span>`;
@@ -3113,7 +3118,7 @@ function renderSummary(){
     <span class="kmlbl">Goal:</span><div class="seg kmode" title="What to rank the monsters by">${[["exp","EXP"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>
     <span class="note">monsters within 15 levels you hit every time (no bosses or PQ / job-test monsters) · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level${lowerUsed ? ` · <b style="color:#f5a524">${hk ? `not enough ${hk}${hk>=3?'+':''}-hit kills` : 'not enough monsters you always hit'} within 15 levels — lower-level monsters added</b>` : ''}${noFly ? ' · flying monsters skipped (warriors can\'t reach them)' : ''} · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
-      <span class="ttrank">${i+1}</span><span class="ttname"><span class="ttnm">${mobPic(e)}${esc(e.name)}</span>${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
+      <span class="ttrank">${i+1}</span><span class="ttname"><span class="ttnm">${mobPic(e)}${esc(e.name)}</span>${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}${S.showTypeTags === false ? '' : monsterElements(e).map(([k, l]) => ` <span class="tag t-el-${k}">${l}</span>`).join('')}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         const cond = t.cond.filter(([l]) => l !== "ok" || !/No special/.test(t.cond[0][1]));
         const T = (txt) => `data-tip="${esc(txt)}"`;
         const url = mapUrl(m), per = t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1);
@@ -3147,7 +3152,7 @@ function renderList(){
   { const ex = S.exclude || []; $("exCount").textContent = ex.length ? ` (${ex.length})` : ""; $("btnExclude").classList.toggle("on", ex.length > 0);
     $("exPop").innerHTML = `<div class="note" style="padding:2px 4px 6px">Hide these monsters:</div>` + EXCLUDES.map(([k,l]) => `<label class="exrow"><input type="checkbox" data-ex="${k}" ${ex.includes(k)?'checked':''}> ${l}</label>`).join("") + (ex.length ? `<button class="btn small" data-exclear="1" style="margin-top:6px;width:100%">Clear</button>` : '')
       + `<div class="note" style="padding:8px 4px 6px;border-top:1px solid var(--line);margin-top:6px">Hide in the list:</div>`
-      + `<label class="exrow"><input type="checkbox" data-show="showElIcons" ${S.showElIcons === false ? 'checked' : ''}> 🔥 Weakness icons</label><label class="exrow"><input type="checkbox" data-show="showTypeTags" ${S.showTypeTags === false ? 'checked' : ''}> 🏷 Type & element words (BOSS, WEAK FIRE…)</label>`;
+      + `<label class="exrow"><input type="checkbox" data-show="showElIcons" ${S.showElIcons === false ? 'checked' : ''}> 🔥 Weakness icons</label><label class="exrow"><input type="checkbox" data-show="showTypeTags" ${S.showTypeTags === false ? 'checked' : ''}> 🏷 Type & element words (BOSS, UNDEAD, FIRE…)</label>`;
     $("exCount").textContent = (ex.length + (S.showElIcons === false) + (S.showTypeTags === false)) ? ` (${ex.length + (S.showElIcons === false) + (S.showTypeTags === false)})` : ""; }
   $("fRegion").value = S.region; $("fStatus").value = S.status;
   const sk = RR.sk;
