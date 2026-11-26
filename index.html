@@ -381,6 +381,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .elc.ec-fire .h{color:var(--fire,#f87171)}.elc.ec-ice .h{color:var(--ice,#7dd3fc)}
 .totop{position:fixed;right:22px;bottom:22px;z-index:900;width:44px;height:44px;border-radius:50%;border:1px solid var(--accent);background:var(--accent);color:#1a1200;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.4);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s}
 .totop.on{opacity:1;transform:translateY(0);pointer-events:auto}.totop:hover{filter:brightness(1.1)}
+#btnImport.glow{animation:impglow 1.8s ease-in-out infinite}@keyframes impglow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 0%,transparent)}50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 45%,transparent),0 0 22px color-mix(in srgb,var(--accent) 60%,transparent)}}
+.implive{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}.implive.on{border-color:#2fbf71;background:#10261a}.implive .btn{margin-left:auto;flex:none}
 </style>
 </head>
 <body>
@@ -566,6 +568,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
   <div class="panel wide">
     <div class="mhead"><h3>📷 Import character stat window</h3><button class="btn small" data-close="impModal" style="margin-left:auto">✕</button></div>
     <p class="note" style="margin:0 0 12px">Screenshot your in-game <b>CHARACTER STAT</b> window with the DETAIL panel open, then drop it here, choose a file, or paste with Ctrl+V. It's read in your browser — nothing is uploaded.</p>
+    <div class="implive" id="impLive"></div>
     <label class="drop" id="drop">Drop screenshot here · click to choose · or Ctrl+V (tip: Ctrl+V anywhere on the site works too)<input type="file" id="impFile" accept="image/*" hidden></label>
     <div class="imp" id="impResult" style="display:none">
       <div><canvas id="impCanvas"></canvas><div class="status" id="impStatus"></div></div>
@@ -1996,7 +1999,7 @@ function readTipCanvas(c, forceSlot, res, live){
 }
 
 /* ---------- live screen share: find the item tooltip on the shared Maple window ---------- */
-const LIVE = {stream:null, video:null, timer:null, last:"", busy:false, n:0, msg:""};
+const LIVE = {stream:null, video:null, timer:null, last:"", busy:false, n:0, msg:"", mode:"gear", statOk:0};
 const isTipBg = (r, g, b) => { const mx = Math.max(r, g, b), l = 0.3*r + 0.59*g + 0.11*b; return mx <= 150 && l < 95 && b >= r - 4 && b >= g - 12 && b >= 28; };   // dark, bluish/neutral (the tooltip is semi-transparent navy)
 function findTooltip(c){
   const W = c.width, H = c.height, s = 4, gw = Math.floor(W / s), gh = Math.floor(H / s);
@@ -2034,6 +2037,12 @@ function liveTick(){
   LIVE.busy = true;
   try {
     const f = document.createElement("canvas"); f.width = W; f.height = H; f.getContext("2d", {willReadFrequently:true}).drawImage(v, 0, 0);
+    if (LIVE.mode === "stat"){   // looking for the CHARACTER STAT window
+      let n = 0; try { const r = StatOCR.read(f.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H)); n = Object.keys(r.values || {}).length; if (n >= 8 && r.values.level !== undefined) n = statFromImage(f, W, H); else n = 0; } catch(e){}
+      if (n >= 8){ LIVE.statOk = n; LIVE.mode = "idle"; renderLive(); }
+      LIVE.busy = false; return;
+    }
+    if (LIVE.mode !== "gear"){ LIVE.busy = false; return; }
     const b = findTooltip(f);
     if (!b){ LIVE.busy = false; return; }
     const pad = 2, x0 = Math.max(0, b.x - pad), y0 = Math.max(0, b.y - pad), w = Math.min(W - x0, b.w + pad*2), h = Math.min(H - y0, b.h + pad*2);
@@ -2063,7 +2072,9 @@ function liveTick(){
     }, true);
   } catch(e){ console.error(e); LIVE.busy = false; }
 }
-async function liveStart(){
+async function liveStart(mode){
+  LIVE.mode = mode || "gear"; LIVE.statOk = 0;
+  if (LIVE.stream){ renderLive(); return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){ alert("Your browser can't share a screen here. Use Chrome or Edge on a computer."); return; }
   try {
     const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:5, displaySurface:"window", cursor:"never"}, audio:false, preferCurrentTab:false, selfBrowserSurface:"exclude", surfaceSwitching:"include", monitorTypeSurfaces:"exclude"});   // opens the picker on the Window tab; the browser doesn't let a site pick MapleStory.exe itself
@@ -2080,13 +2091,35 @@ function liveStop(){
   LIVE.stream = null; LIVE.video = null; renderLive();
 }
 function renderLive(){
-  const el = $("liveBox"); if (!el) return;
-  el.classList.toggle("on", !!LIVE.stream);
-  el.innerHTML = LIVE.stream
-    ? `<span class="scico"><span class="livedot"></span></span><span class="sctxt"><b>Scanning your Maple screen${LIVE.n ? ` · ${LIVE.n} read` : ''}</b><small>Hover your items in MapleStory one by one${usesStars() ? ' (also your throwing stars)' : ''} — each tooltip is read automatically</small>${LIVE.msg ? `<span class="livemsg">${esc(LIVE.msg)}</span>` : ''}</span><button class="btn small" id="liveStop">Stop</button>`
-    : `<span class="scico">🖥</span><span class="sctxt"><b>Live scan from MapleStory</b><small>Share the <b>MapleStory</b> window (Window tab), then just hover your items — no screenshots needed</small></span><button class="btn small go" id="liveStart">Share Maple screen</button>`;
+  const el = $("liveBox");
+  if (el){
+    const on = !!LIVE.stream && LIVE.mode === "gear";
+    el.classList.toggle("on", on);
+    el.innerHTML = on
+      ? `<span class="scico"><span class="livedot"></span></span><span class="sctxt"><b>Scanning your Maple screen${LIVE.n ? ` · ${LIVE.n} read` : ''}</b><small>Hover your items in MapleStory one by one${usesStars() ? ' (also your throwing stars)' : ''} — each tooltip is read automatically</small>${LIVE.msg ? `<span class="livemsg">${esc(LIVE.msg)}</span>` : ''}</span><button class="btn small" id="liveStop">Stop</button>`
+      : LIVE.stream
+      ? `<span class="scico">🖥</span><span class="sctxt"><b>Your Maple screen is shared</b><small>Start scanning your equipment with it</small></span><button class="btn small go" data-livegear="1">Scan equipment</button>`
+      : `<span class="scico">🖥</span><span class="sctxt"><b>Live scan from MapleStory</b><small>Share the <b>MapleStory</b> window (Window tab), then just hover your items — no screenshots needed</small></span><button class="btn small go" id="liveStart">Share Maple screen</button>`;
+  }
+  const im = $("impLive");
+  if (im){
+    im.classList.toggle("on", !!LIVE.stream);
+    im.innerHTML = !LIVE.stream
+      ? `<span class="scico">🖥</span><span class="sctxt"><b>Or share your Maple screen</b><small>Pick the MapleStory window and open your CHARACTER STAT window (with DETAIL) in game — it's read automatically.</small></span><button class="btn small go" data-livestat="1">Share Maple screen</button>`
+      : LIVE.mode === "stat"
+      ? `<span class="scico"><span class="livedot"></span></span><span class="sctxt"><b>Looking for your stat window…</b><small>Open the CHARACTER STAT window with the DETAIL panel in MapleStory.</small></span><button class="btn small" id="liveStop">Stop</button>`
+      : `<span class="scico">✅</span><span class="sctxt"><b>${LIVE.statOk ? `Stats read (${LIVE.statOk} values)` : 'Screen shared'}</b><small>${LIVE.statOk ? 'Check them below and press Apply. ' : ''}Want your gear too? Keep sharing and hover your equipment in game.</small></span><button class="btn small go" data-livegear="1">Scan my equipment</button>`;
+  }
 }
-document.addEventListener("click", ev => { if (ev.target.closest("#liveStart")) liveStart(); else if (ev.target.closest("#liveStop")) liveStop(); });
+document.addEventListener("click", ev => {
+  if (ev.target.closest("#liveStart")) liveStart("gear");
+  else if (ev.target.closest("[data-livestat]")) liveStart("stat");
+  else if (ev.target.closest("[data-livegear]")){   // keep the same share, switch to reading equipment tooltips
+    const ap = $("impApply"); if (LIVE.statOk && ap && $("impModal").classList.contains("open")) ap.click();
+    $("impModal").classList.remove("open"); LIVE.mode = "gear"; LIVE.last = ""; location.hash = "#gear"; renderAll(); renderLive();
+  }
+  else if (ev.target.closest("#liveStop")) liveStop();
+});
 /* ---------- name the item from its picture: compare the tooltip icon with maplestory.io icons of the same type ---------- */
 const ICON_FEAT = new Map();
 function iconFeat(img, useAlpha){
@@ -2200,7 +2233,7 @@ async function handleGearFiles(files, forceSlot){
   S.gearEdit = null; renderAll();
 }
 document.addEventListener("click", ev => {
-  if (ev.target.closest("#ccImport")){ $("impModal").classList.add("open"); return; }
+  if (ev.target.closest("#ccImport")){ $("impModal").classList.add("open"); renderLive(); return; }
   const cell = ev.target.closest("[data-gsel]");
   if (cell){ const k = cell.dataset.gsel; if (cell.classList.contains("blocked")){ S.gearSel = "overall"; } else S.gearSel = k; if (!S.gear[S.gearSel]) S.gearEdit = null; renderGear(); return; }
   const im = ev.target.closest("[data-gimg]");
@@ -3219,7 +3252,7 @@ function renderList(){
   { const dup = {fire:"fw", ice:"iw", holy:"hw"}[sk.el];   // "weak to my skill" and "weak to fire" are the same list for a fire skill: show it once
     if (dup && S.elFilter === dup) S.elFilter = "mine";
     const icon = {fire:"🔥", ice:"❄", holy:"✨", lightning:"⚡", poison:"☠"}[sk.el] || "✔";
-    $("fElement").innerHTML = ELEMENT_FILTERS.filter(([k]) => (k !== "mine" || sk.el) && k !== dup).map(([k,l]) => `<option value="${k}" ${S.elFilter===k?'selected':''}>${k==="mine"?`${icon} Weak to ${sk.el} (your skill)`:l}</option>`).join(""); }
+    $("fElement").innerHTML = ELEMENT_FILTERS.filter(([k]) => (k !== "mine" || sk.el) && k !== dup).map(([k,l]) => `<option value="${k}" ${S.elFilter===k?'selected':''}>${k==="mine"?`${icon} Weak to ${sk.el}`:l}</option>`).join(""); }
   const [sKey, sDir] = S.sort.split(":");
   $("thead").innerHTML = COLS.map(([k,l]) => `<th data-sort="${k}" class="${sKey===k?'sorted':''}">${l} ${sKey===k?`<span class="arr">${+sDir>0?'▲':'▼'}</span>`:''}</th>`).join("");
   const rows = EVAL.filter(passFilters).sort(sorter());
@@ -3398,6 +3431,7 @@ function renderAll(){
   normSkill();
   const page = renderPage();
   renderHeaderGear();
+  $("btnImport").classList.toggle("glow", !S.charImported);
   RR = rawRange();
   EVAL = monsters().map(m => evaluate(m, RR));
   BYID = new Map(EVAL.map(e => [e.id, e]));
@@ -3527,7 +3561,7 @@ function guessClass(v){
   const best = Object.entries(st).sort((a,b) => b[1]-a[1])[0];
   return (v.level||0) < 10 && best[1] < 40 ? "beginner" : best[0];
 }
-$("btnImport").onclick = () => $("impModal").classList.add("open");
+$("btnImport").onclick = () => { $("impModal").classList.add("open"); try { renderLive(); } catch(e){} };
 $("impFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) loadImage(f); e.target.value = ""; });
 const drop = $("drop");
 ["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
@@ -3556,9 +3590,14 @@ $("gearSlots").addEventListener("drop", e => { const c = e.target.closest(".gcar
 $("gearClear").onclick = () => { S.gear = {}; Object.keys(IMGS).forEach(k => { if (k !== "stat") delete IMGS[k]; }); saveImgs(); $("gearMsg").innerHTML = ""; renderAll(); };
 function loadImage(file){
   const url = URL.createObjectURL(file), img = new Image();
-  img.onload = () => {
-    const c = $("impCanvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
-    const ctx = c.getContext("2d", {willReadFrequently:true}); ctx.drawImage(img, 0, 0); URL.revokeObjectURL(url);
+  img.onload = () => { URL.revokeObjectURL(url); statFromImage(img, img.naturalWidth, img.naturalHeight); };
+  img.onerror = () => { $("impStatus").textContent = "Could not open that image."; $("impResult").style.display = ""; };
+  img.src = url;
+}
+/* read a stat window from an image or canvas (a pasted screenshot or a frame of the shared screen); returns how many values were read */
+function statFromImage(src, W, H){
+    const c = $("impCanvas"); c.width = W; c.height = H;
+    const ctx = c.getContext("2d", {willReadFrequently:true}); ctx.drawImage(src, 0, 0);
     let res; try { res = StatOCR.read(ctx.getImageData(0, 0, c.width, c.height)); } catch(err){ res = {values:{}, found:{pink:0,green:0,blue:0}}; }
     const v = res.values, n = IMP_FIELDS.filter(([k]) => v[k] !== undefined).length;
     impLast = v;
@@ -3568,9 +3607,7 @@ function loadImage(file){
       IMP_FIELDS.map(([k,l]) => { const ph = k === "level" && v.level === undefined ? (levelFromStats(v) ? "≈" + levelFromStats(v) + " (from stats)" : "") : k === "accuracy" && v.accuracy === undefined ? "auto from stats" : "";
         return `<div><label>${l}</label><input class="txt mono ${v[k]===undefined && !ph?'miss':''}" data-imp="${k}" value="${v[k] ?? ''}" placeholder="${ph}" inputmode="numeric"></div>`; }).join("");
     $("impResult").style.display = "";
-  };
-  img.onerror = () => { $("impStatus").textContent = "Could not open that image."; $("impResult").style.display = ""; };
-  img.src = url;
+    return n;
 }
 /* level from base stats: you start with 25 stat points and get 5 AP per level */
 function levelFromStats(v){
