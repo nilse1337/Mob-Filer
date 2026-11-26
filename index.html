@@ -355,6 +355,9 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .tag.t-fly{background:color-mix(in srgb,#7dd3fc 18%,transparent);color:#7dd3fc}
 .mobpic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;margin-right:8px;vertical-align:middle}.mobpic img{max-width:34px;max-height:30px;image-rendering:pixelated}.mobpic.none{display:none}
 .maplink{color:inherit;text-decoration:none;border-bottom:1px dashed var(--line2)}.maplink:hover{color:var(--accent);border-color:var(--accent)}.maplink:hover b{color:var(--accent)}
+.pchip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;cursor:help}
+.pchip.map{font-weight:700}.pchip.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 35%,transparent)}.pchip.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}.pchip.slow{color:#f5a524;border-color:#f5a52455}.pchip.mate{color:var(--muted)}
+.ttplan .tpl{gap:4px 6px!important}
 </style>
 </head>
 <body>
@@ -3104,11 +3107,19 @@ function renderSummary(){
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname"><span class="ttnm">${mobPic(e)}${esc(e.name)}</span>${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         const cond = t.cond.filter(([l]) => l !== "ok" || !/No special/.test(t.cond[0][1]));
-        const pc = [...t.pro.map(x => `<span class="fit-good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="fit-poor">− ${esc(x)}</span>`)];
-        return `<span class="ttplan"><span class="tpl"><span title="Map with the most ${esc(e.name)} (MeowDB)">📍 ${mapUrl(m) ? `<a class="maplink" href="${mapUrl(m)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open ${esc(m.map)} on MeowDB">` : ""}<b>${esc(m.map)}</b> <i>${esc(m.street)}</i>${mapUrl(m) ? " ↗</a>" : ""} · ${m.n}×${m.rate && m.rate !== 1 ? ` · respawn ×${m.rate}` : ''}</span>
-          <span>👥 ${t.boss ? `boss: party of <b>${t.party}</b>` : t.party === 1 ? '<b>solo</b>' : `party of <b>${t.party}</b>`} · ≈${t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1)}/person</span>
-          ${cond.length ? cond.map(([l, x]) => `<span class="tcond ${l}">${esc(x)}</span>`).join('') : ''}</span>
-          ${pc.length || t.mates.length ? `<span class="tpl">${pc.join(' ')}${t.mates.length ? `<span title="${esc(t.mates.map(([c, w]) => w ? c + ': ' + w : c).join(' · '))}">🤝 ${t.mates.map(([c, w]) => `<b>${esc(c)}</b>${w ? ` <i>(${esc(w)})</i>` : ''}`).join(', ')}</span>` : ''}</span>` : ''}</span>`; })()}</span>
+        const T = (txt) => `data-tip="${esc(txt)}"`;
+        const url = mapUrl(m), per = t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1);
+        const rate = m.rate && m.rate !== 1 ? m.rate : null;
+        const chips = [
+          `<span class="pchip map" ${T(`<b>${esc(m.map)}</b> · ${esc(m.street)}<br>The map with the most ${esc(e.name)} (MeowDB).${url ? '<br>Click to open it on MeowDB.' : ''}`)}>📍 ${url ? `<a class="maplink" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(m.map)}</a>` : esc(m.map)}</span>`,
+          `<span class="pchip" ${T(`<b>${m.n} ${esc(e.name)}</b> spawn on this map${m.total > m.n ? ` (${m.total} monsters in total)` : ''}.`)}>👾 ${m.n}</span>`,
+          rate ? `<span class="pchip ${rate > 1 ? 'good' : 'slow'}" ${T(`<b>Respawn speed ×${rate}</b><br>Monsters on this map come back ${rate > 1 ? Math.round((rate - 1)*100) + '% faster' : Math.round((1 - rate)*100) + '% slower'} than on a normal map.`)}>⏱ ${rate > 1 ? 'fast' : 'slow'} respawn</span>` : '',
+          `<span class="pchip" ${T(t.boss ? `<b>Boss</b>: bring a party of ${t.party}.` : `<b>${t.party === 1 ? 'Best solo' : 'Best in a party of ' + t.party}</b><br>That leaves about ${per} ${esc(e.name)} per person to kill.`)}>👥 ${t.party === 1 ? 'solo' : 'party ' + t.party} · ${per} each</span>`
+        ].filter(Boolean).join('');
+        const conds = cond.map(([l, x]) => `<span class="tcond ${l}">${esc(x)}</span>`).join('');
+        const pc = [...t.pro.map(x => `<span class="pchip good">+ ${esc(x)}</span>`), ...t.con.map(x => `<span class="pchip bad">− ${esc(x)}</span>`)].join('');
+        const mates = t.mates.length ? `<span class="pchip mate" ${T(`<b>Good party partners</b><ul>${t.mates.map(([c, w]) => `<li><b>${esc(c)}</b>${w ? ' — ' + esc(w) : ''}</li>`).join('')}</ul>`)}>🤝 ${t.mates.map(([c]) => esc(c.replace(/ \(.*\)$/, ''))).join(', ')}</span>` : '';
+        return `<span class="ttplan"><span class="tpl">${chips}${conds}</span>${pc || mates ? `<span class="tpl">${pc}${mates}</span>` : ''}</span>`; })()}</span>
       ${(() => { const mz = e._mz, mph = e._mph, est = mz.est ? '~' : '';
         const mTitle = `<b>${esc(e.name)}:</b> ${mz.est ? 'no player reports on MeowDB yet — estimated from level' : `MeowDB reports ${mz.min}–${mz.max} mesos per kill`}`;
         const cMph = `<span class="ttstat" data-tip="${esc(mTitle + '<br>' + TIP_MESOS)}"><b>${est}${fmt(Math.round(mph / 100) * 100)}</b><small>mesos / hr</small></span>`;
