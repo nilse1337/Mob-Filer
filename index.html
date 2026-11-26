@@ -1131,10 +1131,13 @@ const TipOCR = (function(){
   }
 
   /* the light square with the item picture, above the first stat line */
-  function iconBox(px, W, H, bs){
+  function iconBox(px, W, H, bs, all){
     if (!bs.length) return null;
-    const b0 = bs[0], x0 = Math.max(0, Math.round(b0.x0 - 40)), x1 = Math.min(W-1, Math.round(b0.x0 + 220));
-    const y0 = Math.max(0, Math.round(b0.cy - 260)), y1 = Math.max(0, Math.round(b0.cy - 8));
+    // scale from the bullet spacing (16 px at normal size): big screens / zoomed shares have bigger icons
+    const ab = all || bs, dd = ab.slice(1).map((b, i) => b.cy - ab[i].cy).sort((a, b) => a - b), pt = dd.length ? dd[dd.length >> 1] : 16;
+    const sc = Math.max(1, Math.min(4, pt / 16));
+    const b0 = bs[0], x0 = Math.max(0, Math.round(b0.x0 - 40*sc)), x1 = Math.min(W-1, Math.round(b0.x0 + 220*sc));
+    const y0 = Math.max(0, Math.round(b0.cy - 260*sc)), y1 = Math.max(0, Math.round(b0.cy - 8*sc));
     const w = x1-x0+1, h = y1-y0+1; if (w < 10 || h < 10) return null;
     const mask = new Uint8Array(w*h);
     for (let y=0;y<h;y++) for (let x=0;x<w;x++){ const o=((y+y0)*W+(x+x0))*4, r=px[o], g=px[o+1], bb=px[o+2]; const mx=Math.max(r,g,bb), mn=Math.min(r,g,bb);
@@ -1146,7 +1149,7 @@ const TipOCR = (function(){
       while (st.length){ const p=st.pop(), x=p%w, y=(p/w)|0; n++; if(x<ax)ax=x; if(x>bx)bx=x; if(y<ay)ay=y; if(y>by)by=y;
         for (const q of [p-1,p+1,p-w,p+w]) if (q>=0 && q<w*h && mask[q] && !seen[q] && !(q===p-1 && x===0) && !(q===p+1 && x===w-1)){ seen[q]=1; st.push(q); } }
       const bw=bx-ax+1, bh=by-ay+1;
-      if (bw < 36 || bh < 36 || bw > 200 || bh > 200 || bw/bh > 1.35 || bh/bw > 1.35 || n < bw*bh*0.18) continue;
+      if (bw < 36 || bh < 36 || bw > 200*sc || bh > 200*sc || bw/bh > 1.35 || bh/bw > 1.35 || n < bw*bh*0.18) continue;
       if (!best || n > best.n) best = {x:ax+x0, y:ay+y0, w:bw, h:bh, n};
     }
     return best;
@@ -1170,7 +1173,7 @@ const TipOCR = (function(){
       lines.push(r);
       if (r.key && values[r.key] === undefined && r.value !== null) values[r.key] = r.value;
     }
-    let icon = null; try { icon = iconBox(px, W, H, firstB ? [firstB] : bs); } catch(e){}
+    let icon = null; try { icon = iconBox(px, W, H, firstB ? [firstB] : bs, bs); } catch(e){}
     // a bullet above the first stat line is the item name: read its "+N"
     try {
       // the name is the first band of orange text at the top
@@ -2143,26 +2146,24 @@ function readTipFile(file, forceSlot){
    A MapleStory item tooltip is about 15 text lines wide and ends one line below its last bullet. */
 function trimTip(c){
   try {
-    let bs = [], k = 1;
-    for (const sc of [1, 2, 2.5]){   // small (shared-screen) tooltips: read them bigger, then scale back
-      const u = document.createElement("canvas"); u.width = Math.round(c.width*sc); u.height = Math.round(c.height*sc);
-      const ux = u.getContext("2d", {willReadFrequently:true}); ux.imageSmoothingQuality = "high"; ux.drawImage(c, 0, 0, u.width, u.height);
-      const r = TipOCR.read(ux.getImageData(0, 0, u.width, u.height)); if ((r.bs || []).length >= 3){ bs = r.bs; k = sc; break; } }
-    if (bs.length < 3){   // no bullets found (very small): the orange job row (BEGINNER … THIEF) spans the tooltip's width
-      const W = c.width, H = c.height, px = c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
-      let best = null;
-      for (let y = 0; y < H; y++){ let n = 0, x1 = -1; for (let x = 0; x < W; x++){ const o = (y*W + x)*4, r = px[o], g = px[o+1], b = px[o+2]; if (r > 70 && r - g > 25 && r - b > 15){ n++; x1 = x; } } if (y > H*0.25 && y < H*0.8 && n > 20 && (!best || n > best.n)) best = {n, x1}; }
-      if (!best) return c;
-      const w = Math.min(W, Math.round(best.x1 * 1.07) + 2); if (w >= W - 2) return c;
-      const o = document.createElement("canvas"); o.width = w; o.height = H; o.getContext("2d", {willReadFrequently:true}).drawImage(c, 0, 0, w, H, 0, 0, w, H); return o;
-    }
-    bs = bs.map(b => ({cx: b.cx / k, cy: b.cy / k}));
-    const d = bs.slice(1).map((b, i) => b.cy - bs[i].cy).sort((a, b) => a - b), pitch = d[d.length >> 1];
-    if (!(pitch > 4)) return c;
-    const w = Math.min(c.width, Math.round(bs[0].cx + 14.6 * pitch)), h = Math.min(c.height, Math.round(bs[bs.length - 1].cy + 1.2 * pitch));
-    if (w >= c.width - 2 && h >= c.height - 2) return c;
-    const o = document.createElement("canvas"); o.width = w; o.height = h; o.getContext("2d", {willReadFrequently:true}).drawImage(c, 0, 0, w, h, 0, 0, w, h);
-    return o;
+    const cut = (w, h) => { if (w >= c.width - 2 && h >= c.height - 2) return c; const o = document.createElement("canvas"); o.width = w; o.height = h; o.getContext("2d", {willReadFrequently:true}).drawImage(c, 0, 0, w, h, 0, 0, w, h); return o; };
+    const fromBullets = (bs, k) => { bs = bs.map(b => ({cx: b.cx / k, cy: b.cy / k}));
+      const d = bs.slice(1).map((b, i) => b.cy - bs[i].cy).sort((a, b) => a - b), pitch = d[d.length >> 1];
+      if (!(pitch > 4)) return c;
+      return cut(Math.min(c.width, Math.round(bs[0].cx + 14.6 * pitch)), Math.min(c.height, Math.round(bs[bs.length - 1].cy + 1.2 * pitch))); };
+    // 1) normal size: the stat bullets give the tooltip's width (fast, one read)
+    const r1 = TipOCR.read(c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, c.width, c.height));
+    if ((r1.bs || []).length >= 3) return fromBullets(r1.bs, 1);
+    // 2) small (shared-screen) tooltip: the orange job row (BEGINNER … THIEF) spans the tooltip's width — a cheap pixel pass
+    const W = c.width, H = c.height, px = c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H).data;
+    let best = null;
+    for (let y = Math.floor(H*0.25); y < H*0.8; y++){ let n = 0, x1 = -1; for (let x = 0; x < W; x++){ const o = (y*W + x)*4, r = px[o], g = px[o+1], b = px[o+2]; if (r > 70 && r - g > 25 && r - b > 15){ n++; x1 = x; } } if (n > 20 && (!best || n > best.n)) best = {n, x1}; }
+    if (best){ const w = Math.min(W, Math.round(best.x1 * 1.07) + 2); return w >= W - 2 ? c : cut(w, H); }
+    // 3) last try: read it twice as big (slower, rarely needed)
+    const u = document.createElement("canvas"); u.width = W*2; u.height = H*2;
+    const ux = u.getContext("2d", {willReadFrequently:true}); ux.imageSmoothingQuality = "high"; ux.drawImage(c, 0, 0, u.width, u.height);
+    const r2 = TipOCR.read(ux.getImageData(0, 0, u.width, u.height));
+    return (r2.bs || []).length >= 3 ? fromBullets(r2.bs, 2) : c;
   } catch(e){ return c; }
 }
 function readTipCanvas(c, forceSlot, res, live){
@@ -2266,9 +2267,13 @@ function liveTick(){
       LIVE.busy = false; return;
     }
     if (LIVE.mode !== "gear"){ LIVE.busy = false; return; }
-    const b = findTooltip(f);
+    let b;
+    if (W > 2400){   // big (4K) screens: look for the tooltip on a half-size copy, it's 4× less work
+      const hf = document.createElement("canvas"); hf.width = W >> 1; hf.height = H >> 1; const hx = hf.getContext("2d", {willReadFrequently:true}); hx.imageSmoothingEnabled = false; hx.drawImage(f, 0, 0, hf.width, hf.height);
+      const b0 = findTooltip(hf); b = b0 && {x:b0.x*2, y:b0.y*2, w:b0.w*2, h:b0.h*2}; }
+    else b = findTooltip(f);
     if (!b){ LIVE.busy = false; return; }
-    const pad = 2, x0 = Math.max(0, b.x - pad), y0 = Math.max(0, b.y - pad), w = Math.min(W - x0, b.w + pad*2), h = Math.min(H - y0, b.h + pad*2);
+    const pad = W > 2400 ? 3 : 2, x0 = Math.max(0, b.x - pad), y0 = Math.max(0, b.y - pad), w = Math.min(W - x0, b.w + pad*2), h = Math.min(H - y0, b.h + pad*2);
     const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d", {willReadFrequently:true}).drawImage(f, x0, y0, w, h, 0, 0, w, h);
     // same tooltip as last time? skip
     const sm = document.createElement("canvas"); sm.width = 24; sm.height = 24; const sx = sm.getContext("2d", {willReadFrequently:true}); sx.drawImage(c, 0, 0, 24, 24);
@@ -2287,7 +2292,9 @@ function liveTick(){
         const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || list.lastIndexOf(b[0]) - list.lastIndexOf(a[0]))[0][0];
         const v = JSON.parse(best); g.st = v.st; g.slots = v.slots; g.ex = v.ex; if (v.plus !== undefined) g.plus = v.plus;
       }
-      if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => {
+      const nm = r.slot ? nameFromIcon(r.slot).catch(() => {}) : null;
+      if (nm) nm.then(() => { if (IMPW.live && IMPW.step === "gear") renderLive(); });   // a late name still shows up
+      if (r.slot) Promise.race([nm, new Promise(ok => setTimeout(ok, 700))]).then(() => {   // never keep the scan waiting on slow pictures
         const g = S.gear[r.slot], pk = (LIVE.picked || {})[r.slot];
         if (g && pk && pk.sub === g.sub){   // you already told us which item this is: keep it
           const it = ITEMS.find(x => x.name === pk.name); if (it && fitPenalty(it, g) < 0.25){ g.name = pk.name; g.alts = [pk.name]; GSTATS.forEach(([q]) => { const b = it.st[q] || 0; if (b > 0 && (g.st[q] || 0) < b) g.st[q] = b; }); save(); } }
@@ -2306,11 +2313,12 @@ async function liveStart(mode){
   if (LIVE.stream){ renderLive(); return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){ alert("Your browser can't share a screen here. Use Chrome or Edge on a computer."); return; }
   try {
-    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:5, width:{ideal:3840}, height:{ideal:2160}, displaySurface:"window", cursor:"never"}, audio:false, preferCurrentTab:false, selfBrowserSurface:"exclude", surfaceSwitching:"include", monitorTypeSurfaces:"exclude"});   // opens the picker on the Window tab; the browser doesn't let a site pick MapleStory.exe itself
+    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:10, width:{ideal:3840}, height:{ideal:2160}, displaySurface:"window", cursor:"never"}, audio:false, preferCurrentTab:false, selfBrowserSurface:"exclude", surfaceSwitching:"include", monitorTypeSurfaces:"exclude"});   // opens the picker on the Window tab; the browser doesn't let a site pick MapleStory.exe itself
     LIVE.stream = st; LIVE.video = document.createElement("video"); LIVE.video.muted = true; LIVE.video.playsInline = true; LIVE.video.srcObject = st; await LIVE.video.play();
     LIVE.last = ""; LIVE.n = 0; LIVE.msg = "";
     st.getVideoTracks()[0].addEventListener("ended", liveStop);
-    LIVE.timer = setInterval(liveTick, 600);
+    setTimeout(() => { try { TipOCR.read(new ImageData(4, 4)); } catch(e){} }, 30);   // build the letter shapes now, not on the first item
+    LIVE.timer = setInterval(liveTick, 300);
   } catch(e){ LIVE.stream = null; }
   renderLive();
 }
@@ -2504,7 +2512,8 @@ function loadIconFeat(id){
 }
 function loadGmsFeat(id){
   const pr = new Promise(res => { const im = new Image(); im.crossOrigin = "anonymous";
-    im.onload = () => { try { res(iconFeat(im, true)); } catch(e){ res(null); } }; im.onerror = () => res(null);
+    const to = setTimeout(() => { im.src = ""; ICON_FEAT.delete(id); res(null); }, 1200);   // slow picture server: don't make the scan wait, try again next time
+    im.onload = () => { clearTimeout(to); try { res(iconFeat(im, true)); } catch(e){ res(null); } }; im.onerror = () => { clearTimeout(to); res(null); };
     im.src = `https://maplestory.io/api/GMS/83/item/${id}/icon`; });
   return pr;
 }
@@ -2556,7 +2565,7 @@ function scanToast(r){
   if (!r || !r.ok) return;
   let txt;
   if (r.stars) txt = `${ammoName()} scanned — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
-  else if (r.slot){ const g = S.gear[r.slot], im = IMGS[r.slot]; if (!g || !im || !im.icon) return;
+  else if (r.slot){ const g = S.gear[r.slot]; if (!g) return;   // also without a cut-out picture: you always see that it was scanned
     const exl = EXSTATS.filter(([k]) => g.ex && g.ex[k]).map(([k, l]) => `${l} +${g.ex[k]}`).join(' · ');
     txt = `${SLOTS.find(s => s[0] === r.slot)[1]} scanned${g.name ? ' — ' + g.name : ''} · ${[statLine(g.st), exl].filter(Boolean).join(' · ') || 'no stats'}${g.slots ? ' · ' + g.slots + ' slots' : ''}`; }
   else return;
