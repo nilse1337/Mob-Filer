@@ -425,6 +425,14 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .bopt .bt{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px}.bopt .bt small{font-weight:600;color:var(--good);font-size:11px}
 .bopt .bico{display:flex;gap:6px;min-height:40px;align-items:center}.bopt .bico img{width:36px;height:36px;object-fit:contain;image-rendering:pixelated;padding:3px;border-radius:8px;background:#eef1f5}
 .bopt .note{font-size:12px;line-height:1.4}.sbico{display:flex;gap:4px}.sbico img{width:26px;height:26px;object-fit:contain;image-rendering:pixelated}
+.ualtbtn{display:block;margin:6px 0 0 auto;width:30px;height:26px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);color:var(--accent);font-size:14px;line-height:1;cursor:pointer}.ualtbtn:hover,.ualtbtn.on{border-color:var(--accent)}
+.ualts{grid-column:1/-1;display:grid;gap:6px;margin:4px 0 2px 30px;padding:8px 10px;border-left:2px solid var(--accent);background:color-mix(in srgb,var(--panel2) 70%,transparent);border-radius:0 10px 10px 0}
+.ualthead{margin-bottom:2px}.ualt{padding:7px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel)}.ualt .sname{display:flex;align-items:center;gap:6px}.ualt .upct{font:700 13px var(--mono);color:var(--good);text-align:right}.ualt .upct small{display:block;font-size:10.5px;color:var(--muted)}
+.welcome{position:fixed;inset:0;z-index:45;display:none;place-items:center;background:rgba(8,11,18,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}.welcome.on{display:grid}
+.welcome .wclose{position:absolute;top:14px;right:18px;background:none;border:0;color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:6px;opacity:.85}.welcome .wclose:hover{opacity:1}
+.welcome .wcard{text-align:center;max-width:520px;padding:10px 20px}.welcome h2{margin:0 0 10px;font-size:26px;color:#fff}.welcome p{margin:0 0 20px;color:#d7dde8;font-size:15px}
+.welcome .wgo{font-size:18px;padding:14px 34px;border-radius:12px;box-shadow:0 8px 30px rgba(245,158,11,.35)}
+.btn.resetbtn{background:#b4232c;border-color:#d43a43;color:#fff}.btn.resetbtn:hover{background:#c92a34}
 </style>
 </head>
 <body>
@@ -611,6 +619,21 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 </div>
 
 <!-- IMPORT -->
+<div id="welcome" class="welcome">
+  <button class="wclose" id="welcomeClose" title="Just take a look">✕</button>
+  <div class="wcard">
+    <h2>Find the best monsters &amp; gear for your character</h2>
+    <p>Import your in-game <b>CHARACTER STAT</b> window first — everything on this site is calculated from it.</p>
+    <button class="btn primary wgo" id="welcomeGo">Get started →</button>
+  </div>
+</div>
+<div class="modal" id="resetModal">
+  <div class="panel" style="max-width:420px">
+    <div class="mhead"><h3>↺ Reset everything?</h3><button class="btn small" data-close="resetModal" style="margin-left:auto">✕</button></div>
+    <p class="note" style="margin:0 0 14px">Do you wish to reset everything? This clears your character (stat window, class, level, skill), all gear, your choices, potions, buffs and filters. Pinned ★ monsters, monsters you edited and the theme stay. This can't be undone.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-close="resetModal">Cancel</button><button class="btn resetbtn" id="resetYes">Yes, reset everything</button></div>
+  </div>
+</div>
 <div class="modal" id="impModal">
   <div class="panel wide">
     <div class="mhead"><h3>📷 Import your character stats</h3><button class="btn small" data-close="impModal" style="margin-left:auto">✕</button></div>
@@ -2962,31 +2985,50 @@ function usefulList(R){
       const subs = slot === "weapon" ? jobOf().weapons : SLOT_SUBS[slot];
       cands = ITEMS.filter(it => subs.includes(it.sub) && usable(it, S.char.cls) && (slot !== "weapon" || weaponOK(it.sub)) && wearCheck(it, cur).ok);
     }
-    // the same item you already wear is never an 'upgrade' (scrolling it is its own row)
-    if (cur && cur.name) cands = cands.filter(it => it.name.toLowerCase() !== cur.name.toLowerCase());
-    else if (cur) cands = cands.filter(it => !couldBe(it, cur));   // unnamed: skip items your current one could be (its base + scrolls fit)
-    // never worse than what you have: skip items whose base your current item already beats on every stat (and slots),
-    // and items that even fully scrolled don't beat scrolling your current item
-    if (cur){ const base = cur.name ? ITEMS.find(it => it.name.toLowerCase() === cur.name.toLowerCase()) : null, cb = base ? base.st : cur.st, cs = base ? base.slots : 99;
-      cands = cands.filter(it => !(GSTATS.every(([k]) => (it.st[k] || 0) <= (cb[k] || 0) + 0.1) && it.slots <= cs)); }
+    const clean = list => {
+      // the same item you already wear is never an 'upgrade' (scrolling it is its own row)
+      if (cur && cur.name) list = list.filter(it => it.name.toLowerCase() !== cur.name.toLowerCase());
+      else if (cur) list = list.filter(it => !couldBe(it, cur));   // unnamed: skip items your current one could be (its base + scrolls fit)
+      // never worse than what you have: skip items whose base your current item already beats on every stat (and slots)
+      if (cur){ const bi = cur.name ? ITEMS.find(it => it.name.toLowerCase() === cur.name.toLowerCase()) : null, cb = bi ? bi.st : cur.st, cs = bi ? bi.slots : 99;
+        list = list.filter(it => !(GSTATS.every(([k]) => (it.st[k] || 0) <= (cb[k] || 0) + 0.1) && it.slots <= cs)); }
+      return list;
+    };
+    cands = clean(cands);
     const curLv = cur && cur.name ? ((ITEMS.find(it => it.name.toLowerCase() === cur.name.toLowerCase()) || {}).lv || 0) : 0;
     const curBest = cur ? bestFor(slot, cur.st, cur.sub, cur.slots || 0, fromSt, extra) : null;
     const curGain = cur && cur.slots > 0 ? gainOf(Object.assign({}, extra, {[slot]: {st:curBest.to, sub:cur.sub}})) : 0;
-    let bestItem = null;
-    for (const it of cands){ const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (bestItem && b.m <= bestItem.b.m) continue;
-      if (curBest && b.m <= curBest.m + 1e-9) continue;   // scrolling what you wear does at least as much for this goal
-      if (curLv && it.lv < curLv && gainOf(Object.assign({}, extra, {[slot]: {st:it.st, sub:it.sub}})) < 0) continue;   // a lower-level item with a weaker base than yours is no upgrade
-      if (gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})) <= curGain + 0.0005) continue;   // and for your damage
-      if (gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})) <= 0.0005) continue;   // never suggest something that lowers your damage
-      bestItem = {it, b}; }
-    if (bestItem && bestItem.b.m > 1e-6){
-      const it = bestItem.it, b = bestItem.b;
+    // an item passes when it beats what you wear for this goal and for your damage
+    const passes = (it, b) => {
+      if (curBest && b.m <= curBest.m + 1e-9) return false;   // scrolling what you wear does at least as much for this goal
+      if (curLv && it.lv < curLv && gainOf(Object.assign({}, extra, {[slot]: {st:it.st, sub:it.sub}})) < 0) return false;   // a lower-level item with a weaker base than yours is no upgrade
+      const gg = gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}}));
+      if (gg <= curGain + 0.0005) return false;   // and for your damage
+      if (gg <= 0.0005) return false;   // never suggest something that lowers your damage
+      return b.m > 1e-6;
+    };
+    const mk = (it, b) => {
       const g = gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})), hit = lastHit;
       const raw = gainOf(Object.assign({}, extra, {[slot]: {st:it.st, sub:it.sub}}));
       const empty = slot === "weapon" ? gainOf({weapon: {st:{}, sub:it.sub}}) : gainOf(Object.assign({}, extra, {[slot]: null}));
       const fromItem = Math.max(0, raw - empty), fromScroll = Math.max(0, g - raw);
-      if (goal !== "damage" || g > 0.0005) out.push({kind:"item", slot, g, raw, m:b.m, share: fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1, hit,
-        goal: goalWord(fromSt, b.to, slot, it.sub, extra), name:it.name, id:itemIconId(it.name), lv:it.lv, d:diff(b.to, fromSt), sc: b.sc ? {n:it.slots, sc:b.sc, rate:grade} : null});
+      return {kind:"item", slot, g, raw, m:b.m, share: fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1, hit, it,
+        goal: goalWord(fromSt, b.to, slot, it.sub, extra), name:it.name, id:itemIconId(it.name), lv:it.lv, d:diff(b.to, fromSt), sc: b.sc ? {n:it.slots, sc:b.sc, rate:grade} : null};
+    };
+    let bestItem = null;
+    for (const it of cands){ const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (bestItem && b.m <= bestItem.b.m) continue;
+      if (!passes(it, b)) continue;
+      bestItem = {it, b}; }
+    if (bestItem && bestItem.b.m > 1e-6){
+      const top = mk(bestItem.it, bestItem.b);
+      // smaller upgrades for the same slot (shown when the row is opened): every wearable item that still beats yours for this goal
+      const subs = slot === "weapon" ? jobOf().weapons : SLOT_SUBS[slot];
+      const pool = goal === "damage" ? clean(ITEMS.filter(it => subs.includes(it.sub) && usable(it, S.char.cls) && (slot !== "weapon" || weaponOK(it.sub)) && wearCheck(it, cur).ok)) : cands;
+      const alts = [];
+      for (const it of pool){ if (it === bestItem.it) continue; const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (b.m < bestItem.b.m + 1e-9 && passes(it, b)) alts.push({it, b}); }
+      alts.sort((a, b) => b.b.m - a.b.m);
+      top.alts = alts.slice(0, 6).map(a => mk(a.it, a.b)).filter(x => x.g > 0.0005);
+      if (goal !== "damage" || top.g > 0.0005) out.push(top);
     }
     // failed scrolls on what you wear: a fresh copy of the same item, scrolled with all its slots, can beat it
     { const base = cur && cur.name ? ITEMS.find(it => it.name.toLowerCase() === cur.name.toLowerCase()) : null;
@@ -3064,9 +3106,24 @@ function usefulColumn(R){
         ${x.rebuy ? `<div class="note">yours is +${x.used - x.failed} with ${x.failed} failed scroll${x.failed > 1 ? 's' : ''} (${x.used} slots used) — a fresh one with every scroll working beats it</div>` : x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
         ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
         <div class="ubar">${(() => { const it = x.g * (x.share === undefined ? 1 : x.share), scp = x.g - it; return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item share"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scroll share"></i>` : ''}`; })()}</div></div>
-      <div class="upct ${x.g < -0.0005 ? 'neg' : ''}">${x.g >= 0 ? '+' : '−'}${Math.abs(x.g*100).toFixed(1)}%${goal !== "damage" ? `<small>${goalValue(x, goal)}</small>` : ''}</div></div>`;
+      <div class="upct ${x.g < -0.0005 ? 'neg' : ''}">${x.g >= 0 ? '+' : '−'}${Math.abs(x.g*100).toFixed(1)}%${goal !== "damage" ? `<small>${goalValue(x, goal)}</small>` : ''}${x.alts && x.alts.length ? `<button class="ualtbtn ${altOpen(x.slot) ? 'on' : ''}" data-ualt="${x.slot}" data-tip="${x.alts.length} smaller upgrade${x.alts.length > 1 ? 's' : ''} for this slot">${altOpen(x.slot) ? '︽' : '︾'}</button>` : ''}</div>
+      ${x.alts && x.alts.length && altOpen(x.slot) ? `<div class="ualts"><div class="note ualthead">Smaller upgrades for your ${SLOTS.find(s => s[0] === x.slot)[1].toLowerCase()} — still better than what you wear for <b>${esc(goalLabel(goal, (GOALS.find(gl => gl[0] === goal) || [0, goal])[1]))}</b>, and you can wear them now</div>${x.alts.map(a => altRow(a, goal, R)).join("")}</div>` : ''}</div>`;
   }).join("");
 }
+const altOpen = slot => !!(S.altOpen && S.altOpen[slot]);
+function altRow(a, goal, R){
+  const sc = a.sc ? `${a.sc.n}× ${esc(a.sc.sc.target)} ${esc(a.sc.sc.stat)} Scroll ${a.sc.rate}%` : "";
+  const w = wearCheck(a.it, S.gear[a.slot]);
+  return `<div class="ualt"><div class="sname">${iconImg(a.id, "")}<b>${esc(a.name)}</b><span class="ugoal g-${a.goal.toLowerCase()}">${a.goal}</span><span class="upct" style="margin-left:auto">+${(a.g*100).toFixed(1)}%${goal !== "damage" ? `<small>${goalValue(a, goal)}</small>` : ''}</span></div>
+    <div class="note">Lv ${a.lv}${sc ? ' + ' + sc : ''} · ${statLine(a.it.st) || 'no stats'}${a.it.slots ? ' · ' + a.it.slots + ' slots' : ''}</div>
+    ${a.sc ? `<div class="note"><span class="tg">item alone ${a.raw >= 0 ? '+' : '−'}${Math.abs(a.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((a.g - a.raw)*100).toFixed(1)}%</span></div>` : ''}
+    <div class="note">${reqLine(a.it, w)}</div>
+    ${a.hit != null && R.base.hitP != null && a.hit - R.base.hitP > 0.004 ? `<div class="note">hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(a.hit*100).toFixed(1)}%</div>` : ''}</div>`;
+}
+document.addEventListener("click", ev => {
+  const b = ev.target.closest("[data-ualt]"); if (!b) return;
+  S.altOpen = S.altOpen || {}; S.altOpen[b.dataset.ualt] = !S.altOpen[b.dataset.ualt]; renderAll();
+});
 function scrollColumn(R){
   const rows = [];
   for (const [slot, label, icon] of SLOTS){
@@ -3681,6 +3738,10 @@ function renderAll(){
   const page = renderPage();
   renderHeaderGear();
   $("btnImport").classList.toggle("glow", !S.charImported);
+  { const b = $("btnImport"), done = !!S.charImported; b.classList.toggle("resetbtn", done); b.classList.toggle("primary", !done);
+    b.innerHTML = done ? '↺ <span class="lbltxt">Reset all data</span>' : '📷 <span class="lbltxt">Import stat window</span>';
+    if (done) b.dataset.tip = '<b style="color:#ff6b6b">Reset all data</b><br>Clears your character, gear and choices so you can start over.'; else delete b.dataset.tip; }
+  $("welcome").classList.toggle("on", !S.charImported && !S.charTemplate && !WELCOME_PEEK);
   RR = rawRange();
   EVAL = monsters().map(m => evaluate(m, RR));
   BYID = new Map(EVAL.map(e => [e.id, e]));
@@ -3785,7 +3846,12 @@ $("btnApplyEst").onclick = () => { S.baseAcc = classAcc(S.bClass, S.level, S.bPr
   $("dataTip").dataset.tip = `<b>Data &amp; formulas</b><ul><li>Monsters (level, avoid, HP, defense, elements) come from MeowDB, only monsters with a known MSCW location.</li><li>Damage uses MeowDB's MSCW formula: defense, element, level gap and crit.</li><li>Magic never misses in MSCW, so accuracy only matters for physical attacks.</li></ul>`;
   $("blTip").dataset.tip = `<b>Hidden suggestions</b><ul><li>Monsters you removed with the ✕ (clicked twice) in "Best EXP per hit".</li><li>They still show in the monster list — only the top 5 suggestions skip them.</li><li>Click a name here to bring it back into the suggestions.</li></ul>`; }
 $("btnResetAll").addEventListener("click", ev => { const b = $("btnResetAll"); if (!b.classList.contains("sure")){ ev.stopImmediatePropagation(); b.classList.add("sure"); b.textContent = "Sure? This clears your character & gear"; clearTimeout(b._t); b._t = setTimeout(() => { b.classList.remove("sure"); b.textContent = "Reset everything"; }, 4000); } }, true);
-$("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $("btnResetAll").textContent = "Reset everything"; S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch(e){} location.hash = ""; location.reload(); };   // start clean: every part sets up its own defaults again
+function resetEverything(){ S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch(e){} location.hash = ""; location.reload(); }   // start clean: every part sets up its own defaults again
+$("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $("btnResetAll").textContent = "Reset everything"; resetEverything(); };
+var WELCOME_PEEK = false;
+$("welcomeClose").onclick = () => { WELCOME_PEEK = true; $("welcome").classList.remove("on"); };
+$("welcomeGo").onclick = () => { $("btnImport").click(); };
+$("resetYes").onclick = () => resetEverything();
 $("btnResetFilters").onclick = () => { Object.assign(S, {search:"", region:"all", status:"all", elFilter:"all", exclude:[]}); $("inSearch").value = ""; renderAll(); };
 document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open")); });
@@ -3810,7 +3876,7 @@ function guessClass(v){
   const best = Object.entries(st).sort((a,b) => b[1]-a[1])[0];
   return (v.level||0) < 10 && best[1] < 40 ? "beginner" : best[0];
 }
-$("btnImport").onclick = () => { if (!LIVE.stream) IMPW.live = false; $("impModal").classList.add("open"); try { renderLive(); } catch(e){} };
+$("btnImport").onclick = () => { if (S.charImported){ $("resetModal").classList.add("open"); return; } if (!LIVE.stream) IMPW.live = false; $("impModal").classList.add("open"); try { renderLive(); } catch(e){} };
 $("impFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) loadImage(f); e.target.value = ""; });
 const drop = $("drop");
 ["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
