@@ -443,6 +443,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .tskip{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer}
 .tourtog{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600}
 .kodds{display:block;font:600 12px var(--mono);color:var(--muted);margin-top:3px;cursor:help}
+html.touring,html.touring body{overflow:hidden}
 </style>
 </head>
 <body>
@@ -3942,7 +3943,7 @@ let tourAt = -1;
 function tourShow(i){
   tourAt = i; const st = TOUR[i], el = document.querySelector(st.sel); if (!el){ tourEnd(true); return; }
   if (location.hash === "#gear" && i < 3) location.hash = "#calc";
-  $("tour").classList.add("on"); $("welcome").classList.remove("on");
+  $("tour").classList.add("on"); $("welcome").classList.remove("on"); document.documentElement.classList.add("touring");
   const big = el.offsetHeight > window.innerHeight * 0.6;
   if (big){ const hh = (document.querySelector("header") || {offsetHeight:70}).offsetHeight; window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - hh - 50}); }
   else el.scrollIntoView({block:"center"});
@@ -3958,11 +3959,14 @@ function tourShow(i){
   }));
 }
 function tourEnd(done){
-  $("tour").classList.remove("on"); tourAt = -1;
+  $("tour").classList.remove("on"); tourAt = -1; document.documentElement.classList.remove("touring");
   if (done || $("tourSkip").checked) S.tour = "off";   // walked through once, or "don't show again": always off from now on
   else S.tour = "later";                                 // closed with ✕: offered again on the next visit
   save(); window.scrollTo({top:0}); renderAll();
 }
+// no scrolling while the tour runs (wheel, touch, keys); the tour itself still moves the page
+["wheel","touchmove"].forEach(t => window.addEventListener(t, ev => { if (tourAt >= 0) ev.preventDefault(); }, {passive:false, capture:true}));
+window.addEventListener("keydown", ev => { if (tourAt >= 0 && ["ArrowUp","ArrowDown","PageUp","PageDown","Home","End"," ","Spacebar"].includes(ev.key) && !ev.target.closest("input,select,textarea,button")) ev.preventDefault(); }, true);
 $("tourNext").onclick = () => tourAt < TOUR.length - 1 ? tourShow(tourAt + 1) : tourEnd(true);
 $("tourBack").onclick = () => tourAt > 0 && tourShow(tourAt - 1);
 $("tourClose").onclick = () => tourEnd(false);
