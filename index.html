@@ -333,6 +333,10 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .livebox{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:-4px 0 12px;font-size:12.5px}.livebox .btn{margin-left:auto}.livebox .btn#liveStart{margin-left:0}
 .livedot{width:9px;height:9px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px #e5484d33;animation:lvp 1.2s infinite}@keyframes lvp{50%{opacity:.35}}.livemsg{flex-basis:100%;color:var(--good);font-weight:600}
 .setwhy{font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:0 0 10px}.setwhy b{color:var(--text)}.setwhy.closed{cursor:pointer}.setwhy.closed:hover{border-color:var(--line2)}.whyhead{cursor:pointer;margin-bottom:5px}.whycar{color:var(--accent);font-size:11px}.whyhint{font-size:11px;opacity:.7;margin-left:4px}.setwhy .sgoal{margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--line)}.setwhy b.ok{color:var(--good)}
+#scanToasts{position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.scantoast{display:flex;align-items:center;gap:10px;max-width:420px;padding:9px 14px 9px 10px;border-radius:12px;background:#12351f;border:1px solid #2fbf71;color:#c9f7dc;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:1;transform:translateY(0);transition:opacity 3s ease,transform 3s ease;animation:stin .25s ease}
+.scantoast img{width:34px;height:34px;border-radius:6px;background:#eef2f7;image-rendering:pixelated}.scantoast .stok{color:#2fbf71;font-size:18px}
+.scantoast.fade{opacity:0;transform:translateY(8px)}@keyframes stin{from{opacity:0;transform:translateY(10px)}}
 </style>
 </head>
 <body>
@@ -1918,6 +1922,7 @@ function liveTick(){
     readTipCanvas(c, null, r => {
       LIVE.busy = false;
       if (!r.ok) return;
+      scanToast(r);
       LIVE.n++;
       if (r.stars) LIVE.msg = `✓ Throwing stars — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
       else { const g = S.gear[r.slot]; LIVE.msg = `✓ ${SLOTS.find(s => s[0] === r.slot)[1]}${g.name ? ' — ' + g.name : ''}: ${statLine(g.st) || 'no attack stats'}`; }
@@ -1948,10 +1953,27 @@ function renderLive(){
     : `<button class="btn small" id="liveStart">🖥 Share Maple screen</button><span class="note">pick your MapleStory window, then hover each item — no screenshots needed</span>`;
 }
 document.addEventListener("click", ev => { if (ev.target.closest("#liveStart")) liveStart(); else if (ev.target.closest("#liveStop")) liveStop(); });
+/* green notification after a good scan: stats read and the picture saved; fades out slowly */
+function scanToast(r){
+  if (!r || !r.ok) return;
+  let txt;
+  if (r.stars) txt = `Throwing stars scanned — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
+  else if (r.slot){ const g = S.gear[r.slot], im = IMGS[r.slot]; if (!g || !im || !im.icon) return;
+    txt = `${SLOTS.find(s => s[0] === r.slot)[1]} scanned${g.name ? ' — ' + g.name : ''} · ${statLine(g.st) || 'no attack stats'}${g.slots ? ' · ' + g.slots + ' slots' : ''}`; }
+  else return;
+  let box = document.getElementById("scanToasts");
+  if (!box){ box = document.createElement("div"); box.id = "scanToasts"; document.body.appendChild(box); }
+  const t = document.createElement("div"); t.className = "scantoast";
+  t.innerHTML = `${r.slot && IMGS[r.slot] && IMGS[r.slot].icon ? `<img src="${IMGS[r.slot].icon}" alt="">` : '<span class="stok">✓</span>'}<span>${esc(txt)}</span>`;
+  box.appendChild(t);
+  setTimeout(() => t.classList.add("fade"), 2200);
+  setTimeout(() => t.remove(), 5200);
+}
 async function handleGearFiles(files, forceSlot){
   const msgs = [];
   for (const f of files){
     const r = await readTipFile(f, forceSlot);
+    scanToast(r);
     if (r.stars){ msgs.push(r.ok ? `<span class="ok">✓</span> Throwing stars: ${esc(curStar()[0])} (W.ATK +${curStar()[1]})${r.amb ? ' — two stars have this W.ATK, click the stars slot to switch' : ''}` : `<span class="bad">✕ Couldn't read the stars from that screenshot.</span> Pick them from the list under the inventory.`); continue; }
     if (r.ok && r.stat){ msgs.push(`<span class="ok">✓</span> Character updated from your stat window: ${esc(jobOf().label)}, Lv ${S.level}`); continue; }
     if (r.ok){ const g = S.gear[r.slot]; msgs.push(`<span class="ok">✓</span> ${SLOTS.find(s => s[0] === r.slot)[1]}: ${statLine(g.st)}${g.slots ? ` · ${g.slots} slots` : ''}`); }
