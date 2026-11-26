@@ -366,6 +366,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .setnotice{position:fixed;z-index:10001;width:300px;padding:12px 14px;border-radius:12px;background:#0f1522;border:1px solid var(--accent);box-shadow:0 12px 34px rgba(0,0,0,.5);font-size:13px;opacity:0;transform:translateY(-8px);transition:opacity .4s ease,transform .4s ease}
 .setnotice.on{opacity:1;transform:translateY(0)}.setnotice::before{content:"";position:absolute;top:-7px;right:28px;width:12px;height:12px;background:#0f1522;border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}
 .setnotice .note{margin:4px 0 8px}.snbtns{display:flex;gap:6px}#btnSettings.pulse{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent);transition:box-shadow .3s}
+@keyframes flashring{0%{box-shadow:0 0 0 0 transparent}15%{box-shadow:0 0 0 3px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.flash{animation:flashring 1.6s ease-out}tr.flash td{animation:flashbg 1.6s ease-out}@keyframes flashbg{15%{background:color-mix(in srgb,var(--accent) 16%,transparent)}100%{background:transparent}}
 </style>
 </head>
 <body>
@@ -3401,6 +3403,21 @@ function renderAll(){
   save();
 }
 
+/* bring a monster row to eye level (top of the list, under the header) and flash it with its info cards */
+function jumpToRow(row){
+  const wrap = row.closest(".tablewrap"), head = document.querySelector("header") || document.querySelector(".topbar");
+  const hh = head ? head.getBoundingClientRect().height : 64;
+  if (wrap){
+    const wt = wrap.getBoundingClientRect().top + window.scrollY - hh - 12;
+    window.scrollTo({top: Math.max(0, wt), behavior: "smooth"});
+    const th = wrap.querySelector("thead"), thH = th ? th.getBoundingClientRect().height : 0;
+    // rows near the end can't reach the top: give the list room below its last row
+    const need = row.offsetTop - thH - 4 + wrap.clientHeight - wrap.scrollHeight;
+    if (need > 0) wrap.style.paddingBottom = (parseFloat(wrap.style.paddingBottom) || 0) + need + "px";
+    wrap.scrollTo({top: Math.max(0, row.offsetTop - thH - 4), behavior: "smooth"});
+  } else row.scrollIntoView({block: "start", behavior: "smooth"});
+  [row, $("insp"), $("killPanel")].forEach(el => { if (!el) return; el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1800); });
+}
 /* ---------- events ---------- */
 document.addEventListener("click", ev => {
   const sr = ev.target.closest("[data-statwin]");
@@ -3415,7 +3432,7 @@ document.addEventListener("click", ev => {
   else if (t.dataset.tab) S.tab = t.dataset.tab;
   else if (t.dataset.pin){ ev.stopPropagation(); if (S.pinned[t.dataset.pin]) delete S.pinned[t.dataset.pin]; else S.pinned[t.dataset.pin] = true; }
   else if (t.dataset.quick){ if (t.dataset.quick === "100") S.status = S.status === "100" ? "all" : "100"; else S.elFilter = S.elFilter === t.dataset.quick ? "all" : t.dataset.quick; }
-  else if (t.dataset.jump !== undefined){ if (!t.dataset.jump) return; S.selectedId = t.dataset.jump; renderAll(); const row = document.querySelector(`#tbody tr[data-id="${CSS.escape(S.selectedId)}"]`); if (row) row.scrollIntoView({block:"nearest", behavior:"smooth"}); return; }
+  else if (t.dataset.jump !== undefined){ if (!t.dataset.jump) return; S.selectedId = t.dataset.jump; renderAll(); const row = document.querySelector(`#tbody tr[data-id="${CSS.escape(S.selectedId)}"]`); if (row) jumpToRow(row); return; }
   else if (t.dataset.sort){ const [k, d] = S.sort.split(":"); const defDir = {hit:-1}[t.dataset.sort] || 1; S.sort = t.dataset.sort + ":" + (k === t.dataset.sort ? -d : defDir); }
   else if (t.dataset.id){ S.selectedId = t.dataset.id; renderAll(); if (window.innerWidth <= 1180) $("insp").scrollIntoView({behavior:"smooth"}); return; }
   renderAll();
