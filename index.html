@@ -2933,7 +2933,7 @@ const TIP_MESOS = `<b>Mesos — how it's estimated</b><ul><li><b>Mesos / kill</b
 const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],["fly","🪽 Flying", e => e.isFly],
   ["fh","🌲 Forgotten Hollow", e => e.region === "Forgotten Hollow"],["fw","🔥 Weak to fire", e => e.fire === 1],["iw","❄ Weak to ice", e => e.ice === 1],["hw","✨ Weak to holy", e => e.el && e.el.holy === 1],
   ["fs","🔥 Resists fire", e => e.fire === -1],["is","❄ Resists ice", e => e.ice === -1],["miss","❌ Can't hit 100%", e => e.raw < 1],["hit","✅ Can hit 100%", e => e.raw >= 1],["hidden","✕ Hidden by you", e => (S.blacklist || []).includes(e.id)]];
-const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["any","🔥/❄ Weak to either"],["hw","✨ Weak to holy"],["undead","💀 Undead"],["fs","Resists fire"],["is","Resists ice"]];
+const ELEMENT_FILTERS = [["all","All elements"],["mine","✔ Weak to my skill"],["fw","🔥 Weak to fire"],["iw","❄ Weak to ice"],["hw","✨ Weak to holy"],["undead","💀 Undead"]];
 const COLS = [["name","Monster"],["level","Lv"],["hp","HP"],["avoid","Avoid"],["hit","Hit rate"],["missing","ACC"],["ko","Hits to kill"]];
 const LIMITS = {level:[1,200], baseAcc:[0,9999], extraAcc:[-999,9999], darkness:[0,100], skillLv:[1,30], bPrimary:[0,9999], bLuk:[0,9999], bGear:[0,9999]};
 const EL_COLOR = {fire:"fire", ice:"ice"};
@@ -3143,7 +3143,7 @@ function renderSummary(){
     <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length}</div><div class="s">monsters · click to filter</div></div>
     <div class="panel tile" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span><div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
     <div class="panel tile ${S.topCollapsed === false ? 'open' : ''}" data-ttfold="1" title="Click to ${S.topCollapsed === false ? 'hide' : 'show'} the top 5"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"} (±15 Lv)</span><span class="tmore">${S.topCollapsed === false ? 'Hide ▴' : 'See top 5 ▾'}</span><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
-    <div class="panel tile ${sk.el==='ice'?'ice':'fire'}" ${sk.el?`data-quick="mine"`:`data-quick="any"`}><span class="lbl">${weakLbl}</span><div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} · click to filter` : 'pick a fire/ice skill to compare'}</div></div>`;
+    <div class="panel tile ${sk.el==='ice'?'ice':'fire'}" ${sk.el?`data-quick="mine"`:``}><span class="lbl">${weakLbl}</span><div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} · click to filter` : 'pick a fire/ice skill to compare'}</div></div>`;
   const top = pool.slice(0, 5);
   const tc = S.topCollapsed !== false;   // closed by default; opens from the "Best EXP per hit" tile
   $("topTrain").style.display = tc ? "none" : "";
@@ -3191,7 +3191,8 @@ function renderList(){
     $("exCount").textContent = (ex.length + (S.showElIcons === false) + (S.showTypeTags === false)) ? ` (${ex.length + (S.showElIcons === false) + (S.showTypeTags === false)})` : ""; }
   $("fRegion").value = S.region; $("fStatus").value = S.status;
   const sk = RR.sk;
-    { const dup = {fire:"fw", ice:"iw", holy:"hw"}[sk.el];   // "weak to my skill" and "weak to fire" are the same list for a fire skill: show it once
+    if (["any","fs","is"].includes(S.elFilter)) S.elFilter = "all";   // removed options
+  { const dup = {fire:"fw", ice:"iw", holy:"hw"}[sk.el];   // "weak to my skill" and "weak to fire" are the same list for a fire skill: show it once
     if (dup && S.elFilter === dup) S.elFilter = "mine";
     const icon = {fire:"🔥", ice:"❄", holy:"✨", lightning:"⚡", poison:"☠"}[sk.el] || "✔";
     $("fElement").innerHTML = ELEMENT_FILTERS.filter(([k]) => (k !== "mine" || sk.el) && k !== dup).map(([k,l]) => `<option value="${k}" ${S.elFilter===k?'selected':''}>${k==="mine"?`${icon} Weak to ${sk.el} (your skill)`:l}</option>`).join(""); }
