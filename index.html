@@ -1644,7 +1644,7 @@ const MANUAL_GMS = {"blue icarus cape":"1102054", "blue pao bottoms":"1060031", 
 function itemIconId(name){ if (!name) return null; const k = String(name).toLowerCase().replace(/[’']/g, "'").trim(); if (MANUAL_GMS[k]) return MANUAL_GMS[k]; if (NO_GMS.has(k)) return null; const id = ICON_ID[k]; return id ? String(GMS_DELTA[id] || id) : null; }
 function scrollIconId(sc){
   if (!sc) return null; const k = sc.target + "|" + sc.stat, b = SCROLL_INT[k]; if (!b) return null;
-  return String(sc.grade === "Lesser" ? (SCROLL_LESSER[k] || b - 1) : sc.grade === "Greater" ? b + 1 : sc.grade === "Chaos" ? b + 2 : b);
+  return String(sc.grade === "Lesser" ? b - 1 : sc.grade === "Greater" ? b + 1 : sc.grade === "Chaos" ? b + 2 : b);   // MSCW numbering (checked on MeowDB)
 }
 /* <img> with maplestory.io → MeowDB CDN → fallback (data-URI crop or emoji) */
 function iconErr(el){
@@ -1660,6 +1660,13 @@ function iconImg(id, fallback, cls){
   if (!id && isImg) return `<img class="${cls}" src="${fallback}" alt="">`;
   if (!id) return "";
   return `<img class="${cls}" src="https://maplestory.io/api/GMS/83/item/${id}/icon" data-id="${id}"${isImg ? ` data-fb="${fallback}"` : ""} alt="" loading="lazy" onerror="iconErr(this)"><span class="${cls} iemo" hidden>${emo}</span>`;
+}
+
+/* scroll pictures: MSCW draws its own scrolls, so MeowDB's picture first, the GMS one as backup */
+function scrollImg(sc, cls){
+  const id = scrollIconId(sc); if (!id) return "";
+  cls = cls || "iicon";
+  return `<img class="${cls}" src="https://cdn.meowdb.com/icons/${id}.png" data-id="${id}" data-fb="https://maplestory.io/api/GMS/83/item/${id}/icon" referrerpolicy="no-referrer" alt="" loading="lazy" onerror="iconErr(this)"><span class="${cls} iemo" hidden></span>`;
 }
 
 /* Gender-locked tops / overalls / bottoms / gloves (requiredGender from maplestory.io, matched by name) */
@@ -1957,7 +1964,7 @@ function renderGear(){
     const koTxt = Number.isFinite(r.ko) && Number.isFinite(A.base.ko) && r.ko < A.base.ko ? `<span class="kobadge">${A.base.ko} → ${r.ko} hits</span>` : "";
     return `<div class="adv ${r.risky?'risky':''}">
       <div class="advrank">${i+1}</div>
-      <div class="advmain"><div class="advtitle">${r.kind==='scroll' ? iconImg(scrollIconId(r.sc), '📜') : iconImg(itemIconId(r.title), SLOT_ICON[r.slot] || '⚔')} ${esc(r.title)} ${r.risky?'<span class="tag t-boss">RISK</span>':''}${r.soon?`<span class="tag t-pq" title="You can't wear this yet">NEEDS ${esc(r.soonTxt)}</span>`:''}${r.kind==='item' && !r.soon?'<span class="tag t-ok">CAN WEAR</span>':''}${r.otherType?'<span class="tag t-cus" title="Different weapon type: needs the matching job branch and mastery skill">OTHER TYPE</span>':''} ${koTxt}</div>
+      <div class="advmain"><div class="advtitle">${r.kind==='scroll' ? scrollImg(r.sc) : iconImg(itemIconId(r.title), SLOT_ICON[r.slot] || '⚔')} ${esc(r.title)} ${r.risky?'<span class="tag t-boss">RISK</span>':''}${r.soon?`<span class="tag t-pq" title="You can't wear this yet">NEEDS ${esc(r.soonTxt)}</span>`:''}${r.kind==='item' && !r.soon?'<span class="tag t-ok">CAN WEAR</span>':''}${r.otherType?'<span class="tag t-cus" title="Different weapon type: needs the matching job branch and mastery skill">OTHER TYPE</span>':''} ${koTxt}</div>
         <div class="note">${esc(r.sub)}</div>
         ${r.req ? `<div class="note">${r.req}</div>` : ''}
         ${r.kind==='scroll' ? `<div class="note">If it succeeds: +${(r.pctIfSuccess*100).toFixed(1)}% · expected per scroll: +${(r.pct*100).toFixed(2)}%${r.all ? ' · ' + r.all : ''}</div>` : ''}
@@ -3052,7 +3059,7 @@ function usefulColumn(R){
   return L.map((x, i) => {
     const sc = x.sc ? `${x.sc.n}× ${esc(x.sc.sc.target)} ${esc(x.sc.sc.stat)} Scroll ${x.sc.rate}%` : "";
     return `<div class="urow"><div class="urank">${i+1}</div>
-      <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : x.rebuy ? `Buy a new ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
+      <div class="umain"><div class="sname">${x.kind === "scroll" ? scrollImg(x.sc.sc) : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : x.rebuy ? `Buy a new ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
         <div class="note">${x.kind === "stars" ? `${ammoName()} · W.ATK +${x.d.watk} vs ${esc(curStar()[0])}` : x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
         ${x.rebuy ? `<div class="note">yours is +${x.used - x.failed} with ${x.failed} failed scroll${x.failed > 1 ? 's' : ''} (${x.used} slots used) — a fresh one with every scroll working beats it</div>` : x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
         ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
@@ -3070,7 +3077,7 @@ function scrollColumn(R){
     if (!sr.bestSc){ rows.push(`<div class="srow empty"><span class="sslot">${icon} ${label}</span><span class="note">${esc(p.name)} · no ${sr.g}% scroll helps your damage (${sr.free} slots)</span></div>`); continue; }
     const sc = sr.bestSc.sc, exp = addSt({}, sc.st, sr.free*sr.g/100), max = addSt({}, sc.st, sr.free);
     rows.push(`<div class="srow scroll"><span class="sslot">${icon} ${label}</span>
-      <div class="smain">${iconImg(scrollIconId(sc), "📜")} <b>${sr.free}× ${esc(sc.target)} ${esc(sc.stat)} Scroll: ${esc(sc.grade)}</b> <span class="tag t-pq">${sc.rate}%</span>
+      <div class="smain">${scrollImg(sc)} <b>${sr.free}× ${esc(sc.target)} ${esc(sc.stat)} Scroll: ${esc(sc.grade)}</b> <span class="tag t-pq">${sc.rate}%</span>
         <div class="note">on ${esc(p.name)}${p.keep ? '' : ' (new)'} · each ${statLine(sc.st)}${sr.bestSc.noDmg ? ' · <span class="bad">no effect on your damage</span>' : ''}</div>
         <div class="note">all succeed: ${deltaLine(max)}${sr.g < 100 ? ` · on average ${deltaLine(exp)} (${sr.g}% chance each, a failed scroll still uses the slot)` : ''}</div></div></div>`);
   }
