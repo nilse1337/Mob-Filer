@@ -442,6 +442,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .tnav{display:flex;align-items:center;gap:8px}.tdots{flex:1;display:flex;justify-content:center;gap:5px}.tdots i{width:7px;height:7px;border-radius:50%;background:var(--line2)}.tdots i.on{background:var(--accent)}
 .tskip{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer}
 .tourtog{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600}
+.kodds{display:block;font:600 12px var(--mono);color:var(--muted);margin-top:3px;cursor:help}
 </style>
 </head>
 <body>
@@ -1415,7 +1416,23 @@ function damageVs(mob, rr, hit){
   const ko = perCast > 0 ? Math.ceil(mob.hp / perCast) : Infinity;
   const best = critHi > 0 ? Math.ceil(mob.hp / (critHi*rr.at.hits)) : Infinity;
   const worst = lo > 0 ? Math.ceil(mob.hp / (lo*rr.at.hits)) : Infinity;
-  return {def, defF, em, ls, lo, hi, critHi, avgHit, perCast, ko, best, worst, hitP};
+  return {def, defF, em, ls, lo, hi, critHi, avgHit, perCast, ko, best, worst, hitP, c, cm:1 + d, k, hp:mob.hp, lines:rr.at.hits};
+}
+/* chance to kill in exactly n casts (simulated: random damage in the range, crits, misses) */
+function killOdds(dm){
+  if (!(dm.hi > 0) || !Number.isFinite(dm.best)) return null;
+  let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const N = 4000, cnt = {};
+  for (let t = 0; t < N; t++){
+    let hp = dm.hp, n = 0;
+    while (hp > 0 && n < 99){ n++;
+      for (let l = 0; l < dm.lines && hp > 0; l++){
+        if (rnd() >= dm.hitP) continue;
+        let v = dm.lo + rnd() * (dm.hi - dm.lo); if (rnd() < dm.c) v *= dm.cm;
+        hp -= Math.trunc(Math.min(99999, v)); } }
+    cnt[n] = (cnt[n] || 0) + 1;
+  }
+  return n => (cnt[n] || 0) / N;
 }
 
 /* ---------- STATE ---------- */
@@ -3693,7 +3710,8 @@ function dmgTab(e){
   const ko = Number.isFinite(d.ko) ? d.ko : "—";
   return `
     <div class="hero"><div><span class="lbl">Hits to kill · ${esc(sk.name)} Lv ${at.lv}</span><div class="big ${d.ko<=3?'ok':d.ko<=6?'near':'bad'}">${ko}</div></div>
-      <div style="margin-left:auto;text-align:right"><span class="lbl">Best – worst</span><b class="mono" style="font-size:16px">${d.best} – ${Number.isFinite(d.worst)?d.worst:'∞'}</b></div></div>
+      <div style="margin-left:auto;text-align:right"><span class="lbl">Best – worst</span><b class="mono" style="font-size:16px">${d.best} – ${Number.isFinite(d.worst)?d.worst:'∞'}</b>${(() => { const od = killOdds(d); if (!od) return ''; const pc = v => v >= 0.995 ? '100%' : v < 0.005 && v > 0 ? '<1%' : Math.round(v*100) + '%';
+        return `<small class="kodds" data-tip="Chance to kill it in exactly that many ${at.hits > 1 ? 'casts' : 'hits'} — random damage in your range, crits${RR.type === 'phys' ? ' and misses' : ''} included">(${pc(od(d.best))}) – (${Number.isFinite(d.worst) ? pc(od(d.worst)) : '—'})</small>`; })()}</div></div>
     <table class="mini" style="margin-top:14px">
       <tr><td>Damage per hit</td><td>${fmt(d.lo)} – ${fmt(d.hi)}</td></tr>
       <tr><td>Max crit</td><td>${fmt(d.critHi)}</td></tr>
