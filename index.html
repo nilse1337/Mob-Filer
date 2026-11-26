@@ -3153,7 +3153,7 @@ function renderSummary(){
   else pool.sort((a,b) => (b.exp / b._ko) - (a.exp / a._ko) || b.exp - a.exp);
   { const seen = new Set(); pool = pool.filter(e => { const k = baseName(e.name); if (seen.has(k)) return false; seen.add(k); return true; }); }   // one row per monster
   const train = pool[0];
-  const weakPool = all.filter(e => e.myWeak && (e.raw >= 1 || RR.type === "magic")).sort((a,b) => b.level - a.level);
+  const weakPool = all.filter(e => e.myWeak && !e.isBoss && !e.isPQ && (e.raw >= 1 || RR.type === "magic")).sort((a,b) => b.level - a.level);   // no bosses or PQ / job-test monsters
   const weakBest = weakPool[0];
   const weakLbl = sk.el ? `${{fire:"🔥",ice:"❄",lightning:"⚡",holy:"✨",poison:"☠"}[sk.el]} Weak to ${sk.el} · highest you hit` : "🔥/❄ weak monsters";
   const fwN = all.filter(e => e.fire === 1).length, iwN = all.filter(e => e.ice === 1).length;
