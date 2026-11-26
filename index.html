@@ -352,6 +352,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .kside .kcard{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;padding:9px 12px}.kside .kcard h4{grid-row:span 3;margin:0;font-size:22px;font-family:var(--mono);color:var(--accent);text-align:center;min-width:42px;line-height:1}.kside .kcard h4 small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:.04em}
 .kside .kcard.done h4{color:var(--good)}.kside .need{font-size:12.5px}.knum{color:var(--accent2,#7dd3fc);font-weight:800}.kneed{color:#f5a524;font-weight:800}.kbig{color:var(--text);font-weight:800;font-family:var(--mono)}
 @media (max-width:1180px){.rcol{position:static;max-height:none}}
+.tag.t-fly{background:color-mix(in srgb,#7dd3fc 18%,transparent);color:#7dd3fc}
 </style>
 </head>
 <body>
@@ -426,7 +427,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
     <div class="panel list">
       <div class="toolbar">
         <input class="txt" id="inSearch" placeholder="🔍 Search monster…">
-        <div class="exwrap"><button class="btn small exbtn" id="btnExclude" type="button">🚫 Exclude<span id="exCount"></span> ▾</button><div class="expop" id="exPop"></div></div>
+        <div class="exwrap"><button class="btn small exbtn" id="btnExclude" type="button">🚫 Turn Off<span id="exCount"></span> ▾</button><div class="expop" id="exPop"></div></div>
         <select id="fRegion">
           <option value="all">All regions</option><option value="mv">Maple &amp; Victoria</option><option value="fh">Forgotten Hollow</option>
           <option value="pq">PQ / Job Test</option><option value="boss">Bosses</option><option value="undead">Undead</option><option value="pinned">★ Pinned</option>
@@ -2899,15 +2900,29 @@ const EL_COLOR = {fire:"fire", ice:"ice"};
 let EVAL = [], BYID = new Map(), RR = null;
 
 /* ---------- helpers ---------- */
+/* which elements your class can use: only those weaknesses get an icon */
+function myElements(){
+  const j = jobOf(), L = j.label, c = j.cls, out = new Set();
+  if (RR && RR.sk && RR.sk.el) out.add(RR.sk.el);
+  if (/Fire\/Poison/.test(L)) { out.add("fire"); out.add("poison"); }
+  if (/Ice\/Lightning/.test(L)) { out.add("ice"); out.add("lightning"); }
+  if (/Cleric|Priest|Bishop/.test(L)) out.add("holy");
+  if (/Page|White Knight|Paladin/.test(L)) { out.add("fire"); out.add("ice"); out.add("lightning"); }
+  if (/Hunter|Ranger|Bowmaster/.test(L)) out.add("fire");
+  if (/Crossbow|Sniper|Marksman/.test(L)) out.add("ice");
+  return out;
+}
 function elIcons(m){
-  let h = "";
-  if (m.fire === 1) h += `<span class="el" title="Weak to fire">🔥</span>`;
-  if (m.ice === 1) h += `<span class="el" title="Weak to ice">❄</span>`;
-  // holy only matters if you (can) deal holy damage: Cleric / Priest line, or a holy skill
-  if (m.el && m.el.holy === 1 && ((RR && RR.sk && RR.sk.el === "holy") || /Cleric|Priest|Bishop/.test(jobOf().label))) h += `<span class="el" title="Weak to holy">✨</span>`;
-  if (m.fire === -1) h += `<span class="el res" title="Resists fire">🔥</span>`;
-  if (m.ice === -1) h += `<span class="el res" title="Resists ice">❄</span>`;
-  return h;
+  if (S.showElIcons === false) return "";
+  const mine = myElements(), w = k => k === "fire" ? m.fire === 1 : k === "ice" ? m.ice === 1 : m.el && m.el[k] === 1;
+  const I = {fire:["🔥","fire"], ice:["❄","ice"], lightning:["⚡","lightning"], holy:["✨","holy"], poison:["☠","poison"]};
+  return Object.keys(I).filter(k => mine.has(k) && w(k)).map(k => `<span class="el" title="Weak to ${I[k][1]} — you can use ${I[k][1]}">${I[k][0]}</span>`).join("");
+}
+/* the monster's type as words */
+function typeTags(e){
+  if (S.showTypeTags === false) return (e.isCustom?'<span class="tag t-cus">CUSTOM</span>':'') + (e.isEdited?'<span class="tag t-cus">EDITED</span>':'');
+  return (e.isBoss?'<span class="tag t-boss">BOSS</span>':'') + (e.isUndead?'<span class="tag t-und">UNDEAD</span>':'') + (e.isFly?'<span class="tag t-fly">FLYING</span>':'')
+    + (e.isPQ?`<span class="tag t-pq">${e.name.includes('Job Test')?'JOB TEST':'PQ'}</span>`:'') + (e.isCustom?'<span class="tag t-cus">CUSTOM</span>':'') + (e.isEdited?'<span class="tag t-cus">EDITED</span>':'');
 }
 function elPill(el){
   if (!el) return `<span class="elpill none">neutral</span>`;
@@ -2926,6 +2941,7 @@ document.addEventListener("click", ev => {
   if (ev.target.closest("[data-openset]")){ ev.preventDefault(); ev.stopPropagation(); renderBlacklist(); $("setModal").classList.add("open"); }
 }, true);
 $("btnExclude").onclick = ev => { ev.stopPropagation(); $("exPop").classList.toggle("open"); };
+document.addEventListener("change", ev => { const sh = ev.target.closest("[data-show]"); if (sh){ S[sh.dataset.show] = !sh.checked; renderAll(); $("exPop").classList.add("open"); } });
 document.addEventListener("change", ev => { const c = ev.target.closest("[data-ex]"); if (!c) return; const k = c.dataset.ex; S.exclude = (S.exclude || []).filter(x => x !== k); if (c.checked) S.exclude.push(k); renderAll(); $("exPop").classList.add("open"); });
 document.addEventListener("click", ev => {
   if (ev.target.closest("[data-exclear]")){ S.exclude = []; renderAll(); $("exPop").classList.add("open"); return; }
@@ -3096,7 +3112,10 @@ function renderSummary(){
 function renderList(){
   setVal("inSearch", S.search);
   { const ex = S.exclude || []; $("exCount").textContent = ex.length ? ` (${ex.length})` : ""; $("btnExclude").classList.toggle("on", ex.length > 0);
-    $("exPop").innerHTML = `<div class="note" style="padding:2px 4px 6px">Hide these from the list:</div>` + EXCLUDES.map(([k,l]) => `<label class="exrow"><input type="checkbox" data-ex="${k}" ${ex.includes(k)?'checked':''}> ${l}</label>`).join("") + (ex.length ? `<button class="btn small" data-exclear="1" style="margin-top:6px;width:100%">Clear</button>` : ''); }
+    $("exPop").innerHTML = `<div class="note" style="padding:2px 4px 6px">Hide these monsters:</div>` + EXCLUDES.map(([k,l]) => `<label class="exrow"><input type="checkbox" data-ex="${k}" ${ex.includes(k)?'checked':''}> ${l}</label>`).join("") + (ex.length ? `<button class="btn small" data-exclear="1" style="margin-top:6px;width:100%">Clear</button>` : '')
+      + `<div class="note" style="padding:8px 4px 6px;border-top:1px solid var(--line);margin-top:6px">Hide in the list:</div>`
+      + `<label class="exrow"><input type="checkbox" data-show="showElIcons" ${S.showElIcons === false ? 'checked' : ''}> 🔥 Weakness icons</label><label class="exrow"><input type="checkbox" data-show="showTypeTags" ${S.showTypeTags === false ? 'checked' : ''}> 🏷 Type words (BOSS, UNDEAD…)</label>`;
+    $("exCount").textContent = (ex.length + (S.showElIcons === false) + (S.showTypeTags === false)) ? ` (${ex.length + (S.showElIcons === false) + (S.showTypeTags === false)})` : ""; }
   $("fRegion").value = S.region; $("fStatus").value = S.status;
   const sk = RR.sk;
   $("fElement").innerHTML = ELEMENT_FILTERS.filter(([k]) => k !== "mine" || sk.el).map(([k,l]) => `<option value="${k}" ${S.elFilter===k?'selected':''}>${k==="mine"?`✔ Weak to ${sk.el}`:l}</option>`).join("");
@@ -3108,7 +3127,7 @@ function renderList(){
   $("tbody").innerHTML = rows.map(e => {
     const color = e.raw >= 1 ? "var(--good)" : e.missing <= 10 ? "var(--warn)" : "var(--bad)";
     const acc = e.raw >= 1 ? `<span class="badge b-ok">✓ +${e.spare}</span>` : `<span class="badge ${e.missing<=10?'b-near':'b-bad'}">−${e.missing}</span>`;
-    const tags = (e.isBoss?'<span class="tag t-boss">BOSS</span>':'') + (e.isUndead?'<span class="tag t-und">UNDEAD</span>':'') + (e.isPQ?`<span class="tag t-pq">${e.name.includes('Job Test')?'JOB':'PQ'}</span>`:'') + (e.isCustom?'<span class="tag t-cus">CUSTOM</span>':'') + (e.isEdited?'<span class="tag t-cus">EDITED</span>':'');
+    const tags = typeTags(e);
     const d = e.dmg, ko = Number.isFinite(d.ko) ? d.ko : null;
     const kc = ko === null ? "bad" : ko <= 3 ? "ok" : ko <= 6 ? "near" : "bad";
     return `<tr data-id="${esc(e.id)}" class="${e.id===S.selectedId?'sel':''} ${e.myWeak?'myweak':''}">
@@ -3216,7 +3235,7 @@ function renderInspector(){
   S.selectedId = e.id;
   $("insp").innerHTML = `
     <div class="ihead">
-      <div style="flex:1"><h2>${esc(e.name)} ${elIcons(e)}</h2><div class="note">${esc(e.region)} · Lv ${e.level} · Avoid ${e.avoid} · HP ${fmt(e.hp)}${e.isBoss?' · Boss':''}${e.isUndead?' · Undead':''}</div></div>
+      <div style="flex:1"><h2>${esc(e.name)} ${elIcons(e)}</h2><div style="margin:3px 0">${typeTags(e)}</div><div class="note">${esc(e.region)} · Lv ${e.level} · Avoid ${e.avoid} · HP ${fmt(e.hp)}</div></div>
       <button class="btn small" data-pin="${esc(e.id)}" title="Pin">${S.pinned[e.id]?'★':'☆'}</button>
       <button class="btn small" id="btnEdit" title="Edit">✎</button>
     </div>
