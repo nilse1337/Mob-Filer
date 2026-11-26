@@ -3831,7 +3831,7 @@ function renderSummary(){
           `<span class="pchip map" ${T(`<b>${esc(m.map)}</b> · ${esc(m.street)}<br>The map with the most ${esc(e.name)} (MeowDB).${url ? '<br>Click to open it on MeowDB.' : ''}`)}>📍 ${url ? `<a class="maplink" href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(m.map)}</a>` : esc(m.map)}</span>`,
           `<span class="pchip" ${T(`<b>${m.n} ${esc(e.name)}</b> spawn on this map${m.total > m.n ? ` (${m.total} monsters in total)` : ''}.`)}>👾 ${m.n}</span>`,
           rate ? `<span class="pchip ${rate > 1 ? 'good' : 'slow'}" ${T(`<b>Respawn speed ×${rate}</b><br>Monsters on this map come back ${rate > 1 ? Math.round((rate - 1)*100) + '% faster' : Math.round((1 - rate)*100) + '% slower'} than on a normal map.`)}>⏱ ${rate > 1 ? 'fast' : 'slow'} respawn</span>` : '',
-          `<span class="pchip" ${T(t.boss ? `<b>Boss</b>: bring a party of ${t.party}.` : `<b>${t.party === 1 ? 'Best solo' : 'Best in a party of ' + t.party}</b><br>That leaves about ${per} ${esc(e.name)} per person to kill.`)}>👥 ${t.party === 1 ? 'solo' : 'party ' + t.party} · ${per} each</span>`
+          // (party size chip removed: keep the top 5 short)
         ].filter(Boolean).join('');
         const conds = cond.map(([l, x]) => `<span class="tcond ${l}">${esc(x)}</span>`).join('');
         const chip = (cls, sign, x) => `<span class="pchip ${cls}">${sign} ${esc(x)}</span>`;   // self-explanatory: no tooltip, normal mouse
