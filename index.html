@@ -954,7 +954,9 @@ const TipOCR = (function(){
     init();
     const {data:px, width:W, height:H} = imageData;
     let bs = bullets(px, W, H);
-    if (bs.length < 3){ const b2 = bullets(px, W, H, true); if (b2.length > bs.length) bs = b2; }   // blurry / shrunk screenshots: pale bullets
+    { const b2 = bullets(px, W, H, true);   // blurry / shrunk screenshots: pale bullets
+      if (bs.length < 3){ if (b2.length > bs.length) bs = b2; }
+      else { const cx = bs[0].cx; b2.forEach(b => { if (Math.abs(b.cx - cx) <= 3 && b.cy > bs[0].cy - 4 && !bs.some(o => Math.abs(o.cy - b.cy) <= 5)) bs.push(b); }); bs.sort((a, b) => a.cy - b.cy); } }
     if (!bs.length) return {lines:[], values:{}};
     const diffs = bs.slice(1).map((b,i) => b.cy - bs[i].cy).sort((a,b)=>a-b);
     const pitch = diffs.length ? diffs[diffs.length >> 1] : 16;
@@ -1955,7 +1957,7 @@ function liveTick(){
         const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || list.lastIndexOf(b[0]) - list.lastIndexOf(a[0]))[0][0];
         const v = JSON.parse(best); g.st = v.st; g.slots = v.slots; g.ex = v.ex;
       }
-      scanToast(r);
+      if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => { scanToast(r); renderAll(); }); else scanToast(r);
       LIVE.n++;
       if (r.stars) LIVE.msg = `✓ Throwing stars — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
       else { const g = S.gear[r.slot]; LIVE.msg = `✓ ${SLOTS.find(s => s[0] === r.slot)[1]}${g.name ? ' — ' + g.name : ''}: ${statLine(g.st) || 'no attack stats'}`; }
@@ -1987,6 +1989,58 @@ function renderLive(){
     : `<span class="scico">🖥</span><span class="sctxt"><b>Live scan from MapleStory</b><small>Share the <b>MapleStory</b> window (Window tab), then just hover your items — no screenshots needed</small></span><button class="btn small go" id="liveStart">Share Maple screen</button>`;
 }
 document.addEventListener("click", ev => { if (ev.target.closest("#liveStart")) liveStart(); else if (ev.target.closest("#liveStop")) liveStop(); });
+/* ---------- name the item from its picture: compare the tooltip icon with maplestory.io icons of the same type ---------- */
+const ICON_FEAT = new Map();
+function iconFeat(img, useAlpha){
+  const c = document.createElement("canvas"), W = c.width = img.naturalWidth || img.width, H = c.height = img.naturalHeight || img.height;
+  const x = c.getContext("2d", {willReadFrequently:true}); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, W, H).data;
+  let bg = [0, 0, 0];
+  if (!useAlpha){ const ed = []; for (let i = 0; i < W; i++){ ed.push(i*4, ((H-1)*W + i)*4); } for (let j = 0; j < H; j++){ ed.push(j*W*4, (j*W + W-1)*4); }
+    const ch = k => ed.map(o => d[o+k]).sort((a, b) => a - b)[ed.length >> 1]; bg = [ch(0), ch(1), ch(2)]; }
+  const on = o => useAlpha ? d[o+3] > 128 : Math.abs(d[o]-bg[0]) + Math.abs(d[o+1]-bg[1]) + Math.abs(d[o+2]-bg[2]) > 70;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  const m = useAlpha ? 0 : 3;   // skip the box border of the crop
+  for (let y = m; y < H-m; y++) for (let xx = m; xx < W-m; xx++) if (on((y*W + xx)*4)){ if (xx<x0) x0=xx; if (xx>x1) x1=xx; if (y<y0) y0=y; if (y>y1) y1=y; }
+  if (x1 < 0) return null;
+  const N = 16, f = [];
+  for (let gy = 0; gy < N; gy++) for (let gx = 0; gx < N; gx++){
+    const ax = x0 + (x1-x0+1)*gx/N, bx = x0 + (x1-x0+1)*(gx+1)/N, ay = y0 + (y1-y0+1)*gy/N, by = y0 + (y1-y0+1)*(gy+1)/N;
+    let r = 0, g = 0, b = 0, n = 0, t = 0;
+    for (let y = Math.floor(ay); y < Math.ceil(by); y++) for (let xx = Math.floor(ax); xx < Math.ceil(bx); xx++){ const o = (y*W + xx)*4; t++; if (on(o)){ r += d[o]; g += d[o+1]; b += d[o+2]; n++; } }
+    f.push(n / Math.max(1, t) > 0.4 ? [r/n, g/n, b/n] : null);
+  }
+  return {f, ar:(x1-x0+1)/(y1-y0+1)};
+}
+function featDist(a, b){
+  let s = 0, n = 0;
+  for (let i = 0; i < a.f.length; i++){ const p = a.f[i], q = b.f[i]; if (!p && !q) continue; n++;
+    if (!p || !q){ s += 1; continue; } s += Math.min(1, (Math.abs(p[0]-q[0]) + Math.abs(p[1]-q[1]) + Math.abs(p[2]-q[2])) / 300); }
+  return n ? s / n + Math.abs(Math.log(a.ar / b.ar)) * 0.3 : 9;
+}
+function loadIconFeat(id){
+  if (ICON_FEAT.has(id)) return ICON_FEAT.get(id);
+  const pr = new Promise(res => { const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => { try { res(iconFeat(im, true)); } catch(e){ res(null); } }; im.onerror = () => res(null);
+    im.src = `https://maplestory.io/api/GMS/83/item/${id}/icon`; });
+  ICON_FEAT.set(id, pr); return pr;
+}
+async function nameFromIcon(slot){
+  const g = S.gear[slot], im = IMGS[slot]; if (!g || !im || !im.icon) return;
+  const crop = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = im.icon; });
+  if (!crop) return; const mine = iconFeat(crop, false); if (!mine) return;
+  const cands = ITEMS.filter(it => it.sub === g.sub && it.lv <= S.level + 10 && itemIconId(it.name));
+  if (cands.length > 160) return;
+  const feats = await Promise.all(cands.map(it => loadIconFeat(itemIconId(it.name))));
+  let best = null;
+  cands.forEach((it, i) => { const ft = feats[i]; if (!ft) return;
+    // stats only grow with scrolls: an item whose base stats don't fit gets a penalty, not a ban (blurry reads miss lines)
+    let pen = 0; GSTATS.forEach(([k]) => { if ((it.st[k] || 0) > (g.st[k] || 0) + 0.1) pen += 0.04; });
+    const d = featDist(mine, ft) + pen;
+    if (!best || d < best.d) best = {it, d}; });
+  if (!best || best.d > 0.45 || S.gear[slot] !== g) return;   // tested: Blue Calas 0.32 vs Dark Calas 0.43; Emerald 0.39 vs next 0.72
+  if (g.name !== best.it.name){ g.name = best.it.name; if (typeof save === "function") save(); }
+}
+
 /* green notification after a good scan: stats read and the picture saved; fades out slowly */
 function scanToast(r){
   if (!r || !r.ok) return;
@@ -2014,6 +2068,7 @@ async function handleGearFiles(files, forceSlot){
   const msgs = [];
   for (const f of files){
     const r = await readTipFile(f, forceSlot);
+    if (r.ok && r.slot) await nameFromIcon(r.slot).catch(() => {});
     scanToast(r);
     if (r.stars){ msgs.push(r.ok ? `<span class="ok">✓</span> Throwing stars: ${esc(curStar()[0])} (W.ATK +${curStar()[1]})${r.amb ? ' — two stars have this W.ATK, click the stars slot to switch' : ''}` : `<span class="bad">✕ Couldn't read the stars from that screenshot.</span> Pick them from the list under the inventory.`); continue; }
     if (r.ok && r.stat){ msgs.push(`<span class="ok">✓</span> Character updated from your stat window: ${esc(jobOf().label)}, Lv ${S.level}`); continue; }
@@ -2477,8 +2532,12 @@ function usefulList(R){
       const subs = slot === "weapon" ? jobOf().weapons : SLOT_SUBS[slot];
       cands = ITEMS.filter(it => subs.includes(it.sub) && usable(it, S.char.cls) && (slot !== "weapon" || weaponOK(it.sub)) && wearCheck(it, cur).ok);
     }
+    // the same item you already wear is never an 'upgrade' (scrolling it is its own row)
+    if (cur && cur.name) cands = cands.filter(it => it.name.toLowerCase() !== cur.name.toLowerCase());
     let bestItem = null;
-    for (const it of cands){ const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (!bestItem || b.m > bestItem.b.m) bestItem = {it, b}; }
+    for (const it of cands){ const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (bestItem && b.m <= bestItem.b.m) continue;
+      if (gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})) <= 0.0005) continue;   // never suggest something that lowers your damage
+      bestItem = {it, b}; }
     if (bestItem && bestItem.b.m > 1e-6){
       const it = bestItem.it, b = bestItem.b;
       const g = gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})), hit = lastHit;
@@ -2504,7 +2563,7 @@ function usefulList(R){
       if (m > 0) out.push({kind:"stars", slot:"stars", g, raw:g, m, share:1, hit, goal:"Attack", name:bs[0], id:bs[2], d:{watk:bs[1] - c[1]}, sc:null}); }
   }
   // other goals: skip changes that cost more than 5% damage
-  return out.filter(x => goal === "damage" || x.g > -0.05).sort((a,b) => b.m - a.m).slice(0, 10);
+  return out.filter(x => x.g > 0.0005).sort((a,b) => b.m - a.m).slice(0, 10);   // a change that lowers damage is never useful
 }
 function goalValue(x, goal){
   const d = x.d || {}, f = v => (v > 0 ? '+' : '') + (Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1));
@@ -2657,7 +2716,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 
 const EXCLUDES = [["boss","👑 Bosses", e => e.isBoss],["undead","💀 Undead", e => e.isUndead],["pq","🎯 PQ / Job Test", e => e.isPQ],["fly","🪽 Flying", e => e.isFly],
