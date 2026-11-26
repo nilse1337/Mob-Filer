@@ -449,8 +449,8 @@ html.touring,html.touring body{overflow:hidden}
 #pageGear .col{padding:16px 18px}
 #pageGear .colhead h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase}
 #pageGear .gtool2{display:flex;gap:8px;justify-content:space-between;margin-top:12px}
-.tile .tmore{position:absolute;right:10px;bottom:9px;font:700 11px/1 inherit;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);border-radius:7px;padding:5px 8px;cursor:pointer;text-decoration:none;opacity:1}
-.tile .tmore,.tile.open .tmore{text-decoration:none!important}.tile .tmore:hover{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.tile .tmore{position:absolute;right:10px;bottom:9px;font:600 11.5px/1 inherit;color:var(--muted);background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:6px 9px;cursor:pointer;text-decoration:none;opacity:1}
+.tile .tmore,.tile.open .tmore{text-decoration:none!important}.tile .tmore:hover,.tile.open .tmore{color:var(--text);border-color:var(--accent)}
 .ttrow2{grid-template-columns:26px 64px 1fr 76px 92px 92px 92px!important}
 </style>
 </head>
@@ -1714,7 +1714,8 @@ const GMS_DELTA = {}; "1302009:5,1302001:6,1302002:3,1302003:-2,1302004:-2,13020
 const NO_GMS = new Set("Mithril Axe|Iron Burgonet Helm|Gold Burgonet Helm|Orihalcon Burgonet Helm|Green Icarus Cape|Yellow Icarus Cape|Blue Icarus Cape|White Tube Top|Red Striped Top|Brown Training Shirt|Red Striped T-Shirt|Brown Training Pants|Red Pao Bottoms|Blue Pao Bottoms|Black Pao Bottoms|Bennis Chain Pants|Silver Wind Shoes|Yellow Wind Shoes|Black Wind Shoes|Red Magic Shoes|Blue Magic Shoes|White Magic Shoes|Black Magic Shoes|Black Blue-Lined Shoes|Henesys Earrings|Kerning City Earrings|Steel Pow|Beginner’s Long Sword|Beginner’s Triangular Zamadar|Beginner’s Wooden Wand|Beginner’s War Bow|Beginner’s Garnier|Faded Maple Leaf Earrings|Blade of Harmony|Indigo Mop|Magical Destruction Bow".split("|").map(n => n.toLowerCase().replace(/[’']/g, "'")));
 /* names that differ between MSCW and GMS v83 (checked by eye on maplestory.io) */
 const MANUAL_GMS = {"blue icarus cape":"1102054", "blue pao bottoms":"1060031", "red pao bottoms":"1060032", "black pao bottoms":"1060033", "brown training shirt":"1040017", "brown training pants":"1060013"};
-function itemIconId(name){ if (!name) return null; const k = String(name).toLowerCase().replace(/[’']/g, "'").trim(); if (MANUAL_GMS[k]) return MANUAL_GMS[k]; if (NO_GMS.has(k)) return null; const id = ICON_ID[k]; return id ? String(GMS_DELTA[id] || id) : null; }
+let MSCW_K = null;   // item name → MSCW picture id (MeowDB); MSCW sometimes uses other names than GMS for the same picture
+function itemIconId(name){ if (!name) return null; const k = String(name).toLowerCase().replace(/[’']/g, "'").trim(); if (MSCW_K && MSCW_K[k]) return MSCW_K[k]; if (MANUAL_GMS[k]) return MANUAL_GMS[k]; if (NO_GMS.has(k)) return null; const id = ICON_ID[k]; return id ? String(GMS_DELTA[id] || id) : null; }
 function scrollIconId(sc){
   if (!sc) return null; const k = sc.target + "|" + sc.stat, b = SCROLL_INT[k]; if (!b) return null;
   return String(sc.grade === "Lesser" ? b - 1 : sc.grade === "Greater" ? b + 1 : sc.grade === "Chaos" ? b + 2 : b);   // MSCW numbering (checked on MeowDB)
@@ -2049,6 +2050,22 @@ function renderGear(){
 
 /* ---------- events ---------- */
 /* name the item from its read stats: same type, base stats ≤ read stats (scrolls only add), defenses must be close */
+/* double check a name against MeowDB's numbers for that item: base stats, defense, total slots and what the used slots could have added */
+function fitPenalty(it, g){
+  let p = 0;
+  const left = g.slots || 0; if (left > it.slots) p += 0.3;                 // more slots left than the item ever had
+  const used = Math.max(0, it.slots - left), succ = Number.isFinite(g.plus) ? g.plus : used;
+  if (Number.isFinite(g.plus) && g.plus > used) p += 0.3;                     // more successful scrolls than used slots
+  const opts = SCROLLS.filter(x => x.target === SCROLL_TARGET[it.sub]);
+  let need = 0;
+  GSTATS.forEach(([k]) => { const b = it.st[k] || 0, r = g.st[k] || 0, ex = r - b;
+    if (ex < -0.1) p += r ? 0.15 : 0.04;                                       // less than the item's base (0 = maybe a missed line)
+    else if (ex > 0.1){ const mx = Math.max(0, ...opts.map(x => x.st[k] || 0)); need += mx ? Math.ceil(ex / mx - 1e-6) : 99; } });
+  if (need > succ) p += 0.25;                                                 // the extra stats need more scrolls than were used
+  const ex = g.ex || {}; ["wdef","mdef"].forEach(k => { const b = it.st[k] || 0; if (ex[k] && b && ex[k] < b - 0.5) p += 0.3; });   // defense never goes below the base
+  if (typeof usable === "function" && S.char && !usable(it, S.char.cls)) p += 0.2;   // you can't wear it
+  return p;
+}
 function guessName(g, v){
   const keys = [...GSTATS.map(([k]) => k), "wdef", "mdef"];
   const rd = k => (k === "wdef" || k === "mdef") ? (v[k] || 0) : (g.st[k] || 0);
@@ -2057,6 +2074,7 @@ function guessName(g, v){
   ITEMS.filter(it => it.sub === g.sub).forEach(it => {
     const hasDef = it.st.wdef || it.st.mdef, ks = hasDef ? keys : keys.filter(k => k !== "wdef" && k !== "mdef");   // no defense data for this item: compare the other stats only
     if (!ks.every(k => (it.st[k] || 0) <= rd(k) + 0.1)) return;
+    if (fitPenalty(it, Object.assign({}, g, {ex: exStats(v)})) >= 0.25) return;   // MeowDB's numbers for it don't fit what you read
     let sc = hasDef ? 0 : 3; ks.forEach(k => { const d = rd(k) - (it.st[k] || 0); sc += (k === "wdef" || k === "mdef") ? d * 0.3 : d; });
     if (hasDef && ["wdef","mdef"].some(k => rd(k) && !(it.st[k]))) sc += 50;
     if (it.lv > S.level) sc += 30;
@@ -2303,7 +2321,7 @@ function renderImp(){
   const got = Object.keys(IMPW.slots || {}).filter(k => k === "stars" || S.gear[k]);
   if (st === "gear"){
     const items = got.map(k => k === "stars" ? `<div><b>${ammoName()}</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
-      : `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${S.gear[k].name ? ' · ' + esc(S.gear[k].name) : ''}${S.gear[k].plus ? ' (+' + S.gear[k].plus + ')' : ''} <span class="s">${esc([GSTATS.filter(([q]) => S.gear[k].st[q]).map(([q,l]) => `${l} ${S.gear[k].st[q] > 0 ? '+' : ''}${S.gear[k].st[q]}`).join(' · '), EXSTATS.filter(([q]) => S.gear[k].ex && S.gear[k].ex[q]).map(([q,l]) => `${l} +${S.gear[k].ex[q]}`).join(' · ')].filter(Boolean).join(' · ') || 'no stats')}${S.gear[k].slots ? ' · ' + S.gear[k].slots + ' slots' : ''}</span></div>`).join("");
+      : `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${S.gear[k].name ? ' · ' + esc(S.gear[k].name) : ''} <span class="s">${esc([GSTATS.filter(([q]) => S.gear[k].st[q]).map(([q,l]) => `${l} ${S.gear[k].st[q] > 0 ? '+' : ''}${S.gear[k].st[q]}`).join(' · '), EXSTATS.filter(([q]) => S.gear[k].ex && S.gear[k].ex[q]).map(([q,l]) => `${l} +${S.gear[k].ex[q]}`).join(' · ')].filter(Boolean).join(' · ') || 'no stats')}${S.gear[k].slots ? ' · ' + S.gear[k].slots + ' slots' : ''}</span></div>`).join("");
     const head = !got.length
       ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
       : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
@@ -2391,9 +2409,10 @@ function featDist(a, b){
 /* MSCW draws many items differently from GMS: their pictures (from MeowDB) as features, loaded once from mscw_icons.json */
 let MSCW_ICONS = null;
 function mscwIcons(){
-  if (!MSCW_ICONS) MSCW_ICONS = fetch("mscw_icons.json").then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  if (!MSCW_ICONS) MSCW_ICONS = fetch("mscw_icons.json").then(r => r.ok ? r.json() : {}).catch(() => ({})).then(t => { if (t && t.k) MSCW_K = t.k; return t || {}; });
   return MSCW_ICONS;
 }
+mscwIcons().then(t => { if (t && t.k){ ICON_FEAT.clear(); try { renderAll(); } catch(e){} } });   // right pictures and names as soon as the table is in
 function decodeFeat(s){
   const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", i = s.indexOf(":"), f = [];
   for (let k = i + 1; k < s.length;){
@@ -2415,7 +2434,7 @@ async function ammoIconOk(cc, box){
 }
 function loadIconFeat(id){
   if (ICON_FEAT.has(id)) return ICON_FEAT.get(id);
-  const mp = mscwIcons().then(t => t[id] ? decodeFeat(t[id]) : null);
+  const mp = mscwIcons().then(t => (t.f && t.f[id]) ? decodeFeat(t.f[id]) : null);
   const pr0 = mp.then(ft => ft || loadGmsFeat(id));
   ICON_FEAT.set(id, pr0); return pr0;
 }
@@ -2435,8 +2454,7 @@ async function nameFromIcon(slot){
   let best = null, second = null;
   cands.forEach((it, i) => { const ft = feats[i]; if (!ft) return;
     // stats only grow with scrolls: an item whose base stats don't fit gets a penalty, not a ban (blurry reads miss lines)
-    let pen = 0; GSTATS.forEach(([k]) => { if ((it.st[k] || 0) > (g.st[k] || 0) + 0.1) pen += 0.04; });
-    const d = featDist(mine, ft) + pen;
+    const d = featDist(mine, ft) + fitPenalty(it, g);   // the picture, double-checked against the item's stats, defense and slots
     if (!best || d < best.d){ second = best; best = {it, d}; } else if (!second || d < second.d) second = {it, d}; });
   // confident if close, or clearly closer than any other item (blurry or partly covered pictures score higher)
   const ok = best && (best.d <= 0.45 || (best.d <= 0.65 && (!second || second.d - best.d >= 0.12)));
@@ -3358,7 +3376,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {fitPenalty, IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 /* slow hover tooltips: [data-tip] shows after a short hover, fades out when you leave */
 (() => {
@@ -3597,9 +3615,9 @@ function renderSummary(){
   const fwN = all.filter(e => e.fire === 1).length, iwN = all.filter(e => e.ice === 1).length;
   $("summary").innerHTML = `
     <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length} <span class="vunit">monsters</span></div><div class="s">click to filter</div></div>
-    <div class="panel tile ${S.topList === 'acc' ? 'open' : ''}" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span>${target ? `<button class="tmore" data-ttfold="acc">${S.topList === 'acc' ? 'Hide ▴' : 'See top 5 ▾'}</button>` : ''}<div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
-    <div class="panel tile ${S.topList === 'train' ? 'open' : ''}" data-jump="${train?train.id:''}"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"} (±15 Lv)</span><button class="tmore" data-ttfold="train">${S.topList === 'train' ? 'Hide ▴' : 'See top 5 ▾'}</button><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
-    <div class="panel tile ${sk.el==='ice'?'ice':'fire'} ${S.topList === 'weak' ? 'open' : ''}" ${sk.el?`data-jump="${weakBest?weakBest.id:''}"`:``}><span class="lbl">${weakLbl}</span>${sk.el && weakPool.length ? `<button class="tmore" data-ttfold="weak">${S.topList === 'weak' ? 'Hide ▴' : 'See top 5 ▾'}</button>` : ''}<div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} you hit` : 'pick a fire/ice skill to compare'}</div></div>`;
+    <div class="panel tile ${S.topList === 'acc' ? 'open' : ''}" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span>${target ? (() => { const n = Math.min(5, all.filter(e => e.raw < 1 && !e.isPQ).length); return `<button class="tmore" data-ttfold="acc">${S.topList === 'acc' ? 'Hide ▴' : n > 1 ? `See top ${n} ▾` : 'See details ▾'}</button>`; })() : ''}<div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
+    <div class="panel tile ${S.topList === 'train' ? 'open' : ''}" data-jump="${train?train.id:''}"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"} (±15 Lv)</span><button class="tmore" data-ttfold="train">${S.topList === 'train' ? 'Hide ▴' : `See top ${Math.max(1, Math.min(5, pool.length))} ▾`}</button><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
+    <div class="panel tile ${sk.el==='ice'?'ice':'fire'} ${S.topList === 'weak' ? 'open' : ''}" ${sk.el?`data-jump="${weakBest?weakBest.id:''}"`:``}><span class="lbl">${weakLbl}</span>${sk.el && weakPool.length ? `<button class="tmore" data-ttfold="weak">${S.topList === 'weak' ? 'Hide ▴' : `See top ${Math.min(5, weakPool.length)} ▾`}</button>` : ''}<div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} you hit` : 'pick a fire/ice skill to compare'}</div></div>`;
   const top = pool.slice(0, 5);
   const tc = S.topList !== "train";   // closed by default; opens from the "Best EXP per hit" tile
   if (S.topList === "acc" || S.topList === "weak"){   // the other two tiles: a simple top 5 about their own subject
