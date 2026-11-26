@@ -1008,7 +1008,9 @@ const TipOCR = (function(){
     const inkAt = (x,y) => { const o=(y*W+x)*4; if (px[o+2] - px[o] >= 30) return 0; return Math.max(0, Math.min(1, (lum(px,o) - 110) / 120)); };
     const lg = gridOf(inkAt, lbox, LW, LH), lar = (lbox.x1-lbox.x0+1)/(lbox.y1-lbox.y0+1);
     const lm = best(LABEL_T, lg, lar, 0.6);
-    if ((typeof weakColon !== "undefined" && weakColon) && !(lm.d < 0.13)) return null;   // guessed colon: only trust a clear label match
+    if ((typeof weakColon !== "undefined" && weakColon) && !(lm.d < 0.13)){   // guessed colon: a clear label match, or a clear winner over the next best label
+      const l2 = best(LABEL_T.filter(t => t !== lm.t), lg, lar, 0.6);
+      if (!(lm.d < 0.26 && l2.d - lm.d >= 0.08)) return null; }   // guessed colon: only trust a clear label match
     // value: words after the colon
     let after = gl.slice(ci+1); if (!after.length) return {label:lm.t.t, key:LABELS[lm.t.t], value:null, conf:lm.d};
     { let k = 0; while (k < after.length && after[k].white < 0.5) k++; const st = k; while (k < after.length && after[k].white >= 0.5) k++; after = after.slice(st, k); }
@@ -1134,7 +1136,7 @@ const TipOCR = (function(){
       let a = -1, z = -1; for (let y = 0; y < rows.length; y++){ if (rows[y] >= 3){ if (a < 0) a = y; z = y; } else if (a >= 0 && y - z > 1) break; }
       if (a >= 0 && z - a >= 5){ const n = readPlus(px, W, H, {x1: Math.round(W*0.05) - 2, cy: (a + z) / 2}, (z - a) + 4); if (n !== null) values.plus = n; }
     } catch(e){}
-    return {lines, values, icon};
+    return {lines, values, icon, bs};
   }
   return {read};
 })();
@@ -1410,7 +1412,7 @@ let S = JSON.parse(JSON.stringify(DEFAULTS));
 try { const raw = localStorage.getItem(KEY); if (raw){ const p = JSON.parse(raw); S = Object.assign({}, S, p, {char:Object.assign({}, DEFAULTS.char, p.char || {})}); } } catch(e){}
 if (!S.pots){ S.pots = S.potion >= 7 ? ["ssniper"] : S.potion >= 5 ? ["sniper"] : []; } S.potion = 0;   // old single ACC-potion setting
 S.topCollapsed = true;   // the top-5 list starts folded on every visit
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function save(){ if (window.__resetting) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 
 const $ = id => document.getElementById(id);
 const clamp = (v, lo, hi, def) => { v = parseInt(v, 10); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def; };
@@ -2072,7 +2074,9 @@ function readTipCanvas(c, forceSlot, res, live){
           let w = r.values.watk; const ok = v => AMMO().some(s => s[1] === v);
           if (!ok(w)){ let nums = readStarAttack(c).filter(ok); if (!nums.length){ const c2 = document.createElement("canvas"); c2.width = c.width*2; c2.height = c.height*2; const x2 = c2.getContext("2d", {willReadFrequently:true}); x2.imageSmoothingQuality = "high"; x2.drawImage(c, 0, 0, c2.width, c2.height); nums = readStarAttack(c2).filter(ok); } w = nums.length ? nums[nums.length - 1] : 0; }
           const hit = w ? AMMO().filter(s => s[1] === w) : [];
-          if (hit.length){ S[ammoKey()] = (hit.find(s => s[0] === S[ammoKey()]) || hit[0])[0]; IMGS[ammoKey()] = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stars:true}); return; }
+          if (hit.length){ ammoIconOk(cc, r.icon).then(isAmmo => {   // potions etc. also show a "+N": the picture must look like stars / arrows
+            if (!isAmmo){ res({ok:false}); return; }
+            S[ammoKey()] = (hit.find(s => s[0] === S[ammoKey()]) || hit[0])[0]; IMGS[ammoKey()] = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stars:true}); }); return; }
         }
         if (!g){ res({ok:false}); return; }
         const slot = placeGear(g, null); IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); return;
@@ -2088,7 +2092,9 @@ function readTipCanvas(c, forceSlot, res, live){
           if (nums.length) w = nums[nums.length - 1];
         }
         const hit = w ? AMMO().filter(s => s[1] === w) : [];
-        if (hit.length){ S[ammoKey()] = (hit.find(s => s[0] === S[ammoKey()]) || hit[0])[0]; IMGS[ammoKey()] = {src:snapshot(c), t:Date.now()}; saveImgs(); S.gearSel = "stars"; res({ok:true, stars:true, amb:hit.length > 1}); return; }
+        if (hit.length){ (starSel ? Promise.resolve(true) : ammoIconOk(cc, r.icon)).then(isAmmo => {
+            if (!isAmmo){ res({ok:false}); return; }
+            S[ammoKey()] = (hit.find(s => s[0] === S[ammoKey()]) || hit[0])[0]; IMGS[ammoKey()] = {src:snapshot(c), t:Date.now()}; saveImgs(); S.gearSel = "stars"; res({ok:true, stars:true, amb:hit.length > 1}); }); return; }
         if (starSel){ res({ok:false, stars:true}); return; }
       }
       // a character stat window? apply it directly
@@ -2249,7 +2255,7 @@ function renderImp(){
   const got = Object.keys(IMPW.slots || {}).filter(k => k === "stars" || S.gear[k]);
   if (st === "gear"){
     const items = got.map(k => k === "stars" ? `<div><b>${ammoName()}</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
-      : `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${S.gear[k].name ? ' · ' + esc(S.gear[k].name) : ''}${S.gear[k].plus ? ' (+' + S.gear[k].plus + ')' : ''} <span class="s">${esc(statLine(S.gear[k].st) || 'no attack stats')}${S.gear[k].slots ? ' · ' + S.gear[k].slots + ' slots' : ''}</span></div>`).join("");
+      : `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${S.gear[k].name ? ' · ' + esc(S.gear[k].name) : ''}${S.gear[k].plus ? ' (+' + S.gear[k].plus + ')' : ''} <span class="s">${esc([GSTATS.filter(([q]) => S.gear[k].st[q]).map(([q,l]) => `${l} ${S.gear[k].st[q] > 0 ? '+' : ''}${S.gear[k].st[q]}`).join(' · '), EXSTATS.filter(([q]) => S.gear[k].ex && S.gear[k].ex[q]).map(([q,l]) => `${l} +${S.gear[k].ex[q]}`).join(' · ')].filter(Boolean).join(' · ') || 'no stats')}${S.gear[k].slots ? ' · ' + S.gear[k].slots + ' slots' : ''}</span></div>`).join("");
     const head = !got.length
       ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
       : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
@@ -2329,12 +2335,42 @@ function featDist(a, b){
     if (!p || !q){ s += 1; continue; } s += Math.min(1, (Math.abs(p[0]-q[0]) + Math.abs(p[1]-q[1]) + Math.abs(p[2]-q[2])) / 300); }
   return n ? s / n + Math.abs(Math.log(a.ar / b.ar)) * 0.3 : 9;
 }
+/* MSCW draws many items differently from GMS: their pictures (from MeowDB) as features, loaded once from mscw_icons.json */
+let MSCW_ICONS = null;
+function mscwIcons(){
+  if (!MSCW_ICONS) MSCW_ICONS = fetch("mscw_icons.json").then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  return MSCW_ICONS;
+}
+function decodeFeat(s){
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", i = s.indexOf(":"), f = [];
+  for (let k = i + 1; k < s.length;){
+    if (s[k] === "."){ for (let n = A.indexOf(s[k+1]); n > 0; n--) f.push(null); k += 2; continue; }
+    const v = (A.indexOf(s[k]) << 6) | A.indexOf(s[k+1]); f.push([(v >> 8) * 17, ((v >> 4) & 15) * 17, (v & 15) * 17]); k += 2;
+  }
+  while (f.length < 256) f.push(null);
+  return {f, ar: +s.slice(0, i) / 100};
+}
+async function ammoIconOk(cc, box){
+  try {
+    const url = iconCrop(cc, box); if (!url) return false;
+    const im = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = url; }); if (!im) return false;
+    const mine = iconFeat(im, false); if (!mine) return false;
+    const feats = await Promise.all(AMMO().map(a => loadIconFeat(a[2])));
+    const d = Math.min(9, ...feats.filter(Boolean).map(ft => featDist(mine, ft)));
+    return d <= 0.55;
+  } catch(e){ return false; }
+}
 function loadIconFeat(id){
   if (ICON_FEAT.has(id)) return ICON_FEAT.get(id);
+  const mp = mscwIcons().then(t => t[id] ? decodeFeat(t[id]) : null);
+  const pr0 = mp.then(ft => ft || loadGmsFeat(id));
+  ICON_FEAT.set(id, pr0); return pr0;
+}
+function loadGmsFeat(id){
   const pr = new Promise(res => { const im = new Image(); im.crossOrigin = "anonymous";
     im.onload = () => { try { res(iconFeat(im, true)); } catch(e){ res(null); } }; im.onerror = () => res(null);
     im.src = `https://maplestory.io/api/GMS/83/item/${id}/icon`; });
-  ICON_FEAT.set(id, pr); return pr;
+  return pr;
 }
 async function nameFromIcon(slot){
   const g = S.gear[slot], im = IMGS[slot]; if (!g || !im || !im.icon) return;
@@ -2587,7 +2623,7 @@ const BUILD_SHOW = {
 /* ================= THROWING AMMO() (claw users) ================= */
 // MSCW stars with a known source (MeowDB): name, W.ATK, item ID (same ID on maplestory.io)
 const STAR_LIST = [["Subi Throwing Stars",15,"2070000"],["Wolbi Throwing Stars",17,"2070001"],["Mokbi Throwing Stars",19,"2070002"],["Wooden Top",19,"2070009"],
-  ["Kumbi Throwing Stars",21,"2070003"],["Icicle",21,"2070010"],["Tobi Throwing Stars",23,"2070004"],["Steely Throwing Knives",25,"2070005"],["Ilbi Throwing Stars",27,"2070006"]];
+  ["Kumbi Throwing Stars",21,"2070003"],["Icicle",21,"2070010"],["Tobi Throwing Stars",23,"2070004"],["Steely Throwing Knives",25,"2070005"]];
 // arrows (MSCW names, maplestory.io icon IDs): bows and crossbows each have their own
 const ARROW_BOW = [["Arrows for Bows",0,"2060000"],["Bronze Arrows for Bows",1,"2060001"],["Iron Arrows for Bows",2,"2060002"]];
 const ARROW_XBOW = [["Arrows for Crossbows",0,"2061000"],["Bronze Arrows for Crossbows",1,"2061001"],["Iron Arrows for Crossbows",2,"2061002"]];
@@ -3012,7 +3048,7 @@ function usefulList(R){
       const raw = gainOf(Object.assign({}, extra, {[slot]: {st:it.st, sub:it.sub}}));
       const empty = slot === "weapon" ? gainOf({weapon: {st:{}, sub:it.sub}}) : gainOf(Object.assign({}, extra, {[slot]: null}));
       const fromItem = Math.max(0, raw - empty), fromScroll = Math.max(0, g - raw);
-      return {kind:"item", slot, g, raw, m:b.m, share: fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1, hit, it,
+      return {kind:"item", slot, g, raw, m:b.m, share: fromItem + fromScroll > 0 ? fromItem / (fromItem + fromScroll) : 1, hit, it, from:fromSt, to:b.to,
         goal: goalWord(fromSt, b.to, slot, it.sub, extra), name:it.name, id:itemIconId(it.name), lv:it.lv, d:diff(b.to, fromSt), sc: b.sc ? {n:it.slots, sc:b.sc, rate:grade} : null};
     };
     let bestItem = null;
@@ -3103,21 +3139,27 @@ function usefulColumn(R){
     return `<div class="urow"><div class="urank">${i+1}</div>
       <div class="umain"><div class="sname">${x.kind === "scroll" ? scrollImg(x.sc.sc) : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : x.rebuy ? `Buy a new ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
         <div class="note">${x.kind === "stars" ? `${ammoName()} · W.ATK +${x.d.watk} vs ${esc(curStar()[0])}` : x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
-        ${x.kind === "scroll" ? `<div class="note">Goal: <b>${deltaLine(x.d)}</b> on your ${esc(x.name)} if all ${x.sc.n} work${x.sc.rate < 100 ? ` · ≈ ${deltaLine(addSt({}, x.d, x.sc.rate/100))} on average` : ''} → +${(x.g*100).toFixed(1)}% damage</div><div class="note">💰 Or buy a ${esc(x.name)} that's already scrolled like this (Free Market) — same result, no failed scrolls.</div>` : ''}
+        ${x.kind === "scroll" ? `<div class="note">Goal: <b>${deltaLine(x.d)}</b> on your ${esc(x.name)} if all ${x.sc.n} work</div><div class="note">💰 Or buy a ${esc(x.name)} that's already scrolled like this (Free Market)</div>` : ''}
         ${x.rebuy ? `<div class="note">yours is +${x.used - x.failed} with ${x.failed} failed scroll${x.failed > 1 ? 's' : ''} (${x.used} slots used) — a fresh one with every scroll working beats it</div>` : x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
         ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
         <div class="ubar">${(() => { const it = x.g * (x.share === undefined ? 1 : x.share), scp = x.g - it; return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item share"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scroll share"></i>` : ''}`; })()}</div></div>
       <div class="upct ${x.g < -0.0005 ? 'neg' : ''}">${x.g >= 0 ? '+' : '−'}${Math.abs(x.g*100).toFixed(1)}%${goal !== "damage" ? `<small>${goalValue(x, goal)}</small>` : ''}${x.alts && x.alts.length ? `<button class="ualtbtn ${altOpen(x.slot) ? 'on' : ''}" data-ualt="${x.slot}" data-tip="${x.alts.length} smaller upgrade${x.alts.length > 1 ? 's' : ''} for this slot">${altOpen(x.slot) ? '︽' : '︾'}</button>` : ''}</div>
-      ${x.alts && x.alts.length && altOpen(x.slot) ? `<div class="ualts"><div class="note ualthead">Smaller upgrades for your ${SLOTS.find(s => s[0] === x.slot)[1].toLowerCase()} — still better than what you wear for <b>${esc(goalLabel(goal, (GOALS.find(gl => gl[0] === goal) || [0, goal])[1]))}</b>, and you can wear them now</div>${x.alts.map(a => altRow(a, goal, R)).join("")}</div>` : ''}</div>`;
+      ${x.alts && x.alts.length && altOpen(x.slot) ? `<div class="ualts"><div class="note ualthead">Smaller upgrades for your ${SLOTS.find(s => s[0] === x.slot)[1].toLowerCase()} — still better than what you wear for <b>${esc(goalLabel(goal, (GOALS.find(gl => gl[0] === goal) || [0, goal])[1]))}</b>, and you can wear them now</div>${x.alts.map(a => altRow(a, goal, R, max)).join("")}</div>` : ''}</div>`;
   }).join("");
 }
 const altOpen = slot => !!(S.altOpen && S.altOpen[slot]);
-function altRow(a, goal, R){
+function altRow(a, goal, R, max){
   const sc = a.sc ? `${a.sc.n}× ${esc(a.sc.sc.target)} ${esc(a.sc.sc.stat)} Scroll ${a.sc.rate}%` : "";
   const w = wearCheck(a.it, S.gear[a.slot]);
+  // what changes for you: yours → this item (with its scrolls), for the stats that differ
+  const fmt = v => (v > 0 ? '+' : '') + (Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1));
+  const ch = GSTATS.filter(([k]) => Math.abs(((a.to || {})[k] || 0) - ((a.from || {})[k] || 0)) >= 0.05)
+    .map(([k, l]) => { const f = (a.from || {})[k] || 0, t = (a.to || {})[k] || 0; return `<span class="${t > f ? 'ok' : 'bad'}">${l} ${fmt(f)} → ${fmt(t)}</span>`; }).join(" · ");
+  const it = a.g * (a.share === undefined ? 1 : a.share), scp = a.g - it;
   return `<div class="ualt"><div class="sname">${iconImg(a.id, "")}<b>${esc(a.name)}</b><span class="ugoal g-${a.goal.toLowerCase()}">${a.goal}</span><span class="upct" style="margin-left:auto">+${(a.g*100).toFixed(1)}%${goal !== "damage" ? `<small>${goalValue(a, goal)}</small>` : ''}</span></div>
-    <div class="note">Lv ${a.lv}${sc ? ' + ' + sc : ''} · ${statLine(a.it.st) || 'no stats'}${a.it.slots ? ' · ' + a.it.slots + ' slots' : ''}</div>
+    <div class="note">${ch || 'same stats'}${sc ? ' · with ' + sc : ''}</div>
     ${a.sc ? `<div class="note"><span class="tg">item alone ${a.raw >= 0 ? '+' : '−'}${Math.abs(a.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((a.g - a.raw)*100).toFixed(1)}%</span></div>` : ''}
+    <div class="ubar">${it > 0 ? `<i class="ui" style="width:${it/max*100}%"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%"></i>` : ''}</div>
     <div class="note">${reqLine(a.it, w)}</div>
     ${a.hit != null && R.base.hitP != null && a.hit - R.base.hitP > 0.004 ? `<div class="note">hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(a.hit*100).toFixed(1)}%</div>` : ''}</div>`;
 }
@@ -3263,7 +3305,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {IMGS, loadIconFeat, nameFromIcon, itemIconIdF: itemIconId, tipBest: typeof tipBest === "function" ? tipBest : null, gearFromTip: typeof gearFromTip === "function" ? gearFromTip : null, setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 /* slow hover tooltips: [data-tip] shows after a short hover, fades out when you leave */
 (() => {
@@ -3846,8 +3888,8 @@ $("btnApplyEst").onclick = () => { S.baseAcc = classAcc(S.bClass, S.level, S.bPr
   $("resetTip").dataset.tip = RT;
   $("dataTip").dataset.tip = `<b>Data &amp; formulas</b><ul><li>Monsters (level, avoid, HP, defense, elements) come from MeowDB, only monsters with a known MSCW location.</li><li>Damage uses MeowDB's MSCW formula: defense, element, level gap and crit.</li><li>Magic never misses in MSCW, so accuracy only matters for physical attacks.</li></ul>`;
   $("blTip").dataset.tip = `<b>Hidden suggestions</b><ul><li>Monsters you removed with the ✕ (clicked twice) in "Best EXP per hit".</li><li>They still show in the monster list — only the top 5 suggestions skip them.</li><li>Click a name here to bring it back into the suggestions.</li></ul>`; }
-$("btnResetAll").addEventListener("click", ev => { const b = $("btnResetAll"); if (!b.classList.contains("sure")){ ev.stopImmediatePropagation(); b.classList.add("sure"); b.textContent = "Sure? This clears your character & gear"; clearTimeout(b._t); b._t = setTimeout(() => { b.classList.remove("sure"); b.textContent = "Reset everything"; }, 4000); } }, true);
-function resetEverything(){ S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch(e){} location.hash = ""; location.reload(); }   // start clean: every part sets up its own defaults again
+$("btnResetAll").addEventListener("click", ev => { ev.stopImmediatePropagation(); $("setModal").classList.remove("open"); $("resetModal").classList.add("open"); }, true);
+function resetEverything(){ window.__resetting = true; try { history.scrollRestoration = "manual"; } catch(e){} window.scrollTo(0, 0); S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch(e){} location.hash = ""; location.reload(); }   // start clean: every part sets up its own defaults again
 $("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $("btnResetAll").textContent = "Reset everything"; resetEverything(); };
 var WELCOME_PEEK = false;
 $("welcomeClose").onclick = () => { WELCOME_PEEK = true; $("welcome").classList.remove("on"); };
