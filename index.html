@@ -374,6 +374,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .elc .h{font-size:12px;font-weight:800;letter-spacing:.02em}.elc .m{font:800 18px var(--mono);margin-top:2px}.elc .s{font-size:11px;color:var(--muted);margin-top:1px}
 .elc.weak{border-color:color-mix(in srgb,var(--good) 45%,transparent)}.elc.weak .m{color:var(--good)}.elc.resist .m{color:#f5a524}.elc.immune .m{color:var(--bad)}.elc.undead{border-color:rgba(168,85,247,.45)}.elc.undead .m{color:#c084fc}
 .ec-fire .h{color:#f87171}.ec-ice .h{color:#7dd3fc}.ec-lightning .h{color:#facc15}.ec-holy .h{color:#fde68a}.ec-poison .h{color:#a3e635}.elc.undead .h{color:#c084fc}
+.btn.resetf{background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid var(--accent);color:var(--accent);font-weight:800}.btn.resetf:hover{background:var(--accent);color:#1a1200}
 </style>
 </head>
 <body>
@@ -459,7 +460,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
         </select>
         <select id="fElement"></select>
       </div>
-      <div class="listfoot"><span class="note" id="countNote"></span><button class="btn ghost small" id="btnResetFilters" style="margin-left:auto">Reset filters</button></div>
+      <div class="listfoot"><span class="note" id="countNote"></span><button class="btn small resetf" id="btnResetFilters" style="margin-left:auto">↺ Reset filters</button></div>
       <div class="tablewrap">
         <table>
           <thead><tr id="thead"></tr></thead>
