@@ -2333,7 +2333,7 @@ document.addEventListener("click", ev => {
     if (st === "gear"){ impNextGear(); return; }
     if (st === "done" || st === "build") LIVE.mode = "idle";
     renderLive(); return; }
-  if (ev.target.closest("#impFinish")){ IMPW.live = false; liveStop(); $("impModal").classList.remove("open"); renderAll(); gearNotice(); return; }
+  if (ev.target.closest("#impFinish")){ IMPW.live = false; liveStop(); $("impModal").classList.remove("open"); renderAll(); if (!(typeof tourAfterImport === "function" && tourAfterImport())) gearNotice(); return; }
   if (ev.target.closest("[data-opengear]")){ location.hash = "#gear"; const n = $("setNotice"); if (n) n.remove(); return; }
   if (ev.target.closest("[data-closenote]")){ const n = $("setNotice"); if (n) n.remove(); return; }
 });
@@ -3972,10 +3972,13 @@ $("tourBack").onclick = () => tourAt > 0 && tourShow(tourAt - 1);
 $("tourClose").onclick = () => tourEnd(false);
 window.addEventListener("resize", () => { if (tourAt >= 0) tourShow(tourAt); });
 $("tourOn").onchange = () => { S.tour = $("tourOn").checked ? "on" : "off"; save(); };
-{ const closeSet = () => { if (S.tour === "on" && tourAt < 0) setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 150); };
+{ const closeSet = () => { if (S.tour === "on" && tourAt < 0 && S.charImported) setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 150); };
   new MutationObserver(() => { if (!$("setModal").classList.contains("open")) closeSet(); }).observe($("setModal"), {attributes:true, attributeFilter:["class"]}); }
 // first visit (or switched on again): start the tour
-setTimeout(() => { if ((S.tour === undefined || S.tour === "later" || S.tour === "on") && !$("setModal").classList.contains("open")) tourShow(0); }, 400);
+const tourPending = () => S.tour === undefined || S.tour === "later" || S.tour === "on";
+// the tour only comes after a complete import (stat window → equipment → build → Apply)
+function tourAfterImport(){ if (!tourPending()) return false; setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 450); return true; }
+setTimeout(() => { if (S.charImported && tourPending() && !$("setModal").classList.contains("open") && !$("impModal").classList.contains("open")) tourShow(0); }, 400);
 var WELCOME_PEEK = false;
 $("welcomeClose").onclick = () => { WELCOME_PEEK = true; $("welcome").classList.remove("on"); };
 $("welcomeGo").onclick = () => { $("btnImport").click(); };
@@ -4117,6 +4120,7 @@ $("impApply").onclick = () => {
   applyImpFields();
   $("impModal").classList.remove("open"); renderAll();
   toast(`✓ Character saved: ${jobOf().label}, Lv ${S.level}. It stays saved for next time.`);
+  tourAfterImport();
 };
 $("impNext").onclick = () => { applyImpFields(); impNextGear(); };
 function toast(html){ const t = $("toast"); t.innerHTML = html; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 4000); }
