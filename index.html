@@ -433,6 +433,15 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .welcome .wcard{text-align:center;max-width:520px;padding:10px 20px}.welcome h2{margin:0 0 10px;font-size:26px;color:#fff}.welcome p{margin:0 0 20px;color:#d7dde8;font-size:15px}
 .welcome .wgo{font-size:18px;padding:14px 34px;border-radius:12px;box-shadow:0 8px 30px rgba(245,158,11,.35)}
 .btn.resetbtn{background:#b4232c;border-color:#d43a43;color:#fff}.btn.resetbtn:hover{background:#c92a34}
+.tour{position:fixed;inset:0;z-index:46;display:none}.tour.on{display:block}
+.tspot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(8,11,18,.62),0 0 0 2px var(--accent);pointer-events:none;transition:all .25s ease}
+.tcard{position:fixed;background:var(--panel);border:1px solid var(--accent);border-radius:14px;padding:16px 16px 12px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .25s ease,left .25s ease}
+.tcard h4{margin:4px 0 6px;font-size:17px}.tcard p{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:var(--text)}
+.tstep{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.tclose{position:absolute;top:8px;right:10px;background:none;border:0;color:#fff;font-size:18px;cursor:pointer;opacity:.8}.tclose:hover{opacity:1}
+.tnav{display:flex;align-items:center;gap:8px}.tdots{flex:1;display:flex;justify-content:center;gap:5px}.tdots i{width:7px;height:7px;border-radius:50%;background:var(--line2)}.tdots i.on{background:var(--accent)}
+.tskip{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer}
+.tourtog{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600}
 </style>
 </head>
 <body>
@@ -511,7 +520,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 
   <!-- 3. MONSTERS + INSPECTOR -->
   <div class="sechead"><b>Monsters</b><span class="sh-sub">pick one in the list to see its details on the right</span></div>
-  <section class="layout">
+  <section class="layout" id="layoutMain">
     <div class="panel list">
       <div class="toolbar">
         <input class="txt" id="inSearch" placeholder="🔍 Search monster…">
@@ -586,6 +595,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
           <div class="note" id="estNote" style="margin-top:6px"></div></div>
         <div class="note">Where the numbers come from <span class="qmark" id="dataTip">?</span></div>
         <div><label class="lbl">Monsters you hid from the top 5 suggestions <span class="qmark" id="blTip">?</span></label><div id="blList" class="chips"></div><div class="note" style="margin-top:4px">Click one to suggest it again.</div></div>
+        <div><label class="tourtog"><input type="checkbox" id="tourOn"> Show the site tour <span class="note">(4 short steps — starts when you close Settings)</span></label></div>
         <div><button class="btn danger" id="btnResetAll">Reset everything</button> <span class="qmark" id="resetTip">?</span></div>
       </div>
     </div>
@@ -625,6 +635,16 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
     <h2>Find the best monsters &amp; gear for your character</h2>
     <p>Import your in-game <b>CHARACTER STAT</b> window first — everything on this site is calculated from it.</p>
     <button class="btn primary wgo" id="welcomeGo">Get started →</button>
+  </div>
+</div>
+<div id="tour" class="tour"><div class="tspot" id="tourSpot"></div>
+  <div class="tcard" id="tourCard">
+    <button class="tclose" id="tourClose" title="Close the tour">✕</button>
+    <div class="tstep" id="tourStep"></div>
+    <h4 id="tourTitle"></h4>
+    <p id="tourText"></p>
+    <div class="tnav"><button class="btn small" id="tourBack">← Back</button><span class="tdots" id="tourDots"></span><button class="btn primary small" id="tourNext">Next →</button></div>
+    <label class="tskip"><input type="checkbox" id="tourSkip"> Don't show this tour again</label>
   </div>
 </div>
 <div class="modal" id="resetModal">
@@ -3784,7 +3804,8 @@ function renderAll(){
   { const b = $("btnImport"), done = !!S.charImported; b.classList.toggle("resetbtn", done); b.classList.toggle("primary", !done);
     b.innerHTML = done ? '↺ <span class="lbltxt">Reset all data</span>' : '📷 <span class="lbltxt">Import stat window</span>';
     if (done) b.dataset.tip = '<b style="color:#ff6b6b">Reset all data</b><br>Clears your character, gear and choices so you can start over.'; else delete b.dataset.tip; }
-  $("welcome").classList.toggle("on", !S.charImported && !S.charTemplate && !WELCOME_PEEK);
+  $("welcome").classList.toggle("on", !S.charImported && !S.charTemplate && !WELCOME_PEEK && !(typeof tourAt !== "undefined" && tourAt >= 0));
+  if ($("tourOn")) $("tourOn").checked = S.tour === "on";
   RR = rawRange();
   EVAL = monsters().map(m => evaluate(m, RR));
   BYID = new Map(EVAL.map(e => [e.id, e]));
@@ -3891,6 +3912,48 @@ $("btnApplyEst").onclick = () => { S.baseAcc = classAcc(S.bClass, S.level, S.bPr
 $("btnResetAll").addEventListener("click", ev => { ev.stopImmediatePropagation(); $("setModal").classList.remove("open"); $("resetModal").classList.add("open"); }, true);
 function resetEverything(){ window.__resetting = true; try { history.scrollRestoration = "manual"; } catch(e){} window.scrollTo(0, 0); S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch(e){} location.hash = ""; location.reload(); }   // start clean: every part sets up its own defaults again
 $("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $("btnResetAll").textContent = "Reset everything"; resetEverything(); };
+
+/* ---------- site tour: 4 steps on the dimmed page; first visit only (or switched on again in Settings) ---------- */
+const TOUR = [
+  {sel:"#charbar", t:"Your character", x:"Everything on the site is calculated from your character. Import your CHARACTER STAT window here (or try a random example) — level, job, accuracy and damage are filled in for you."},
+  {sel:"#summary", t:"At a glance", x:"The quick answers: how many monsters you hit 100%, your next accuracy goal, the best EXP per hit (see the top 5) and the strongest monster that's weak to your element."},
+  {sel:"#layoutMain", t:"Monsters", x:"Every MSCW monster with your hit rate, the ACC you still need and how many hits it takes. Click one to see its details, elements and where to find it — and the 1-, 2-, 3-hit panel below it."},
+  {sel:"#navGear", t:"Gear & Upgrades", x:"Scan your items (or share your Maple screen) to see the best possible set for your level and build, and the upgrades that add the most damage — with the scrolls you choose."}
+];
+let tourAt = -1;
+function tourShow(i){
+  tourAt = i; const st = TOUR[i], el = document.querySelector(st.sel); if (!el){ tourEnd(true); return; }
+  if (location.hash === "#gear" && i < 3) location.hash = "#calc";
+  $("tour").classList.add("on"); $("welcome").classList.remove("on");
+  const big = el.offsetHeight > window.innerHeight * 0.6;
+  if (big){ const hh = (document.querySelector("header") || {offsetHeight:70}).offsetHeight; window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - hh - 50}); }
+  else el.scrollIntoView({block:"center"});
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const r = el.getBoundingClientRect(), pad = 8, top = Math.max(4, r.top - pad), h = Math.min(window.innerHeight - 8 - top, r.height + pad*2);
+    const sp = $("tourSpot"); sp.style.left = (r.left - pad) + "px"; sp.style.top = top + "px"; sp.style.width = (r.width + pad*2) + "px"; sp.style.height = h + "px";
+    const c = $("tourCard"), cw = Math.min(380, window.innerWidth - 24); c.style.width = cw + "px";
+    $("tourStep").textContent = `Step ${i+1} of ${TOUR.length}`; $("tourTitle").textContent = st.t; $("tourText").textContent = st.x;
+    $("tourDots").innerHTML = TOUR.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join("");
+    $("tourBack").style.visibility = i ? "visible" : "hidden"; $("tourNext").textContent = i === TOUR.length - 1 ? "Done ✓" : "Next →";
+    const ch = c.offsetHeight; let y = top + h + 12; if (y + ch > window.innerHeight - 8) y = top - ch - 12; if (y < 8) y = Math.min(window.innerHeight - ch - 8, top + 20);
+    c.style.top = y + "px"; c.style.left = Math.max(12, Math.min(window.innerWidth - cw - 12, r.left)) + "px";
+  }));
+}
+function tourEnd(done){
+  $("tour").classList.remove("on"); tourAt = -1;
+  if (done || $("tourSkip").checked) S.tour = "off";   // walked through once, or "don't show again": always off from now on
+  else S.tour = "later";                                 // closed with ✕: offered again on the next visit
+  save(); window.scrollTo({top:0}); renderAll();
+}
+$("tourNext").onclick = () => tourAt < TOUR.length - 1 ? tourShow(tourAt + 1) : tourEnd(true);
+$("tourBack").onclick = () => tourAt > 0 && tourShow(tourAt - 1);
+$("tourClose").onclick = () => tourEnd(false);
+window.addEventListener("resize", () => { if (tourAt >= 0) tourShow(tourAt); });
+$("tourOn").onchange = () => { S.tour = $("tourOn").checked ? "on" : "off"; save(); };
+{ const closeSet = () => { if (S.tour === "on" && tourAt < 0) setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 150); };
+  new MutationObserver(() => { if (!$("setModal").classList.contains("open")) closeSet(); }).observe($("setModal"), {attributes:true, attributeFilter:["class"]}); }
+// first visit (or switched on again): start the tour
+setTimeout(() => { if ((S.tour === undefined || S.tour === "later" || S.tour === "on") && !$("setModal").classList.contains("open")) tourShow(0); }, 400);
 var WELCOME_PEEK = false;
 $("welcomeClose").onclick = () => { WELCOME_PEEK = true; $("welcome").classList.remove("on"); };
 $("welcomeGo").onclick = () => { $("btnImport").click(); };
