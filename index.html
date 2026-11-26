@@ -508,7 +508,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
           </div>
           <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span>Estimate: <b class="mono" style="font-size:18px;color:var(--accent2)" id="outEst">0</b></span><button class="btn primary small" id="btnApplyEst" style="margin-left:auto">Use as my ACC</button></div>
           <div class="note" id="estNote" style="margin-top:6px"></div></div>
-        <div class="note">Data: monster list, level, avoid, HP, defense and elements from MeowDB (only monsters with recorded MSCW locations). Damage uses MeowDB's MSCW formula (defense, element, level gap, crit). Magic never misses in MSCW.</div>
+        <div class="note">Where the numbers come from <span class="qmark" id="dataTip">?</span></div>
         <div><label class="lbl">Monsters you hid from the top 5 suggestions <span class="qmark" id="blTip">?</span></label><div id="blList" class="chips"></div><div class="note" style="margin-top:4px">Click one to suggest it again.</div></div>
         <div><button class="btn danger" id="btnResetAll">Reset everything</button> <span class="qmark" id="resetTip">?</span></div>
       </div>
@@ -3456,6 +3456,7 @@ $("btnTheme").onclick = () => { S.theme = S.theme === "light" ? "dark" : "light"
 $("btnApplyEst").onclick = () => { S.baseAcc = classAcc(S.bClass, S.level, S.bPrimary, S.bLuk) + S.bGear; renderAll(); };
 { const RT = `<b>Reset everything</b><ul><li>Clears your character (stat window, class, level, skill), all gear you pasted, the best-set and upgrade choices, potions, buffs, filters and hidden monsters.</li><li>Keeps: pinned ★ monsters, monsters you edited and the light/dark theme.</li><li>Can't be undone — you'll need to paste your stat window and gear again.</li></ul>`;
   $("resetTip").dataset.tip = RT;
+  $("dataTip").dataset.tip = `<b>Data &amp; formulas</b><ul><li>Monsters (level, avoid, HP, defense, elements) come from MeowDB, only monsters with a known MSCW location.</li><li>Damage uses MeowDB's MSCW formula: defense, element, level gap and crit.</li><li>Magic never misses in MSCW, so accuracy only matters for physical attacks.</li></ul>`;
   $("blTip").dataset.tip = `<b>Hidden suggestions</b><ul><li>Monsters you removed with the ✕ (clicked twice) in "Best EXP per hit".</li><li>They still show in the monster list — only the top 5 suggestions skip them.</li><li>Click a name here to bring it back into the suggestions.</li></ul>`; }
 $("btnResetAll").addEventListener("click", ev => { const b = $("btnResetAll"); if (!b.classList.contains("sure")){ ev.stopImmediatePropagation(); b.classList.add("sure"); b.textContent = "Sure? This clears your character & gear"; clearTimeout(b._t); b._t = setTimeout(() => { b.classList.remove("sure"); b.textContent = "Reset everything"; }, 4000); } }, true);
 $("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $("btnResetAll").textContent = "Reset everything"; S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), keep); $("setModal").classList.remove("open"); renderAll(); };
