@@ -3850,7 +3850,7 @@ function renderSummary(){
       <button class="blbtn" data-bl="${esc(e.id)}" title="Don't suggest ${esc(e.name)} any more (undo in Settings)">✕</button></div>`;
   const trCtrls = `    <span class="kmlbl">Damage range:</span><div class="seg kmode" title="Which part of your damage range to use for hits to kill">${[["low","Lowest hit"],["avg","Average hit"],["high","Highest hit"]].map(([k,l]) => `<button data-kmode="${k}" class="${km===k?'on':''}">${l}</button>`).join("")}</div>
     <span class="kmlbl">Hits to kill:</span><div class="seg kmode" title="Only suggest monsters you kill in this many hits">${[[0,"Any"],[1,"1 hit"],[2,"2 hits"],[3,"3+ hits"]].map(([k,l]) => `<button data-hk="${k}" class="${(S.hitsKill||0)===k?'on':''}">${l}</button>`).join("")}</div>
-    <span class="kmlbl">Priority:</span><div class="seg kmode" title="What to rank the monsters by">${[["exp","EXP / Mob"],["exph","EXP / Hit"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXPH : k === "exph" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>`;
+    <span class="kmlbl">Priority:</span><div class="seg kmode" title="What to rank the monsters by">${[["exph","EXP / Hit"],["exp","EXP / Mob"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXPH : k === "exph" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>`;
   const tc = S.topList !== "train";   // closed by default; opens from the "Best EXP per hit" tile
   if (S.topList === "acc" || S.topList === "weak"){   // the other two tiles: a simple top 5 about their own subject
     const isAcc = S.topList === "acc";
