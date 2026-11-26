@@ -238,8 +238,11 @@ svg text{font-family:var(--mono)}
 .elcell.holy{background:rgba(250,204,21,.12)}.elcell.holy .h{color:#eab308}
 .tag.t-ok{background:rgba(16,185,129,.15);color:var(--good)}
 
-.gtool{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
-.gtool .gpaste{flex:1;min-width:240px;margin:0;padding:10px}
+.gtool{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:2px}@media (max-width:800px){.gtool{grid-template-columns:1fr}}
+.scancard{display:flex!important;align-items:center;gap:12px;margin:0!important;padding:12px 14px!important;border-radius:12px;min-height:64px;text-align:left!important}
+.gtool .gpaste{border:2px dashed var(--line2)}
+.scico{font-size:22px;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line);flex:none}
+.sctxt{display:flex;flex-direction:column;gap:2px;min-width:0}.sctxt b{color:var(--text);font-size:14px}.sctxt small{color:var(--muted);font-size:12px;line-height:1.35}
 .buildcard{margin:10px 0;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2)}.buildcard .bhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}.buildcard .seg button small{font-weight:600;opacity:.75}
 .hgear{display:flex;align-items:center;gap:8px;margin-left:10px}.hgear .lbl{margin:0;white-space:nowrap}.hgear .seg button{padding:6px 10px}
 @media (max-width:1100px){.hgear .lbl{display:none}}
@@ -330,13 +333,17 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .ttplan{display:flex!important;flex-direction:column;gap:2px!important;margin-top:3px!important}.tpl{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:center}
 .ttag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;border:1px solid var(--line2);color:var(--text);margin-left:4px;vertical-align:1px}
 .tcond{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:6px;border:1px solid var(--line2)}.tcond.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}.tcond.warn{color:#f5a524;border-color:#f5a52466}.tcond.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
-.livebox{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:-4px 0 12px;font-size:12.5px}.livebox .btn{margin-left:auto}.livebox .btn#liveStart{margin-left:0}
+
 .livedot{width:9px;height:9px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px #e5484d33;animation:lvp 1.2s infinite}@keyframes lvp{50%{opacity:.35}}.livemsg{flex-basis:100%;color:var(--good);font-weight:600}
 .setwhy{font-size:12.5px;line-height:1.5;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin:0 0 10px}.setwhy b{color:var(--text)}.setwhy.closed{cursor:pointer}.setwhy.closed:hover{border-color:var(--line2)}.whyhead{cursor:pointer;margin-bottom:5px}.whycar{color:var(--accent);font-size:11px}.whyhint{font-size:11px;opacity:.7;margin-left:4px}.setwhy .sgoal{margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--line)}.setwhy b.ok{color:var(--good)}
 #scanToasts{position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .scantoast{display:flex;align-items:center;gap:10px;max-width:420px;padding:9px 14px 9px 10px;border-radius:12px;background:#12351f;border:1px solid #2fbf71;color:#c9f7dc;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:1;transform:translateY(0);transition:opacity 3s ease,transform 3s ease;animation:stin .25s ease}
 .scantoast img{width:34px;height:34px;border-radius:6px;background:#eef2f7;image-rendering:pixelated}.scantoast .stok{color:#2fbf71;font-size:18px}
 .stcnt{margin-left:auto;padding:1px 7px;border-radius:999px;background:#2fbf71;color:#08210f;font:800 11px var(--mono);flex:none}.scantoast.fade{opacity:0;transform:translateY(8px)}@keyframes stin{from{opacity:0;transform:translateY(10px)}}
+.gchip.def{background:transparent;border:1px dashed var(--line2);color:var(--muted)}
+.livebox{border:1px solid var(--line);background:var(--panel2)}.livebox.on{border-color:#2fbf71;background:#10261a}
+.livebox .btn{margin-left:auto;flex:none}.livebox .btn.go{background:var(--accent);color:#1a1200;border-color:var(--accent);font-weight:800}
+.livemsg{color:var(--good);font-weight:600;font-size:12px}
 </style>
 </head>
 <body>
@@ -439,8 +446,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
   <section class="panel" style="padding:14px 16px">
     <div id="charCard"></div>
     <div class="gtool">
-      <label class="gpaste small" id="gearDrop"><b>📋 Paste item tooltip (Ctrl+V)</b> · or drop / click<input type="file" id="gearFile" accept="image/*" multiple hidden></label>
-      <div class="livebox" id="liveBox"></div>
+      <label class="gpaste small scancard" id="gearDrop"><span class="scico">📋</span><span class="sctxt"><b>Paste item tooltip</b><small>Ctrl+V a screenshot · or drop / click to choose files</small></span><input type="file" id="gearFile" accept="image/*" multiple hidden></label>
+      <div class="livebox scancard" id="liveBox"></div>
     </div>
     <div id="gearMsg"></div>
   </section>
@@ -807,9 +814,10 @@ const TipOCR = (function(){
   }
 
   /* ---- image analysis ---- */
-  function bullets(px, W, H){
+  function bullets(px, W, H, loose){
     const xmax = W, mask = new Uint8Array(W*H);
-    for (let y=0;y<H;y++) for (let x=0;x<xmax;x++){ const o=(y*W+x)*4, r=px[o], g=px[o+1], b=px[o+2]; if (r > 175 && r-g > 55 && g > 35 && b < 130 && r-b > 90) mask[y*W+x] = 1; }
+    for (let y=0;y<H;y++) for (let x=0;x<xmax;x++){ const o=(y*W+x)*4, r=px[o], g=px[o+1], b=px[o+2];
+      if (loose ? (r > 125 && r-g > 22 && r-b > 12 && r > g && r > b) : (r > 175 && r-g > 55 && g > 35 && b < 130 && r-b > 90)) mask[y*W+x] = 1; }
     const seen = new Uint8Array(W*H), out = [];
     for (let i=0;i<W*H;i++){
       if (!mask[i] || seen[i]) continue;
@@ -860,12 +868,24 @@ const TipOCR = (function(){
       r.forEach(v => { if (v) cur++; else if (cur){ bl.push(cur); cur = 0; } }); if (cur) bl.push(cur);
       if (bl.length === 2 && bl.every(h => h <= capH*0.4)){ ci = i; break; }
     }
-    if (ci < 1) return null;
-    const lab = gl.slice(0, ci);
+    let lab;
+    if (ci < 1){   // colon faded to a single dot: a tiny blob right after the label
+      for (let i=1;i<gl.length-1;i++){ const g = gl[i], capL = Math.max(...gl.slice(0, i).map(o => o.h)); if (g.h <= capL*0.35 && g.w <= capL*0.35 && gl[i-1].h >= capL*0.6){ ci = i; break; } }
+      if (ci >= 1) var weakColon = true;
+    }
+    if (ci >= 1) lab = gl.slice(0, ci);
+    else {
+      // blurry shots: the colon can melt into the last letter. Labels are cream, the total value is white: cut there
+      const k = gl.findIndex(g => g.white >= 0.5);
+      if (k < 1) return null;
+      lab = gl.slice(0, k); if (lab.length > 1 && lab[lab.length-1].w <= capH*0.35) lab = lab.slice(0, -1);
+      ci = k - 1;
+    }
     const lbox = {x0:lab[0].x0, x1:lab[lab.length-1].x1, y0:Math.min(...lab.map(g=>g.y0)), y1:Math.max(...lab.map(g=>g.y1))};
     const inkAt = (x,y) => { const o=(y*W+x)*4; if (px[o+2] - px[o] >= 30) return 0; return Math.max(0, Math.min(1, (lum(px,o) - 110) / 120)); };
     const lg = gridOf(inkAt, lbox, LW, LH), lar = (lbox.x1-lbox.x0+1)/(lbox.y1-lbox.y0+1);
     const lm = best(LABEL_T, lg, lar, 0.6);
+    if ((typeof weakColon !== "undefined" && weakColon) && !(lm.d < 0.13)) return null;   // guessed colon: only trust a clear label match
     // value: words after the colon
     let after = gl.slice(ci+1); if (!after.length) return {label:lm.t.t, key:LABELS[lm.t.t], value:null, conf:lm.d};
     { let k = 0; while (k < after.length && after[k].white < 0.5) k++; const st = k; while (k < after.length && after[k].white >= 0.5) k++; after = after.slice(st, k); }
@@ -933,7 +953,8 @@ const TipOCR = (function(){
   function read(imageData){
     init();
     const {data:px, width:W, height:H} = imageData;
-    const bs = bullets(px, W, H);
+    let bs = bullets(px, W, H);
+    if (bs.length < 3){ const b2 = bullets(px, W, H, true); if (b2.length > bs.length) bs = b2; }   // blurry / shrunk screenshots: pale bullets
     if (!bs.length) return {lines:[], values:{}};
     const diffs = bs.slice(1).map((b,i) => b.cy - bs[i].cy).sort((a,b)=>a-b);
     const pitch = diffs.length ? diffs[diffs.length >> 1] : 16;
@@ -1483,6 +1504,9 @@ const SLOT_SUBS = {weapon:[9,10,11,12,13,14,15,16,17,18,19,20,21,22], hat:[0], t
 const TYPE_TO_SUB = {"Hat":0,"Cap":0,"Top":1,"Topwear":1,"Overall":2,"Outfit":2,"Bottom":3,"Bottomwear":3,"Gloves":4,"Shoes":5,"Cape":6,"Shield":7,"Earrings":8,"Earring":8,
   "One-Handed Sword":9,"One-Handed Axe":10,"One-Handed Blunt Weapon":11,"One-Handed Mace":11,"Two-Handed Sword":12,"Two-Handed Axe":13,"Two-Handed Blunt Weapon":14,"Two-Handed Mace":14,
   "Spear":15,"Polearm":16,"Wand":17,"Staff":18,"Bow":19,"Crossbow":20,"Dagger":21,"Claw":22};
+/* other tooltip stats (defense etc.): shown, not used for damage */
+const EXSTATS = [["wdef","W.DEF"],["mdef","M.DEF"],["avoid","Avoid"],["hp","HP"],["mp","MP"],["speed","Speed"],["jump","Jump"]];
+const exStats = v => { const o = {}; EXSTATS.forEach(([k]) => { if (typeof v[k] === "number" && v[k]) o[k] = v[k]; }); return o; };
 const GSTATS = [["str","STR"],["dex","DEX"],["int","INT"],["luk","LUK"],["watk","W.ATK"],["matk","M.ATK"],["acc","ACC"],["critRate","Crit %"],["critDamage","Crit dmg"]];
 const CODE = {s:"str", d:"dex", i:"int", l:"luk", w:"watk", m:"matk", a:"acc", c:"critRate", x:"critDamage", v:"avoid", p:"speed", j:"jump", h:"hp", n:"mp", e:"wdef", f:"mdef"};
 const parseCode = s => { const o = {}; (s.match(/[a-z]-?\d+/g) || []).forEach(t => { const k = CODE[t[0]]; if (k) o[k] = +t.slice(1); }); return o; };
@@ -1672,7 +1696,7 @@ function slotCard(slot, label, icon){
   let body;
   if (editing) body = gearEditForm(slot, g);
   else if (g) body = `<div class="gbody">${IMGS[slot] && IMGS[slot].src ? `<img class="gimg" src="${IMGS[slot].src}" data-gimg="${slot}" alt="" title="Click to enlarge">` : ''}<div style="min-width:0"><div class="gname">${itemIconId(g.name) ? iconImg(itemIconId(g.name), "", "iicon") + " " : ""}${esc(g.name || SUBTYPES[g.sub])}</div>
-      <div class="gstats">${GSTATS.filter(([k]) => g.st[k]).map(([k,l]) => `<span class="gchip ${k==='int'||k==='matk'?'mag':''}">${l} ${g.st[k]>0?'+':''}${g.st[k]}</span>`).join("") || '<span class="note">no attack stats</span>'}</div>
+      <div class="gstats">${GSTATS.filter(([k]) => g.st[k]).map(([k,l]) => `<span class="gchip ${k==='int'||k==='matk'?'mag':''}">${l} ${g.st[k]>0?'+':''}${g.st[k]}</span>`).join("")}${EXSTATS.filter(([k]) => g.ex && g.ex[k]).map(([k,l]) => `<span class="gchip def" title="Shown only — doesn't change damage">${l} ${g.ex[k]>0?'+':''}${g.ex[k]}</span>`).join("") || (GSTATS.some(([k]) => g.st[k]) ? '' : '<span class="note">no stats</span>')}</div>
       <div class="note">${g.slots > 0 ? `<b class="ok">${g.slots}</b> upgrade slot${g.slots>1?'s':''} left` : 'no slots left'}</div></div></div>`;
   else body = `<div class="gempty">Paste a tooltip or <a href="#" data-gedit="${slot}">fill in</a></div>`;
   return `<div class="gcard ${g?'has':''}" data-gslot="${slot}">
@@ -1784,7 +1808,7 @@ function gearFromTip(res){
   const v = res.values; const sub = TYPE_TO_SUB[v.type];
   if (sub === undefined) return null;
   const st = {}; GSTATS.forEach(([k]) => { if (v[k]) st[k] = v[k]; });
-  const g = {sub, st, slots: v.slots || 0, name: ""};
+  const g = {sub, st, slots: v.slots || 0, name: "", ex: exStats(v)};
   g.name = guessName(g, v);
   if (g.name && v.slots === undefined){ const it = ITEMS.find(i => i.name === g.name); if (it) g.slots = it.slots; }   // slots line not read: assume unscrolled
   return g;
@@ -1863,7 +1887,7 @@ function readTipCanvas(c, forceSlot, res, live){
       if (sv && Object.keys(sv.values).length >= 5){ applyStat(sv); IMGS.stat = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stat:true}); return; }
       const g = gearFromTip(r);
       if (g){ const slot = placeGear(g, forceSlot && SLOT_SUBS[forceSlot].includes(g.sub) ? forceSlot : null); IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); }
-      else if (r.lines.length && forceSlot){ IMGS[forceSlot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; saveImgs(); S.gear[forceSlot] = {sub:SLOT_SUBS[forceSlot][0], st:Object.fromEntries(GSTATS.filter(([k]) => r.values[k]).map(([k]) => [k, r.values[k]])), slots:r.values.slots || 0, name:""}; S.gear[forceSlot].name = guessName(S.gear[forceSlot], r.values); res({ok:true, slot:forceSlot}); }
+      else if (r.lines.length && forceSlot){ IMGS[forceSlot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; saveImgs(); S.gear[forceSlot] = {sub:SLOT_SUBS[forceSlot][0], st:Object.fromEntries(GSTATS.filter(([k]) => r.values[k]).map(([k]) => [k, r.values[k]])), slots:r.values.slots || 0, name:"", ex:exStats(r.values)}; S.gear[forceSlot].name = guessName(S.gear[forceSlot], r.values); res({ok:true, slot:forceSlot}); }
       else {
         // maybe it's the character stat window
         let sv = null; try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){}
@@ -1926,10 +1950,10 @@ function liveTick(){
         const g = S.gear[r.slot], k = r.slot + "|" + g.sub + "|" + (g.name || ""), now = Date.now();
         const h = (LIVE.hist = LIVE.hist || {})[r.slot];
         const list = h && h.k === k && now - h.t < 30000 ? h.list : [];
-        list.push(JSON.stringify({st:g.st, slots:g.slots})); LIVE.hist[r.slot] = {k, t:now, list};
+        list.push(JSON.stringify({st:g.st, slots:g.slots, ex:g.ex || {}})); LIVE.hist[r.slot] = {k, t:now, list};
         const cnt = {}; list.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
         const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || list.lastIndexOf(b[0]) - list.lastIndexOf(a[0]))[0][0];
-        const v = JSON.parse(best); g.st = v.st; g.slots = v.slots;
+        const v = JSON.parse(best); g.st = v.st; g.slots = v.slots; g.ex = v.ex;
       }
       scanToast(r);
       LIVE.n++;
@@ -1942,7 +1966,7 @@ function liveTick(){
 async function liveStart(){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){ alert("Your browser can't share a screen here. Use Chrome or Edge on a computer."); return; }
   try {
-    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:5}, audio:false});
+    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:5, displaySurface:"window", cursor:"never"}, audio:false, preferCurrentTab:false, selfBrowserSurface:"exclude", surfaceSwitching:"include", monitorTypeSurfaces:"exclude"});   // opens the picker on the Window tab; the browser doesn't let a site pick MapleStory.exe itself
     LIVE.stream = st; LIVE.video = document.createElement("video"); LIVE.video.muted = true; LIVE.video.playsInline = true; LIVE.video.srcObject = st; await LIVE.video.play();
     LIVE.last = ""; LIVE.n = 0; LIVE.msg = "";
     st.getVideoTracks()[0].addEventListener("ended", liveStop);
@@ -1957,9 +1981,10 @@ function liveStop(){
 }
 function renderLive(){
   const el = $("liveBox"); if (!el) return;
+  el.classList.toggle("on", !!LIVE.stream);
   el.innerHTML = LIVE.stream
-    ? `<span class="livedot"></span><b>Sharing your screen</b> · hover your items in MapleStory one by one${usesStars() ? ' (also your throwing stars in the Use tab)' : ''} — each tooltip is read automatically${LIVE.n ? ` · ${LIVE.n} read` : ''}${LIVE.msg ? `<div class="livemsg">${esc(LIVE.msg)}</div>` : ''}<button class="btn small" id="liveStop">Stop sharing</button>`
-    : `<button class="btn small" id="liveStart">🖥 Share Maple screen</button><span class="note">pick your MapleStory window, then hover each item — no screenshots needed</span>`;
+    ? `<span class="scico"><span class="livedot"></span></span><span class="sctxt"><b>Scanning your Maple screen${LIVE.n ? ` · ${LIVE.n} read` : ''}</b><small>Hover your items in MapleStory one by one${usesStars() ? ' (also your throwing stars)' : ''} — each tooltip is read automatically</small>${LIVE.msg ? `<span class="livemsg">${esc(LIVE.msg)}</span>` : ''}</span><button class="btn small" id="liveStop">Stop</button>`
+    : `<span class="scico">🖥</span><span class="sctxt"><b>Live scan from MapleStory</b><small>Share the <b>MapleStory</b> window (Window tab), then just hover your items — no screenshots needed</small></span><button class="btn small go" id="liveStart">Share Maple screen</button>`;
 }
 document.addEventListener("click", ev => { if (ev.target.closest("#liveStart")) liveStart(); else if (ev.target.closest("#liveStop")) liveStop(); });
 /* green notification after a good scan: stats read and the picture saved; fades out slowly */
@@ -1968,7 +1993,8 @@ function scanToast(r){
   let txt;
   if (r.stars) txt = `Throwing stars scanned — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
   else if (r.slot){ const g = S.gear[r.slot], im = IMGS[r.slot]; if (!g || !im || !im.icon) return;
-    txt = `${SLOTS.find(s => s[0] === r.slot)[1]} scanned${g.name ? ' — ' + g.name : ''} · ${statLine(g.st) || 'no attack stats'}${g.slots ? ' · ' + g.slots + ' slots' : ''}`; }
+    const exl = EXSTATS.filter(([k]) => g.ex && g.ex[k]).map(([k, l]) => `${l} +${g.ex[k]}`).join(' · ');
+    txt = `${SLOTS.find(s => s[0] === r.slot)[1]} scanned${g.name ? ' — ' + g.name : ''} · ${[statLine(g.st), exl].filter(Boolean).join(' · ') || 'no stats'}${g.slots ? ' · ' + g.slots + ' slots' : ''}`; }
   else return;
   let box = document.getElementById("scanToasts");
   if (!box){ box = document.createElement("div"); box.id = "scanToasts"; document.body.appendChild(box); }
