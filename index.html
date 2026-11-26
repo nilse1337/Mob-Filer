@@ -2505,6 +2505,8 @@ function setColumn(R){
 
 /* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
 const GOALS = [["damage","Damage"],["attack","Attack"],["accuracy","Accuracy"],["crit","Crit"],["main","Main stat"]];
+const goalLabel = (k, l) => k === "attack" && S.char.cls === "magician" ? "Magic Attack" : l;
+const GOAL_TIP = {damage:"Everything that raises your damage per hit: main stat, attack, crit, accuracy — all counted together", attack:"Only Weapon / Magic Attack on the item", accuracy:"Hit the monster more often", crit:"Critical rate and damage", main:"Your main stat only"};
 /* could your (unnamed) item be this one? base stats fit and the extra fits the slots already used */
 function couldBe(it, cur){
   if (!it || !cur || it.sub !== cur.sub) return false;
@@ -2537,11 +2539,11 @@ function usefulList(R){
     for (const k of Object.keys(d)){ if (d[k] <= 0) continue;
       const g = gainOf(Object.assign({}, extra, {[slot]: {st:addSt(fromSt, {[k]: d[k]}), sub}})); const h = lastHit;
       if (!best || g > best.g) best = {k, g, h}; }
-    if (!best || best.g <= 0.0002) return goal === "accuracy" ? "Accuracy" : goal === "crit" ? "Crit" : goal === "attack" ? "Attack" : "Damage";
+    if (!best || best.g <= 0.0002) return goal === "accuracy" ? "Accuracy" : goal === "crit" ? "Crit" : goal === "attack" ? (magic ? "Magic Atk" : "Attack") : "Damage";
     const k = best.k;
     if (k === "acc" && magic) return "Damage";
     if (k === "acc" || (best.h != null && base.hitP != null && best.h - base.hitP > 0.004 && (k === "dex" || k === "luk"))) return "Accuracy";
-    if (k === "watk" || k === "matk") return "Attack";
+    if (k === "watk" || k === "matk") return magic ? "Magic Atk" : "Attack";
     if (k === "critRate" || k === "critDamage") return "Crit";
     return {str:"STR", dex:"DEX", int:"INT", luk:"LUK"}[k] || "Damage";
   };
@@ -2566,8 +2568,18 @@ function usefulList(R){
     // the same item you already wear is never an 'upgrade' (scrolling it is its own row)
     if (cur && cur.name) cands = cands.filter(it => it.name.toLowerCase() !== cur.name.toLowerCase());
     else if (cur) cands = cands.filter(it => !couldBe(it, cur));   // unnamed: skip items your current one could be (its base + scrolls fit)
+    // never worse than what you have: skip items whose base your current item already beats on every stat (and slots),
+    // and items that even fully scrolled don't beat scrolling your current item
+    if (cur){ const base = cur.name ? ITEMS.find(it => it.name.toLowerCase() === cur.name.toLowerCase()) : null, cb = base ? base.st : cur.st, cs = base ? base.slots : 99;
+      cands = cands.filter(it => !(GSTATS.every(([k]) => (it.st[k] || 0) <= (cb[k] || 0) + 0.1) && it.slots <= cs)); }
+    const curLv = cur && cur.name ? ((ITEMS.find(it => it.name.toLowerCase() === cur.name.toLowerCase()) || {}).lv || 0) : 0;
+    const curBest = cur ? bestFor(slot, cur.st, cur.sub, cur.slots || 0, fromSt, extra) : null;
+    const curGain = cur && cur.slots > 0 ? gainOf(Object.assign({}, extra, {[slot]: {st:curBest.to, sub:cur.sub}})) : 0;
     let bestItem = null;
     for (const it of cands){ const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (bestItem && b.m <= bestItem.b.m) continue;
+      if (curBest && b.m <= curBest.m + 1e-9) continue;   // scrolling what you wear does at least as much for this goal
+      if (curLv && it.lv < curLv && gainOf(Object.assign({}, extra, {[slot]: {st:it.st, sub:it.sub}})) < 0) continue;   // a lower-level item with a weaker base than yours is no upgrade
+      if (gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})) <= curGain + 0.0005) continue;   // and for your damage
       if (gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})) <= 0.0005) continue;   // never suggest something that lowers your damage
       bestItem = {it, b}; }
     if (bestItem && bestItem.b.m > 1e-6){
@@ -2676,7 +2688,7 @@ function renderSets(){
   $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">${S.gearView === "set" ? '<b style="color:var(--accent)">on top of the Best possible set</b> · ' : ''}single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
     <div class="ugrade"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
     <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div>
-    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${l}</button>`).join("")}</div></div></div></div>`;
+    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" title="${GOAL_TIP[k]}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div></div></div>`;
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = usefulColumn(R);
   $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
