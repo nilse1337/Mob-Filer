@@ -347,6 +347,11 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .ftip{position:fixed;z-index:10000;display:none;padding:10px 12px;border-radius:10px;background:#0f1522;border:1px solid var(--line2);color:var(--text);font-size:12.5px;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.45);opacity:0;transform:translateY(4px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
 .ftip.on{opacity:1;transform:translateY(0)}.ftip ul{margin:6px 0 0;padding-left:16px}.ftip li{margin:3px 0;color:var(--muted)}.ftip li b,.ftip>b{color:var(--text)}
 .gplus{color:#f5a524;font-weight:800}
+.rcol{position:sticky;top:66px;max-height:calc(100vh - 80px);overflow:auto;display:flex;flex-direction:column;gap:12px}.rcol .insp{position:static;max-height:none;overflow:visible}
+.kside{padding:14px 16px}.kside .kgrid{grid-template-columns:1fr;gap:8px}.kside .khead{display:flex;flex-direction:column;gap:6px}.kside h3{margin:0;font-size:15px}
+.kside .kcard{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;padding:9px 12px}.kside .kcard h4{grid-row:span 3;margin:0;font-size:22px;font-family:var(--mono);color:var(--accent);text-align:center;min-width:42px;line-height:1}.kside .kcard h4 small{display:block;font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.kside .kcard.done h4{color:var(--good)}.kside .need{font-size:12.5px}.knum{color:var(--accent2,#7dd3fc);font-weight:800}.kneed{color:#f5a524;font-weight:800}.kbig{color:var(--text);font-weight:800;font-family:var(--mono)}
+@media (max-width:1180px){.rcol{position:static;max-height:none}}
 </style>
 </head>
 <body>
@@ -441,7 +446,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
         </table>
       </div>
     </div>
-    <aside class="panel insp" id="insp"></aside>
+    <div class="rcol"><aside class="panel insp" id="insp"></aside><section class="panel kside" id="killPanel"></section></div>
   </section>
 </main>
 
@@ -461,7 +466,6 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
     <div class="panel col"><div id="colSetHead"></div><div id="setList"></div><div id="setTotals" class="ctot"></div></div>
     <div class="panel col"><div id="colScrHead"></div><div id="scrollList"></div><div id="scrTotals" class="ctot"></div></div>
   </section>
-  <section class="panel" style="padding:14px 16px" id="killPanel"></section>
 </main>
 
 <div id="toast"></div>
@@ -1289,6 +1293,7 @@ const DEFAULTS = {
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 try { const raw = localStorage.getItem(KEY); if (raw){ const p = JSON.parse(raw); S = Object.assign({}, S, p, {char:Object.assign({}, DEFAULTS.char, p.char || {})}); } } catch(e){}
 if (!S.pots){ S.pots = S.potion >= 7 ? ["ssniper"] : S.potion >= 5 ? ["sniper"] : []; } S.potion = 0;   // old single ACC-potion setting
+S.topCollapsed = true;   // the top-5 list starts folded on every visit
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 
 const $ = id => document.getElementById(id);
@@ -1801,7 +1806,6 @@ function renderGear(){
   nameOldItems();
   renderLive();
   try { renderSets(); } catch(e){ console.error(e); const m = `<div class="note" style="color:var(--bad);padding:10px">Something went wrong here: ${esc(String(e && e.message || e))}. Please send a screenshot of this message.</div>`; if ($("setList")) $("setList").innerHTML = m; if ($("scrollList")) $("scrollList").innerHTML = m; }
-  try { renderKillGoals(); } catch(e){ console.error(e); }
   if (!S.gearSel || (S.gearSel !== "stars" && !S.gear[S.gearSel] && S.gearEdit !== S.gearSel && !EQUIP_LAYOUT.some(e => e[0] === S.gearSel))){
     const first = SLOTS.find(([k]) => S.gear[k]); S.gearSel = first ? first[0] : "weapon";
   }
@@ -2842,17 +2846,17 @@ function renderKillGoals(){
     const avgOk = base.ko <= n, minOk = base.worst <= n;
     const line = mode => stats.map(([k,l]) => { const x = needFor(k, n, mode, model, mob); return x === null ? `<span class="bad">out of reach</span>` : x === 0 ? "" : `+${x} ${l}`; }).filter(Boolean);
     const avgNeed = avgOk ? null : line("avg"), minNeed = minOk ? null : line("min");
-    return `<div class="kcard ${avgOk ? 'done' : ''}"><h4>${n}-hit <b>${esc(mob.name)}</b></h4>
-      <div class="note">needs ${fmt(perCast)} damage per ${hits > 1 ? `cast (${fmt(perCast/hits)} per hit)` : 'hit'} on average</div>
-      <div class="need">${avgOk ? '<span class="ok">✓ you already do this on average</span>' : `Average: ${avgNeed.join('<span class="or">or</span>')}`}</div>
-      <div class="need" style="font-weight:600">${minOk ? '<span class="ok">✓ every time, even on a low roll</span>' : `Every time: ${minNeed.join('<span class="or">or</span>')}`}</div>
+    return `<div class="kcard ${avgOk ? 'done' : ''}"><h4>${n}<small>HIT${n > 1 ? 'S' : ''}</small></h4>
+      <div class="note">needs <span class="kbig">${fmt(perCast)}</span> damage per ${hits > 1 ? `cast (${fmt(perCast/hits)} per hit)` : 'hit'} on average</div>
+      <div class="need">${avgOk ? '<span class="ok">✓ you already do this on average</span>' : `Average: ${avgNeed.map(x => x.replace(/^\+(\d+)/, '<span class="kneed">+$1</span>')).join('<span class="or">or</span>')}`}</div>
+      <div class="need">${minOk ? '<span class="ok">✓ every time, even on a low roll</span>' : `Every time: ${minNeed.map(x => x.replace(/^\+(\d+)/, '<span class="kneed">+$1</span>')).join('<span class="or">or</span>')}`}</div>
     </div>`;
   }).join("");
-  $("killPanel").innerHTML = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <h3 style="margin:0;font-size:15px">What it takes to 1-, 2- or 3-hit</h3>
-      <select id="killMob" class="txt" style="width:auto;height:32px;font-size:12.5px">${mobs.map(e => `<option value="${e.id}" ${e.id===mob.id?'selected':''}>${esc(e.name)} (Lv ${e.level} · ${fmt(e.hp)} HP)</option>`).join("")}</select>
-      <span class="note">now: ${fmt(base.lo)}–${fmt(base.hi)} per hit · ${Number.isFinite(base.ko) ? base.ko + ' hit' + (base.ko > 1 ? 's' : '') + ' on average' : "can't kill"}</span></div>
-    <div class="note" style="margin:4px 0 2px">Based on: <b>${esc(jobOf().label)} Lv ${S.level}</b> · ${magic ? `INT ${S.char.int} · LUK ${S.char.luk} · Magic ${S.char.magic}` : `${prim.toUpperCase()} ${S.char[prim]} · Attack ${S.char.atkMin}–${S.char.atkMax}`} · Crit ${S.char.critRate}% / ${S.char.critDmg}% · <b>${esc(sk.name)} Lv ${RR.at.lv}</b>${hits > 1 ? ` (${hits} hits per cast)` : ''} · vs ${esc(mob.name)}: Lv ${mob.level}, ${fmt(mob.hp)} HP${mob.mdef !== undefined || mob.pdef !== undefined ? `, ${magic ? 'M.DEF ' + (mob.mdef ?? '?') : 'P.DEF ' + (mob.pdef ?? '?')}` : ''}</div>
+  $("killPanel").innerHTML = `<div class="khead">
+      <h3>What it takes to 1-, 2- or 3-hit</h3>
+      <select id="killMob" class="txt" style="height:32px;font-size:12.5px">${mobs.map(e => `<option value="${e.id}" ${e.id===mob.id?'selected':''}>${esc(e.name)} (Lv ${e.level} · ${fmt(e.hp)} HP)</option>`).join("")}</select>
+      <span class="note">now <span class="knum">${fmt(base.lo)}–${fmt(base.hi)}</span> per hit · ${Number.isFinite(base.ko) ? `<span class="knum">${base.ko}</span> hit${base.ko > 1 ? 's' : ''} on average` : "can't kill"}</span>
+      <span class="note">${esc(jobOf().label)} Lv ${S.level} · ${magic ? `INT ${S.char.int} · Magic ${S.char.magic}` : `${prim.toUpperCase()} ${S.char[prim]} · Attack ${S.char.atkMin}–${S.char.atkMax}`} · ${esc(sk.name)} Lv ${RR.at.lv}${hits > 1 ? ` (${hits} hits/cast)` : ''} · ${magic ? 'M.DEF ' + (mob.mdef ?? '?') : 'P.DEF ' + (mob.pdef ?? '?')}</span></div>
     <div class="kgrid">${cards}</div>
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
@@ -2897,7 +2901,8 @@ function elIcons(m){
   let h = "";
   if (m.fire === 1) h += `<span class="el" title="Weak to fire">🔥</span>`;
   if (m.ice === 1) h += `<span class="el" title="Weak to ice">❄</span>`;
-  if (m.el && m.el.holy === 1) h += `<span class="el" title="Weak to holy">✨</span>`;
+  // holy only matters if you (can) deal holy damage: Cleric / Priest line, or a holy skill
+  if (m.el && m.el.holy === 1 && ((RR && RR.sk && RR.sk.el === "holy") || /Cleric|Priest|Bishop/.test(jobOf().label))) h += `<span class="el" title="Weak to holy">✨</span>`;
   if (m.fire === -1) h += `<span class="el res" title="Resists fire">🔥</span>`;
   if (m.ice === -1) h += `<span class="el res" title="Resists ice">❄</span>`;
   return h;
@@ -3293,6 +3298,7 @@ function renderAll(){
     bar.innerHTML = `🛡 <b>Preview: best possible set (with the scrolls you picked)</b> — stats below include ${deltaLine(prev.d) || 'no changes'}${prev.acc !== saved.acc ? ` · ACC ${saved.acc} → ${prev.acc}` : ''}. <a href="#gear">See the set</a> · <a href="#" id="previewOff">Back to current gear</a>`;
   } else bar.style.display = "none";
   if (saved){ S.char = saved.char; S.baseAcc = saved.acc; }
+  try { renderKillGoals(); } catch(e){ console.error(e); }
   save();
 }
 
