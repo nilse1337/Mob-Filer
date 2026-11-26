@@ -3443,6 +3443,10 @@ function typeTags(e){
 function monsterElements(e){
   return [["fire","FIRE"],["ice","ICE"],["lightning","LIGHTNING"],["holy","HOLY"],["poison","POISON"]].filter(([k]) => { const v = k === "fire" ? e.fire : k === "ice" ? e.ice : e.el && e.el[k]; return v === -1 || v === -2; });
 }
+/* the elements a monster takes extra damage from */
+function monsterWeak(e){
+  return [["fire","FIRE"],["ice","ICE"],["lightning","LIGHTNING"],["holy","HOLY"],["poison","POISON"]].filter(([k]) => (k === "fire" ? e.fire : k === "ice" ? e.ice : e.el && e.el[k]) === 1);
+}
 function natureTags(e){
   return monsterElements(e).map(([k, l]) => `<span class="tag t-el-${k}" title="${l.charAt(0) + l.slice(1).toLowerCase()} monster: resists ${k}">${l}</span>`).join('');
 }
@@ -3593,20 +3597,14 @@ function renderSummary(){
   const noFly = jobOf().cls === "warrior";
   const okMob = e => !e.isPQ && !e.isBoss && !/\((?:[^)]*PQ|[^)]*Job Test)\)/i.test(e.name) && !(noFly && e.isFly) && !bl.has(e.id) && !blNames.has(baseName(e.name)) && (e.raw >= 1 || RR.type === "magic") && Number.isFinite(kof(e));
   const hk = S.hitsKill || 0, hkOk = e => !hk || (hk >= 3 ? e._ko >= 3 : e._ko === hk);
-  let pool = all.filter(e => okMob(e) && Math.abs(e.level - S.level) <= 15);
-  pool.forEach(e => { e._ko = kof(e); e._low = false; });
+  let pool = all.filter(e => okMob(e) && e.level <= S.level + 15);   // lower levels count too: a low monster you kill fast can give the most EXP per hit
+  pool.forEach(e => { e._ko = kof(e); e._low = e.level < S.level - 15; });
   pool = pool.filter(hkOk);
-  let lowerUsed = false;
-  if (new Set(pool.map(e => baseName(e.name))).size < 5) {   // not enough 1/2-hit kills in range: look at lower-level monsters too
-    const extra = all.filter(e => okMob(e) && e.level < S.level - 15);
-    extra.forEach(e => { e._ko = kof(e); e._low = true; });
-    const add = extra.filter(hkOk);
-    if (add.length) { pool = pool.concat(add); lowerUsed = true; }
-  }
+  const lowerUsed = pool.some(e => e._low);
   const tg = S.trainGoal || "exp";
   pool.forEach(e => { const mz = mobMesos(e), pl = trainPlan(e), kph = killsPerHour(e, e._ko, pl); e._mz = mz; e._mph = mz.avg * kph; });
-  if (tg === "mesos") pool.sort((a,b) => b._mph - a._mph || (b.exp / b._ko) - (a.exp / a._ko));
-  else pool.sort((a,b) => (b.exp / b._ko) - (a.exp / a._ko) || b.exp - a.exp);
+  if (tg === "mesos") pool.sort((a,b) => b._mph - a._mph || a._ko - b._ko);
+  else pool.sort((a,b) => (b.exp / b._ko) - (a.exp / a._ko) || a._ko - b._ko || b.exp - a.exp);
   { const seen = new Set(); pool = pool.filter(e => { const k = baseName(e.name); if (seen.has(k)) return false; seen.add(k); return true; }); }   // one row per monster
   const train = pool[0];
   const weakPool = all.filter(e => e.myWeak && !e.isBoss && !e.isPQ && (e.raw >= 1 || RR.type === "magic")).sort((a,b) => b.level - a.level);   // no bosses or PQ / job-test monsters
@@ -3616,7 +3614,7 @@ function renderSummary(){
   $("summary").innerHTML = `
     <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length} <span class="vunit">monsters</span></div><div class="s">click to filter</div></div>
     <div class="panel tile ${S.topList === 'acc' ? 'open' : ''}" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span>${target ? (() => { const n = Math.min(5, all.filter(e => e.raw < 1 && !e.isPQ).length); return `<button class="tmore" data-ttfold="acc">${S.topList === 'acc' ? 'Hide ▴' : n > 1 ? `See top ${n} ▾` : 'See details ▾'}</button>`; })() : ''}<div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
-    <div class="panel tile ${S.topList === 'train' ? 'open' : ''}" data-jump="${train?train.id:''}"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"} (±15 Lv)</span><button class="tmore" data-ttfold="train">${S.topList === 'train' ? 'Hide ▴' : `See top ${Math.max(1, Math.min(5, pool.length))} ▾`}</button><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
+    <div class="panel tile ${S.topList === 'train' ? 'open' : ''}" data-jump="${train?train.id:''}"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"}</span><button class="tmore" data-ttfold="train">${S.topList === 'train' ? 'Hide ▴' : `See top ${Math.max(1, Math.min(5, pool.length))} ▾`}</button><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
     <div class="panel tile ${sk.el==='ice'?'ice':'fire'} ${S.topList === 'weak' ? 'open' : ''}" ${sk.el?`data-jump="${weakBest?weakBest.id:''}"`:``}><span class="lbl">${weakLbl}</span>${sk.el && weakPool.length ? `<button class="tmore" data-ttfold="weak">${S.topList === 'weak' ? 'Hide ▴' : `See top ${Math.min(5, weakPool.length)} ▾`}</button>` : ''}<div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} you hit` : 'pick a fire/ice skill to compare'}</div></div>`;
   const top = pool.slice(0, 5);
   const tc = S.topList !== "train";   // closed by default; opens from the "Best EXP per hit" tile
@@ -3639,7 +3637,7 @@ function renderSummary(){
     <span class="kmlbl">Goal:</span><div class="seg kmode" title="What to rank the monsters by">${[["exp","EXP"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>
     </div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
-      <span class="ttrank">${i+1}</span><span class="ttpic">${mobPic(e)}</span><span class="ttname"><span class="ttnm">${esc(e.name)}</span>${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}${S.showTypeTags === false ? '' : monsterElements(e).map(([k, l]) => ` <span class="tag t-el-${k}">${l}</span>`).join('')}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
+      <span class="ttrank">${i+1}</span><span class="ttpic">${mobPic(e)}</span><span class="ttname"><span class="ttnm">${esc(e.name)}</span>${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}${S.showTypeTags === false ? '' : monsterWeak(e).map(([k, l]) => ` <span class="tag t-el-${k}" title="Takes extra damage from ${k}">${l} WEAKNESS</span>`).join('')}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         const cond = t.cond.filter(([l]) => l !== "ok" || !/No special/.test(t.cond[0][1]));
         const T = (txt) => `data-tip="${esc(txt)}"`;
         const url = mapUrl(m), per = t.per >= 10 ? Math.round(t.per) : t.per.toFixed(1);
