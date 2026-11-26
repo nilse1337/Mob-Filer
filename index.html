@@ -1738,7 +1738,7 @@ function iconImg(id, fallback, cls){
   const emo = "";   // only real MapleStory pictures: no emoji fallback next to items
   if (!id && isImg) return `<img class="${cls}" src="${fallback}" alt="">`;
   if (!id) return "";
-  return `<img class="${cls}" src="https://maplestory.io/api/GMS/83/item/${id}/icon" data-id="${id}"${isImg ? ` data-fb="${fallback}"` : ""} alt="" loading="lazy" onerror="iconErr(this)"><span class="${cls} iemo" hidden>${emo}</span>`;
+  return `<img class="${cls}" src="https://cdn.meowdb.com/icons/${id}.png" referrerpolicy="no-referrer" data-id="${id}" data-fb="${isImg ? fallback : `https://maplestory.io/api/GMS/83/item/${id}/icon`}" alt="" loading="lazy" onerror="iconErr(this)"><span class="${cls} iemo" hidden>${emo}</span>`;
 }
 
 /* scroll pictures: MSCW draws its own scrolls, so MeowDB's picture first, the GMS one as backup */
@@ -2355,7 +2355,7 @@ function renderImp(){
       const alts = (g.alts || []).filter(n => n !== g.name);
       return `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${g.name ? ' · ' + esc(g.name) : ' · <i class="near">name unknown</i>'} <span class="s">${esc([GSTATS.filter(([q]) => g.st[q]).map(([q,l]) => `${l} ${g.st[q] > 0 ? '+' : ''}${g.st[q]}`).join(' · '), EXSTATS.filter(([q]) => g.ex && g.ex[q]).map(([q,l]) => `${l} +${g.ex[q]}`).join(' · ')].filter(Boolean).join(' · ') || 'no stats')}${g.slots ? ' · ' + g.slots + ' slots' : ''}</span>
         <button class="btn ghost small impedit" data-impedit="${k}" title="Change the name or stats">✎ Edit</button>
-        ${alts.length && (!g.name || g.alts.length > 1) ? `<div class="impalts"><span class="near">Not sure which item this is — pick it:</span> ${(g.name ? [g.name] : []).concat(alts).map(n => `<button class="altpick ${n === g.name ? 'on' : ''}" data-impname="${k}|${esc(n)}">${itemIconId(n) ? `<img src="https://maplestory.io/api/GMS/83/item/${itemIconId(n)}/icon" alt="" onerror="this.style.display='none'">` : ''}${esc(n)}</button>`).join('')}</div>` : ''}
+        ${alts.length && (!g.name || g.alts.length > 1) ? `<div class="impalts"><span class="near">Not sure which item this is — pick it:</span> ${(g.name ? [g.name] : []).concat(alts).map(n => `<button class="altpick ${n === g.name ? 'on' : ''}" data-impname="${k}|${esc(n)}">${itemIconId(n) ? `<img src="https://cdn.meowdb.com/icons/${itemIconId(n)}.png" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'">` : ''}${esc(n)}</button>`).join('')}</div>` : ''}
         ${IMPW.edit === k ? `<div class="impform">${slotCard(k, SLOTS.find(x => x[0] === k)[1], SLOTS.find(x => x[0] === k)[2])}</div>` : ''}</div>`; };
     const items = got.map(k => k === "stars" ? `<div><b>${ammoName()}</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
       : itemRow(k)).join("");
@@ -2368,12 +2368,12 @@ function renderImp(){
         gs.forEach(g => { Object.entries(g.st || {}).forEach(([k, v]) => tot[k] = (tot[k] || 0) + v); Object.entries(g.ex || {}).forEach(([k, v]) => ex[k] = (ex[k] || 0) + v); });
         if (usesStars() && got.includes("stars")) tot.watk = (tot.watk || 0) + curStar()[1];
         const parts = GSTATS.filter(([k]) => tot[k]).map(([k, l]) => `<b>${l} ${tot[k] > 0 ? '+' : ''}${Math.round(tot[k]*10)/10}</b>`).concat(EXSTATS.filter(([k]) => ex[k]).map(([k, l]) => `${l} +${ex[k]}`));
-        return parts.length ? `<div class="imptotal"><span>Total from your equipment</span><div>${parts.join(' · ')}</div></div>` : ''; })() : ''}${usesStars() ? `<div class="impammo"><div class="note"><b>Your ${ammoName().toLowerCase()}</b> — hover them in game, or pick them here:</div><div class="ammorow">${AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === curStar()[0] && S[ammoKey()] ? 'on' : ''}" title="${esc(x[0])} · W.ATK +${x[1]}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><b>+${x[1]}</b></button>`).join("")}</div></div>` : ''}
+        return parts.length ? `<div class="imptotal"><span>Total from your equipment</span><div>${parts.join(' · ')}</div></div>` : ''; })() : ''}${usesStars() ? `<div class="impammo"><div class="note"><b>Your ${ammoName().toLowerCase()}</b> — hover them in game, or pick them here:</div><div class="ammorow">${AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === curStar()[0] && S[ammoKey()] ? 'on' : ''}" title="${esc(x[0])} · W.ATK +${x[1]}"><img src="https://cdn.meowdb.com/icons/${x[2]}.png" referrerpolicy="no-referrer" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><b>+${x[1]}</b></button>`).join("")}</div></div>` : ''}
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-impgo="build">Skip equipment</button>${got.length ? '<button class="btn primary" data-impgo="build">Looks good — next: build ▸</button>' : ''}</div></div></div>`);
   } else set("impGear", "");
   // step 3: the build, from your base stats (stat window minus the gear you just scanned)
   const gk = buildGroup(), G = gk ? BUILDS[gk] : null, auto = gk ? detectBuild() : null, bcur = gk ? ((S.builds && S.builds[gk]) || auto) : null;
-  const bico = k => ((BUILD_SHOW[gk] || {})[k] || []).map(n => { const id = itemIconId(n); return id ? `<img src="https://maplestory.io/api/GMS/83/item/${id}/icon" alt="" title="${esc(n)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''; }).join("");
+  const bico = k => ((BUILD_SHOW[gk] || {})[k] || []).map(n => { const id = itemIconId(n); return id ? `<img src="https://cdn.meowdb.com/icons/${id}.png" referrerpolicy="no-referrer" alt="" title="${esc(n)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''; }).join("");
   if (st === "build" && G){ const b = baseStats();
     set("impBuild", `<div class="impcheck"><span style="font-size:24px">🧭</span><div><b>Build detected — please check</b><div class="note">From your base stats (STR ${b.str} · DEX ${b.dex} · INT ${b.int} · LUK ${b.luk}, without gear). Pick another one if it's wrong.</div></div></div>
       <div class="bopts">${G.list.map(x => `<button class="bopt ${bcur === x.k ? 'on' : ''}" data-impbuild="${gk}:${x.k}"><span class="bt">${bcur === x.k ? '✓ ' : ''}${esc(x.l)}${x.k === auto ? ' <small>detected</small>' : ''}</span><span class="bico">${bico(x.k)}</span><span class="note">${esc(x.d)}</span></button>`).join("")}</div>
@@ -2764,7 +2764,7 @@ function starCell(){
   if (!usesStars()) return "";
   const s = curStar();
   return `<div class="eqcell has starcell ${S.gearSel === 'stars' ? 'sel' : ''}" style="grid-column:5;grid-row:5" data-starpick="1" title="${ammoName()}: ${esc(s[0])} (W.ATK +${s[1]}) — click to choose">
-      <img class="eqico" src="https://maplestory.io/api/GMS/83/item/${s[2]}/icon" alt=""><span class="eqslots">+${s[1]}</span>${S[ammoKey()] ? '' : '<span class="staras">AMMO()</span>'}<span class="stardrop">▾</span></div>`;
+      <img class="eqico" src="https://cdn.meowdb.com/icons/${s[2]}.png" referrerpolicy="no-referrer" alt=""><span class="eqslots">+${s[1]}</span>${S[ammoKey()] ? '' : '<span class="staras">AMMO()</span>'}<span class="stardrop">▾</span></div>`;
 }
 /* dropdown with pictures, attached to the page so the inventory window doesn't cut it off */
 function closeStarPop(){ const p = document.getElementById("starPop"); if (p) p.remove(); }
@@ -2772,7 +2772,7 @@ function openStarPop(cell){
   closeStarPop();
   const r = cell.getBoundingClientRect(), cur = curStar();
   const pop = document.createElement("div"); pop.id = "starPop"; pop.className = "starpop2";
-  pop.innerHTML = `<div class="starhint">Which ${ammoKind() === "stars" ? "throwing stars" : "arrows"} do you use?</div>` + AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === cur[0] && S[ammoKey()] ? 'on' : ''}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt=""><span>${esc(x[0].replace(" Throwing Stars","").replace(/ for (Cross)?[Bb]ows/,"").trim() || x[0].replace(" Throwing Knives"," Knives"))}</span><b>+${x[1]}</b></button>`).join("")
+  pop.innerHTML = `<div class="starhint">Which ${ammoKind() === "stars" ? "throwing stars" : "arrows"} do you use?</div>` + AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === cur[0] && S[ammoKey()] ? 'on' : ''}"><img src="https://cdn.meowdb.com/icons/${x[2]}.png" referrerpolicy="no-referrer" alt=""><span>${esc(x[0].replace(" Throwing Stars","").replace(/ for (Cross)?[Bb]ows/,"").trim() || x[0].replace(" Throwing Knives"," Knives"))}</span><b>+${x[1]}</b></button>`).join("")
     + `<div class="starhint" style="margin-top:4px">or paste a screenshot of their tooltip (Ctrl+V)</div>`;
   document.body.appendChild(pop);
   const w = pop.offsetWidth, h = pop.offsetHeight;
@@ -3050,7 +3050,7 @@ function setColumn(R){
   if (usesStars() || R.load.stars){
     const c = curStar(), n = R.load.stars, keep = !n;
     const one = keep ? 0 : evalLoadout({stars:n}, R.model, R.mob, R.base).pct;
-    rows.push(`<div class="brow ${keep ? 'keep' : ''}"><div class="bico"><img class="bimg" src="https://maplestory.io/api/GMS/83/item/${keep ? c[2] : n.id}/icon" alt=""></div>
+    rows.push(`<div class="brow ${keep ? 'keep' : ''}"><div class="bico"><img class="bimg" src="https://cdn.meowdb.com/icons/${keep ? c[2] : n.id}.png" referrerpolicy="no-referrer" alt=""></div>
       <div class="bmain"><div class="btop"><span class="bslot">${ammoKind() === "stars" ? "Stars" : "Arrows"}</span><b class="bname">${esc(keep ? c[0] : n.name)}</b>${keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
         <div class="bchips"><span class="bchip ${keep ? '' : 'up'}">W.ATK +${keep ? c[1] : n.watk}</span></div>
         <div class="bmeta">${keep ? 'best stars available' : `vs your ${esc(c[0])}${S[ammoKey()] ? '' : ' (assumed — click the stars in the inventory)'}`}</div></div>
