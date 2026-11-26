@@ -3941,6 +3941,7 @@ const TOUR = [
 ];
 let tourAt = -1;
 function tourShow(i){
+  if ($("impModal").classList.contains("open")) return;   // never during the import window
   tourAt = i; const st = TOUR[i], el = document.querySelector(st.sel); if (!el){ tourEnd(true); return; }
   if (location.hash === "#gear" && i < 3) location.hash = "#calc";
   $("tour").classList.add("on"); $("welcome").classList.remove("on"); document.documentElement.classList.add("touring");
@@ -3972,13 +3973,13 @@ $("tourBack").onclick = () => tourAt > 0 && tourShow(tourAt - 1);
 $("tourClose").onclick = () => tourEnd(false);
 window.addEventListener("resize", () => { if (tourAt >= 0) tourShow(tourAt); });
 $("tourOn").onchange = () => { S.tour = $("tourOn").checked ? "on" : "off"; save(); };
-{ const closeSet = () => { if (S.tour === "on" && tourAt < 0 && S.charImported) setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 150); };
+{ const closeSet = () => { if (S.tour === "on" && tourAt < 0 && S.importDone) setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 150); };
   new MutationObserver(() => { if (!$("setModal").classList.contains("open")) closeSet(); }).observe($("setModal"), {attributes:true, attributeFilter:["class"]}); }
 // first visit (or switched on again): start the tour
 const tourPending = () => S.tour === undefined || S.tour === "later" || S.tour === "on";
 // the tour only comes after a complete import (stat window → equipment → build → Apply)
-function tourAfterImport(){ if (!tourPending()) return false; setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 450); return true; }
-setTimeout(() => { if (S.charImported && tourPending() && !$("setModal").classList.contains("open") && !$("impModal").classList.contains("open")) tourShow(0); }, 400);
+function tourAfterImport(){ S.importDone = Date.now(); save(); if (!tourPending()) return false; setTimeout(() => { $("tourSkip").checked = false; tourShow(0); }, 450); return true; }
+setTimeout(() => { if (S.importDone && tourPending() && !$("setModal").classList.contains("open") && !$("impModal").classList.contains("open")) tourShow(0); }, 400);
 var WELCOME_PEEK = false;
 $("welcomeClose").onclick = () => { WELCOME_PEEK = true; $("welcome").classList.remove("on"); };
 $("welcomeGo").onclick = () => { $("btnImport").click(); };
