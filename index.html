@@ -1753,6 +1753,7 @@ function equipWindow(){
 function renderGear(){
   $("charCard").innerHTML = charCard() + buildCard();
   fillMissingIcons();
+  nameOldItems();
   renderLive();
   try { renderSets(); } catch(e){ console.error(e); const m = `<div class="note" style="color:var(--bad);padding:10px">Something went wrong here: ${esc(String(e && e.message || e))}. Please send a screenshot of this message.</div>`; if ($("setList")) $("setList").innerHTML = m; if ($("scrollList")) $("scrollList").innerHTML = m; }
   try { renderKillGoals(); } catch(e){ console.error(e); }
@@ -2038,7 +2039,18 @@ async function nameFromIcon(slot){
     const d = featDist(mine, ft) + pen;
     if (!best || d < best.d) best = {it, d}; });
   if (!best || best.d > 0.45 || S.gear[slot] !== g) return;   // tested: Blue Calas 0.32 vs Dark Calas 0.43; Emerald 0.39 vs next 0.72
-  if (g.name !== best.it.name){ g.name = best.it.name; if (typeof save === "function") save(); }
+  if (g.name !== best.it.name){ g.name = best.it.name; }
+  // a blurry read can miss a stat line: the item has at least its base stats
+  GSTATS.forEach(([k]) => { const b = best.it.st[k] || 0; if (b > 0 && (g.st[k] || 0) < b) g.st[k] = b; });
+  if (typeof save === "function") save();
+}
+/* items scanned before naming by picture: name them once */
+const NAMED_TRY = new Set();
+function nameOldItems(){
+  const todo = Object.keys(S.gear).filter(sl => S.gear[sl] && !S.gear[sl].name && IMGS[sl] && IMGS[sl].icon && !NAMED_TRY.has(sl + JSON.stringify(S.gear[sl].st)));
+  if (!todo.length) return;
+  todo.forEach(sl => NAMED_TRY.add(sl + JSON.stringify(S.gear[sl].st)));
+  Promise.all(todo.map(sl => nameFromIcon(sl).catch(() => {}))).then(() => { if (todo.some(sl => S.gear[sl] && S.gear[sl].name)) renderAll(); });
 }
 
 /* green notification after a good scan: stats read and the picture saved; fades out slowly */
