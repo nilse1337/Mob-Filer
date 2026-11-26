@@ -444,6 +444,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .tourtog{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600}
 .kodds{display:block;font:600 12px var(--mono);color:var(--muted);margin-top:3px;cursor:help}
 html.touring,html.touring body{overflow:hidden}
+.imptotal{margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);background:color-mix(in srgb,var(--accent) 7%,var(--panel2));font-size:13px}.imptotal span{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}.imptotal b{color:var(--good)}
 </style>
 </head>
 <body>
@@ -2298,7 +2299,12 @@ function renderImp(){
       ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
       : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
     set("impGear", `<div class="impgearwrap"><div class="impeq">${equipWindow()}${!got.length ? `<div class="impov"><div><b>👉 Open your EQUIPMENT inventory in MapleStory</b><div class="note">Press <kbd>E</kbd> in game, then hover your mouse over your items one by one${usesStars() ? ` (and your ${ammoName().toLowerCase()})` : ''}.<br>Each one is read and shows up here.</div></div></div>` : ''}</div>
-      <div>${head}<div class="impitems">${items}</div>${usesStars() ? `<div class="impammo"><div class="note"><b>Your ${ammoName().toLowerCase()}</b> — hover them in game, or pick them here:</div><div class="ammorow">${AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === curStar()[0] && S[ammoKey()] ? 'on' : ''}" title="${esc(x[0])} · W.ATK +${x[1]}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><b>+${x[1]}</b></button>`).join("")}</div></div>` : ''}
+      <div>${head}<div class="impitems">${items}</div>${got.length ? (() => {   // everything your equipment adds up to
+        const gs = Object.values(S.gear).filter(Boolean), tot = {}, ex = {};
+        gs.forEach(g => { Object.entries(g.st || {}).forEach(([k, v]) => tot[k] = (tot[k] || 0) + v); Object.entries(g.ex || {}).forEach(([k, v]) => ex[k] = (ex[k] || 0) + v); });
+        if (usesStars() && got.includes("stars")) tot.watk = (tot.watk || 0) + curStar()[1];
+        const parts = GSTATS.filter(([k]) => tot[k]).map(([k, l]) => `<b>${l} ${tot[k] > 0 ? '+' : ''}${Math.round(tot[k]*10)/10}</b>`).concat(EXSTATS.filter(([k]) => ex[k]).map(([k, l]) => `${l} +${ex[k]}`));
+        return parts.length ? `<div class="imptotal"><span>Total from your equipment</span><div>${parts.join(' · ')}</div></div>` : ''; })() : ''}${usesStars() ? `<div class="impammo"><div class="note"><b>Your ${ammoName().toLowerCase()}</b> — hover them in game, or pick them here:</div><div class="ammorow">${AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === curStar()[0] && S[ammoKey()] ? 'on' : ''}" title="${esc(x[0])} · W.ATK +${x[1]}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><b>+${x[1]}</b></button>`).join("")}</div></div>` : ''}
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-impgo="build">Skip equipment</button>${got.length ? '<button class="btn primary" data-impgo="build">Looks good — next: build ▸</button>' : ''}</div></div></div>`);
   } else set("impGear", "");
   // step 3: the build, from your base stats (stat window minus the gear you just scanned)
