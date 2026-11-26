@@ -436,7 +436,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .tour{position:fixed;inset:0;z-index:46;display:none}.tour.on{display:block}
 .tspot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(8,11,18,.62),0 0 0 2px var(--accent);pointer-events:none;transition:all .25s ease}
 .tcard{position:fixed;background:var(--panel);border:1px solid var(--accent);border-radius:14px;padding:16px 16px 12px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .25s ease,left .25s ease}
-.tcard h4{margin:4px 0 6px;font-size:17px}.tcard p{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:var(--text)}
+.tcard h4{margin:4px 0 6px;font-size:17px}.tcard .ttext{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:var(--text)}.tcard .ttext ul{margin:6px 0 0;padding-left:18px}.tcard .ttext li{margin:2px 0}
 .tstep{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
 .tclose{position:absolute;top:8px;right:10px;background:none;border:0;color:#fff;font-size:18px;cursor:pointer;opacity:.8}.tclose:hover{opacity:1}
 .tnav{display:flex;align-items:center;gap:8px}.tdots{flex:1;display:flex;justify-content:center;gap:5px}.tdots i{width:7px;height:7px;border-radius:50%;background:var(--line2)}.tdots i.on{background:var(--accent)}
@@ -445,6 +445,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .kodds{display:block;font:600 12px var(--mono);color:var(--muted);margin-top:3px;cursor:help}
 html.touring,html.touring body{overflow:hidden}
 .imptotal{margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);background:color-mix(in srgb,var(--accent) 7%,var(--panel2));font-size:13px}.imptotal span{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}.imptotal b{color:var(--good)}
+.gtool2{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.gtool2 .note{margin:0}
 </style>
 </head>
 <body>
@@ -553,9 +554,11 @@ html.touring,html.touring body{overflow:hidden}
 <main class="page" id="pageGear">
   <section class="panel" style="padding:14px 16px">
     <div id="charCard"></div>
-    <div class="gtool">
-      <label class="gpaste small scancard" id="gearDrop"><span class="scico">📋</span><span class="sctxt"><b>Paste item tooltip</b><small>Ctrl+V a screenshot · or drop / click to choose files</small></span><input type="file" id="gearFile" accept="image/*" multiple hidden></label>
-      <div class="livebox scancard" id="liveBox"></div>
+    <div class="gtool2">
+      <button class="btn" id="btnManualGear">✏️ Manual input equipment</button>
+      <span class="note">Pick a slot in the inventory and type its stats in. Pasting a tooltip (Ctrl+V) still works too.</span>
+      <label id="gearDrop" hidden><input type="file" id="gearFile" accept="image/*" multiple hidden></label>
+      <div id="liveBox" hidden></div>
     </div>
     <div id="gearMsg"></div>
   </section>
@@ -645,7 +648,7 @@ html.touring,html.touring body{overflow:hidden}
     <button class="tclose" id="tourClose" title="Close the tour">✕</button>
     <div class="tstep" id="tourStep"></div>
     <h4 id="tourTitle"></h4>
-    <p id="tourText"></p>
+    <div class="ttext" id="tourText"></div>
     <div class="tnav"><button class="btn small" id="tourBack">← Back</button><span class="tdots" id="tourDots"></span><button class="btn primary small" id="tourNext">Next →</button></div>
     <label class="tskip"><input type="checkbox" id="tourSkip"> Don't show this tour again</label>
   </div>
@@ -2000,7 +2003,7 @@ function equipWindow(){
     </div></div>`;
 }
 function renderGear(){
-  $("charCard").innerHTML = charCard() + buildCard();
+  $("charCard").innerHTML = buildCard();   // the character itself is shown on the Monsters page
   fillMissingIcons();
   nameOldItems();
   renderLive();
@@ -3940,10 +3943,10 @@ $("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $(
 
 /* ---------- site tour: 4 steps on the dimmed page; first visit only (or switched on again in Settings) ---------- */
 const TOUR = [
-  {sel:"#charbar", t:"Your character", x:"This is the character you just imported: level, job, accuracy and skill. Everything below is calculated from it. Pick another skill or skill level to compare, and open More stats & buffs to add potions and buffs."},
-  {sel:"#summary", t:"At a glance", x:"The quick answers for your character: how many monsters you hit 100%, your next accuracy goal, the best EXP per hit (see the top 5) and the strongest monster that's weak to your element."},
-  {sel:"#layoutMain", t:"Monsters", x:"Every MSCW monster with your hit rate, the ACC you still need and how many hits it takes. Click one for its details, elements and where to find it — the 1-, 2-, 3-hit panel shows what you still need to kill it faster."},
-  {sel:"#navGear", t:"Gear & Upgrades", x:"Your scanned equipment lives here. See the best possible set for your level and build, and the upgrades that add the most damage with the scrolls you choose. Starting over? Use the red Reset all data button."}
+  {sel:"#charbar", t:"Your character", x:"This is the character you just imported. Everything below is calculated from it.<ul><li>Level, job, accuracy and skill</li><li>Pick another skill or skill level to compare</li><li><b>More stats &amp; buffs</b>: add potions and buffs</li></ul>"},
+  {sel:"#summary", t:"At a glance", x:"The quick answers for your character:<ul><li>How many monsters you hit 100%</li><li>Your next accuracy goal</li><li>The best EXP per hit (click to see the top 5)</li><li>The strongest monster that's weak to your element</li></ul>"},
+  {sel:"#layoutMain", t:"Monsters", x:"Every MSCW monster with:<ul><li>Your hit rate and the ACC you still need</li><li>How many hits it takes to kill</li><li>Click one for its details, elements and where to find it</li><li>The 1-, 2-, 3-hit panel shows what you need to kill it faster</li></ul>"},
+  {sel:"#navGear", t:"Gear & Upgrades", x:"Your scanned equipment lives here.<ul><li>The best possible set for your level and build</li><li>The upgrades that add the most damage, with the scrolls you choose</li><li>Starting over? Use the red <b>Reset all data</b> button</li></ul>"}
 ];
 let tourAt = -1;
 function tourShow(i){
@@ -3958,7 +3961,7 @@ function tourShow(i){
     const r = el.getBoundingClientRect(), pad = 8, top = Math.max(4, r.top - pad), h = Math.min(window.innerHeight - 8 - top, r.height + pad*2);
     const sp = $("tourSpot"); sp.style.left = (r.left - pad) + "px"; sp.style.top = top + "px"; sp.style.width = (r.width + pad*2) + "px"; sp.style.height = h + "px";
     const c = $("tourCard"), cw = Math.min(380, window.innerWidth - 24); c.style.width = cw + "px";
-    $("tourStep").textContent = `Step ${i+1} of ${TOUR.length}`; $("tourTitle").textContent = st.t; $("tourText").textContent = st.x;
+    $("tourStep").textContent = `Step ${i+1} of ${TOUR.length}`; $("tourTitle").textContent = st.t; $("tourText").innerHTML = st.x;
     $("tourDots").innerHTML = TOUR.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join("");
     $("tourBack").style.visibility = i ? "visible" : "hidden"; $("tourNext").textContent = i === TOUR.length - 1 ? "Done ✓" : "Next →";
     const ch = c.offsetHeight; let y = top + h + 12; if (y + ch > window.innerHeight - 8) y = top - ch - 12; if (y < 8) y = Math.min(window.innerHeight - ch - 8, top + 20);
@@ -4032,6 +4035,12 @@ document.addEventListener("paste", e => {
   });
 });
 window.addEventListener("hashchange", renderAll);
+$("btnManualGear").onclick = () => {   // open the fill-in form on the selected (or first empty) slot
+  const order = ["weapon","hat","overall","top","bottom","gloves","shoes","cape","shield","earrings"];
+  const sl = S.gearSel && order.includes(S.gearSel) && !S.gear[S.gearSel] ? S.gearSel : (order.find(k => !S.gear[k] && !((k === "top" || k === "bottom") && S.gear.overall) && !(k === "overall" && (S.gear.top || S.gear.bottom))) || S.gearSel || "weapon");
+  S.gearSel = sl; S.gearEdit = sl; renderAll();
+  setTimeout(() => { const f = document.querySelector("#gearSlots input, #gearSlots select"); if (f){ f.scrollIntoView({block:"center", behavior:"smooth"}); f.focus(); } }, 50);
+};
 $("gearFile").addEventListener("change", e => { const fs = [...e.target.files]; if (fs.length) handleGearFiles(fs, null); e.target.value = ""; });
 const gdrop = $("gearDrop");
 ["dragenter","dragover"].forEach(t => gdrop.addEventListener(t, e => { e.preventDefault(); gdrop.classList.add("over"); }));
