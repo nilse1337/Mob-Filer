@@ -358,6 +358,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .pchip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;cursor:help}
 .pchip.map{font-weight:700}.pchip.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 35%,transparent)}.pchip.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}.pchip.slow{color:#f5a524;border-color:#f5a52455}.pchip.mate{color:var(--muted)}
 .ttplan .tpl{gap:4px 6px!important}
+.klv{font-size:12px;color:var(--muted);margin-top:3px}.klv b{color:#f5a524;font-family:var(--mono)}.qmark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--line2);font-size:10px;font-weight:800;color:var(--muted);cursor:help;vertical-align:1px;margin-left:4px}.qmark:hover{color:var(--text);border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -2864,17 +2865,21 @@ function renderKillGoals(){
     const avgOk = base.ko <= n, minOk = base.worst <= n;
     const line = mode => stats.map(([k,l]) => { const x = needFor(k, n, mode, model, mob); return x === null ? `<span class="bad">out of reach</span>` : x === 0 ? "" : `+${x} ${l}`; }).filter(Boolean);
     const avgNeed = avgOk ? null : line("avg"), minNeed = minOk ? null : line("min");
+    // levels of AP into the main stat: 5 AP per level, minus what the build keeps for its second stat (next gear's requirement)
+    const apPer = (() => { const gk = typeof buildGroup === "function" ? buildGroup() : null; const bk = gk ? ((S.builds && S.builds[gk]) || detectBuild()) : "std"; return bk === "none" ? 5 : bk === "low" ? 4.5 : 4; })();
+    const lvFor = mode => { const x = needFor(prim, n, mode, model, mob); return x === null ? null : x === 0 ? 0 : Math.ceil(x / apPer); };
+    const lvA = avgOk ? 0 : lvFor("avg"), lvM = minOk ? 0 : lvFor("min");
+    const lvTip = `<b>Levels to get there with AP alone</b><ul><li>You get 5 AP per level. Your build keeps about ${5 - apPer === 0 ? 'none' : (5 - apPer) + ' AP per level'} for its second stat, so new gear (and weapons that may come out later) stays wearable — that leaves ≈ ${apPer} AP per level for ${prim.toUpperCase()}.</li><li>Counts only the AP: no new gear, scrolls or skill levels on the way. Leveling up also makes the monster's level gap smaller, so the real number can be a bit lower.</li></ul>`;
+    const lvS = (v, w) => v === null || S.level + v > 200 ? `<span class="bad">not by leveling</span> (${w})` : `<b>+${v}</b> level${v > 1 ? 's' : ''} (${w})`;
+    const lvLine = (lvA || lvM) ? `<div class="klv">⬆ ${lvA ? lvS(lvA, 'average') : ''}${lvA && lvM ? ' · ' : ''}${lvM ? lvS(lvM, 'every time') : ''} <span class="qmark" data-tip="${esc(lvTip)}">?</span></div>` : '';
     return `<div class="kcard ${avgOk ? 'done' : ''}"><h4>${n}<small>HIT${n > 1 ? 'S' : ''}</small></h4>
       <div class="note">needs <span class="kbig">${fmt(perCast)}</span> damage per ${hits > 1 ? `cast (${fmt(perCast/hits)} per hit)` : 'hit'} on average</div>
       <div class="need">${avgOk ? '<span class="ok">✓ you already do this on average</span>' : `Average: ${avgNeed.map(x => x.replace(/^\+(\d+)/, '<span class="kneed">+$1</span>')).join('<span class="or">or</span>')}`}</div>
       <div class="need">${minOk ? '<span class="ok">✓ every time, even on a low roll</span>' : `Every time: ${minNeed.map(x => x.replace(/^\+(\d+)/, '<span class="kneed">+$1</span>')).join('<span class="or">or</span>')}`}</div>
+      ${lvLine}
     </div>`;
   }).join("");
-  $("killPanel").innerHTML = `<div class="khead">
-      <h3>What it takes to 1-, 2- or 3-hit</h3>
-      <select id="killMob" class="txt" style="height:32px;font-size:12.5px">${mobs.map(e => `<option value="${e.id}" ${e.id===mob.id?'selected':''}>${esc(e.name)} (Lv ${e.level} · ${fmt(e.hp)} HP)</option>`).join("")}</select>
-      <span class="note">now <span class="knum">${fmt(base.lo)}–${fmt(base.hi)}</span> per hit · ${Number.isFinite(base.ko) ? `<span class="knum">${base.ko}</span> hit${base.ko > 1 ? 's' : ''} on average` : "can't kill"}</span>
-      <span class="note">${esc(jobOf().label)} Lv ${S.level} · ${magic ? `INT ${S.char.int} · Magic ${S.char.magic}` : `${prim.toUpperCase()} ${S.char[prim]} · Attack ${S.char.atkMin}–${S.char.atkMax}`} · ${esc(sk.name)} Lv ${RR.at.lv}${hits > 1 ? ` (${hits} hits/cast)` : ''} · ${magic ? 'M.DEF ' + (mob.mdef ?? '?') : 'P.DEF ' + (mob.pdef ?? '?')}</span></div>
+  $("killPanel").innerHTML = `<div class="khead"><h3>What it takes to 1-, 2- or 3-hit <span class="note" style="font-weight:600">${esc(mob.name)}</span></h3></div>
     <div class="kgrid">${cards}</div>
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
