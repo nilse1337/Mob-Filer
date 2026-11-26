@@ -379,6 +379,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .btn.morebtn{border:1px solid var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:800}.btn.morebtn:hover{background:var(--accent);color:#1a1200}
 .elc.ec-fire{background:var(--fireBg,rgba(239,68,68,.14))}.elc.ec-ice{background:var(--iceBg,rgba(56,189,248,.14))}.elc.ec-lightning{background:rgba(250,204,21,.12)}.elc.ec-holy{background:rgba(253,230,138,.12)}.elc.ec-poison{background:rgba(132,204,22,.12)}.elc.undead{background:rgba(168,85,247,.13)}
 .elc.ec-fire .h{color:var(--fire,#f87171)}.elc.ec-ice .h{color:var(--ice,#7dd3fc)}
+.totop{position:fixed;right:22px;bottom:22px;z-index:900;width:44px;height:44px;border-radius:50%;border:1px solid var(--accent);background:var(--accent);color:#1a1200;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.4);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s}
+.totop.on{opacity:1;transform:translateY(0);pointer-events:auto}.totop:hover{filter:brightness(1.1)}
 </style>
 </head>
 <body>
@@ -397,7 +399,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 <main class="page" id="pageCalc">
   <div id="previewBar" class="previewbar" style="display:none"></div>
   <!-- 1. CHARACTER -->
-  <div class="sechead"><span class="sh-ico">🧙</span><b>Your character</b><span class="sh-sub">level, accuracy, job &amp; skill — everything below is calculated from this</span></div>
+  <div class="sechead"><b>Your character</b><span class="sh-sub">level, accuracy, job &amp; skill — everything below is calculated from this</span></div>
   <section class="panel charbar">
     <div class="cb-row">
       <div><label class="lbl">Level <span id="lvlSrc" class="srctag"></span></label>
@@ -446,12 +448,12 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
   </section>
 
   <!-- 2. SUMMARY -->
-  <div class="sechead"><span class="sh-ico">📊</span><b>At a glance</b><span class="sh-sub">click a box to filter the list or open the top 5</span></div>
+  <div class="sechead"><b>At a glance</b></div>
   <section class="summary" id="summary"></section>
   <section class="panel toptrain" id="topTrain"></section>
 
   <!-- 3. MONSTERS + INSPECTOR -->
-  <div class="sechead"><span class="sh-ico">👾</span><b>Monsters</b><span class="sh-sub">pick one in the list to see its details on the right</span></div>
+  <div class="sechead"><b>Monsters</b><span class="sh-sub">pick one in the list to see its details on the right</span></div>
   <section class="layout">
     <div class="panel list">
       <div class="toolbar">
@@ -498,6 +500,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 </main>
 
 <div id="toast"></div>
+<button id="toTop" class="totop" title="Back to the top" aria-label="Back to the top">▲</button>
 <div class="modal" id="lightbox"><div class="panel" style="width:auto;max-width:92vw;padding:10px;text-align:center"><img id="lightImg" alt="" style="max-width:88vw;max-height:84vh;image-rendering:auto;border-radius:6px"><div><button class="btn small" data-close="lightbox" style="margin-top:8px">Close</button></div></div></div>
 <!-- SETTINGS -->
 <div class="modal" id="setModal">
@@ -3437,6 +3440,9 @@ function jumpToRow(row){
   } else row.scrollIntoView({block: "start", behavior: "smooth"});
   [row, $("insp"), $("killPanel")].forEach(el => { if (!el) return; el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1800); });
 }
+/* back-to-top button: only when you've scrolled down */
+(() => { const b = $("toTop"); const upd = () => b.classList.toggle("on", window.scrollY > 300); window.addEventListener("scroll", upd, {passive:true}); upd();
+  b.onclick = () => window.scrollTo({top:0, behavior:"smooth"}); })();
 /* ---------- events ---------- */
 document.addEventListener("click", ev => {
   const sr = ev.target.closest("[data-statwin]");
