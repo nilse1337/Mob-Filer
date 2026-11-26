@@ -375,7 +375,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .elc.weak{border-color:color-mix(in srgb,var(--good) 45%,transparent)}.elc.weak .m{color:var(--good)}.elc.resist .m{color:#f5a524}.elc.immune .m{color:var(--bad)}.elc.undead{border-color:rgba(168,85,247,.45)}.elc.undead .m{color:#c084fc}
 .ec-fire .h{color:#f87171}.ec-ice .h{color:#7dd3fc}.ec-lightning .h{color:#facc15}.ec-holy .h{color:#fde68a}.ec-poison .h{color:#a3e635}.elc.undead .h{color:#c084fc}
 .btn.resetf{background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid var(--accent);color:var(--accent);font-weight:800}.btn.resetf:hover{background:var(--accent);color:#1a1200}
-.sechead{display:flex;align-items:baseline;gap:8px;margin:18px 4px 8px;flex-wrap:wrap}.sechead:first-of-type{margin-top:6px}.sechead b{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}.sh-ico{font-size:15px}.sh-sub{font-size:12px;color:var(--muted)}
+.vunit{font-size:13px;font-weight:600;color:var(--muted);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0}
+.sechead{display:flex;align-items:baseline;gap:8px;margin:22px 4px -4px;flex-wrap:wrap}.sechead:first-of-type{margin-top:6px}.sechead b{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}.sh-ico{font-size:15px}.sh-sub{font-size:12px;color:var(--muted)}
 .btn.morebtn{border:1px solid var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);font-weight:800}.btn.morebtn:hover{background:var(--accent);color:#1a1200}
 .elc.ec-fire{background:var(--fireBg,rgba(239,68,68,.14))}.elc.ec-ice{background:var(--iceBg,rgba(56,189,248,.14))}.elc.ec-lightning{background:rgba(250,204,21,.12)}.elc.ec-holy{background:rgba(253,230,138,.12)}.elc.ec-poison{background:rgba(132,204,22,.12)}.elc.undead{background:rgba(168,85,247,.13)}
 .elc.ec-fire .h{color:var(--fire,#f87171)}.elc.ec-ice .h{color:var(--ice,#7dd3fc)}
@@ -411,6 +412,19 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .impdone{text-align:center;padding:22px;border:2px solid #2fbf71;border-radius:14px;background:#10261a}
 .impdone h4{margin:0 0 6px;font-size:22px}.impdone .btn{margin-top:12px;font-size:15px;padding:10px 26px}
 .setnotice.left::before{left:28px;right:auto}#navGear.pulse{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent);border-radius:8px}
+.impammo{margin-top:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.ammorow{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.ammorow button{display:flex;align-items:center;gap:4px;padding:4px 7px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--text);cursor:pointer;font:600 12px var(--mono)}
+.ammorow button img{width:24px;height:24px;image-rendering:pixelated}.ammorow button.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%,transparent)}
+.cempty{display:none;align-items:center;gap:12px;flex-wrap:wrap}.charbar.noch>:not(.cempty){display:none!important}.charbar.noch .cempty{display:flex}
+.cempty .ce-txt{display:flex;flex-direction:column;gap:3px;margin-right:auto}.cempty .ce-txt b{font-size:16px}.cempty .btn{padding:10px 18px;font-size:14px}
+.gempty{padding:18px 6px;text-align:center}.gempty b{display:block;font-size:15px;margin-bottom:6px}.gempty .btn{margin:10px 4px 0}
+.ugrid{display:grid;gap:10px;margin-top:12px}.ugrid .uopt{display:grid;gap:5px}.ugrid .ulbl{font-size:12px;font-weight:700;color:var(--muted)}.ugrid .uctl{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ugrid .seg{width:max-content;max-width:100%;flex-wrap:wrap}.ugrid .ulegend{margin-left:auto;white-space:nowrap}
+.bopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0 0 12px}
+.bopt{display:flex;flex-direction:column;gap:6px;text-align:left;padding:12px;border-radius:12px;border:2px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;font:inherit}
+.bopt:hover{border-color:var(--line2)}.bopt.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel2))}
+.bopt .bt{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px}.bopt .bt small{font-weight:600;color:var(--good);font-size:11px}
+.bopt .bico{display:flex;gap:6px;min-height:40px;align-items:center}.bopt .bico img{width:36px;height:36px;object-fit:contain;image-rendering:pixelated;padding:3px;border-radius:8px;background:#eef1f5}
+.bopt .note{font-size:12px;line-height:1.4}.sbico{display:flex;gap:4px}.sbico img{width:26px;height:26px;object-fit:contain;image-rendering:pixelated}
 </style>
 </head>
 <body>
@@ -430,7 +444,12 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
   <div id="previewBar" class="previewbar" style="display:none"></div>
   <!-- 1. CHARACTER -->
   <div class="sechead"><b>Your character</b><span class="sh-sub">level, accuracy, job &amp; skill — everything below is calculated from this</span></div>
-  <section class="panel charbar">
+  <section class="panel charbar" id="charbar">
+    <div class="cempty">
+      <div class="ce-txt"><b>No character yet</b><span class="note">Import your stats from MapleStory, or try the site with a random example character.</span></div>
+      <button class="btn primary" data-openimport="1">📷 Import stats</button>
+      <button class="btn" data-randomchar="1">🎲 Use random template</button>
+    </div>
     <div class="cb-row">
       <div><label class="lbl">Level <span id="lvlSrc" class="srctag"></span></label>
         <div class="step"><button data-step="level:-1">−</button><input id="inLevel" inputmode="numeric"><button data-step="level:1">+</button></div></div>
@@ -548,7 +567,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
           <div class="two"><div><span class="note">Weak ×</span><input class="txt mono" id="inWeakMul" inputmode="decimal"></div><div><span class="note">Resistant ×</span><input class="txt mono" id="inStrongMul" inputmode="decimal"></div></div></div>
       </div>
       <div class="setgrid">
-        <div><label class="lbl">Don't know your ACC? Estimate it</label>
+        <div id="estBox"><label class="lbl">Don't know your ACC? Estimate it</label>
           <div class="chips" id="classChips"></div>
           <div class="three" style="margin-top:8px">
             <div><span class="note" id="lblPrimary">Total DEX</span><input class="txt mono" id="inPrimary" inputmode="numeric"></div>
@@ -594,7 +613,7 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 <!-- IMPORT -->
 <div class="modal" id="impModal">
   <div class="panel wide">
-    <div class="mhead"><h3>📷 Import your character</h3><button class="btn small" data-close="impModal" style="margin-left:auto">✕</button></div>
+    <div class="mhead"><h3>📷 Import your character stats</h3><button class="btn small" data-close="impModal" style="margin-left:auto">✕</button></div>
     <div class="impsteps" id="impSteps"></div>
     <p class="note" id="impIntro" style="margin:0 0 12px">Screenshot your in-game <b>CHARACTER STAT</b> window with the DETAIL panel open, then drop it here, choose a file, or paste with Ctrl+V. It's read in your browser — nothing is uploaded.</p>
     <div class="implive" id="impLive"></div>
@@ -610,6 +629,8 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
     </div>
     <div id="impGear"></div>
     <div class="impsum" id="impSumGear"></div>
+    <div id="impBuild"></div>
+    <div class="impsum" id="impSumBuild"></div>
     <div id="impDone"></div>
   </div>
 </div>
@@ -1483,7 +1504,8 @@ function letterCost(g, ch){
 }
 /* job from the stat window: class from the black job line + main stat, sub-job from the red line */
 function detectJob(info, v){
-  const st = {warrior:v.str||0, magician:v.int||0, bowman:v.dex||0, thief:v.luk||0};
+  const ok9 = x => (x > 0 && x < 1000) ? x : 0;   // a misread like 50149 is not a stat
+  const st = {warrior:ok9(v.str), magician:ok9(v.int), bowman:ok9(v.dex), thief:ok9(v.luk)};
   const statCls = Object.entries(st).sort((a,b) => b[1]-a[1])[0][0];
   const n1 = info ? info.line1 : 0;
   let cls = {7:"warrior", 6:"bowman", 5:"thief"}[n1] || statCls;
@@ -1494,17 +1516,32 @@ function detectJob(info, v){
   if (!n1 && (v.level||0) <= 10 && Math.max(...Object.values(st)) < 35) cls = "beginner";
   if (cls === "beginner") return {job:"beginner", conf:1};
   const sub = info ? info.sub : [];
-  if (!sub.length) return {job:cls, conf: n1 ? 0.9 : 0.6};
+  const lv = v.level || 0;
+  // which jobs are possible at this level (MSCW: 2nd job from 30, 3rd job from 70)
+  const ok = j => !(j.third && lv && lv < 70) && !(j.sub && !j.third && lv && lv < 30);
+  if (!sub.length || (lv && lv < 30)) return {job:cls, conf: n1 ? 0.9 : 0.6};
+  // shape of each red letter: narrow (I), wide (W/M), dash, or normal — the order of these tells the jobs apart well
+  const kind = g => g.hr < 0.45 ? "-" : g.ar < 0.3 ? "i" : g.ar > 0.95 && g.ar < 1.3 ? "w" : g.ar >= 1.3 ? "2" : "n";
+  const want = ch => ch === "-" ? "-" : ch === "I" ? "i" : (ch === "W" || ch === "M") ? "w" : "n";
+  const got = sub.map(kind);
+  const edit = (a, b) => {   // edit distance; a merged pair of letters ("2") may stand for two normal letters
+    const D = Array.from({length:a.length+1}, (_, i) => [i].concat(Array(b.length).fill(0)));
+    for (let j=1;j<=b.length;j++) D[0][j] = j;
+    for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++){
+      D[i][j] = Math.min(D[i-1][j] + 1, D[i][j-1] + 1, D[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+      if (a[i-1] === "2" && j >= 2) D[i][j] = Math.min(D[i][j], D[i-1][j-2] + 0.3);
+    }
+    return D[a.length][b.length];
+  };
   let best = null;
   for (const [k,j] of Object.entries(JOBS)){
-    if (j.cls !== cls || !j.sub) continue;
+    if (j.cls !== cls || !j.sub || !ok(j)) continue;
     const s = j.sub.replace(/ /g, "");
-    let cost = Math.abs(s.length - sub.length) * 0.5 + (j.third ? 0.15 : 0);
-    for (let i=0;i<Math.min(s.length, sub.length);i++) cost += letterCost(sub[i], s[i]);
-    cost /= Math.max(s.length, sub.length);
+    let lc = 0; for (let i=0;i<Math.min(s.length, sub.length);i++) lc += letterCost(sub[i], s[i]);
+    const cost = edit(got, [...s].map(want)) / s.length + lc / Math.max(s.length, sub.length) * 0.5 + (j.third ? (lv >= 70 ? -0.01 : 0.02) : 0);
     if (!best || cost < best.cost) best = {job:k, cost};
   }
-  return best ? {job:best.job, conf: Math.max(0, 1 - best.cost*4)} : {job:cls, conf:0.5};
+  return best ? {job:best.job, conf: Math.max(0, 1 - best.cost*3)} : {job:cls, conf:0.5};
 }
 
 /* best map per monster (MeowDB map data: spawns of that monster / all spawns on the map, respawn rate) */
@@ -1901,7 +1938,7 @@ function renderGear(){
     const first = SLOTS.find(([k]) => S.gear[k]); S.gearSel = first ? first[0] : "weapon";
   }
   const selLbl = SLOTS.find(s => s[0] === S.gearSel) || SLOTS[0];
-  const starDetail = S.gearSel === "stars" && typeof curStar === "function" ? `<div class="gcard"><div class="gslothead"><span>⭐ STARS</span></div><div class="gbody">${IMGS.stars && IMGS.stars.src ? `<img class="gimg" src="${IMGS.stars.src}" data-gimg="stars" alt="">` : ''}<div style="min-width:0"><div class="gname">${esc(curStar()[0])}</div><div class="note">W.ATK +${curStar()[1]}${S.stars ? '' : ' (assumed)'}</div><div class="note">Click the stars in the inventory to choose, or paste a screenshot of their tooltip (Ctrl+V).</div></div></div></div>` : '';
+  const starDetail = S.gearSel === "stars" && typeof curStar === "function" ? `<div class="gcard"><div class="gslothead"><span>${ammoKind() === 'stars' ? '⭐ STARS' : '🏹 ARROWS'}</span></div><div class="gbody">${IMGS[ammoKey()] && IMGS[ammoKey()].src ? `<img class="gimg" src="${IMGS[ammoKey()].src}" data-gimg="stars" alt="">` : ''}<div style="min-width:0"><div class="gname">${esc(curStar()[0])}</div><div class="note">W.ATK +${curStar()[1]}${S[ammoKey()] ? '' : ' (assumed)'}</div><div class="note">Click the stars in the inventory to choose, or paste a screenshot of their tooltip (Ctrl+V).</div></div></div></div>` : '';
   $("gearSlots").innerHTML = equipWindow() + `<div class="eqdetail">${starDetail || slotCard(selLbl[0], selLbl[1], selLbl[2]) || `<div class="note">Covered by your overall.</div>`}</div>`;
   if (!$("advList")) return;   // 'All upgrade ideas' panel removed
   const A = buildAdvice(), sk = RR.sk;
@@ -2001,27 +2038,27 @@ function readTipCanvas(c, forceSlot, res, live){
         // only clear equipment tooltips: besides the type there must be stats / defense / slots, and a weapon always has attack
         if (g){ const extra = Object.keys(r.values).filter(k => k !== "type").length;
           if (extra < 1 || (g.sub >= 9 && !(r.values.watk || r.values.matk))) g = null; }
-        if (!g && typeof STARS !== "undefined" && usesStars()){   // assassins: a throwing-star tooltip
-          let w = r.values.watk; const ok = v => STARS.some(s => s[1] === v);
+        if (!g && typeof AMMO !== "undefined" && usesStars()){   // assassins: a throwing-star tooltip
+          let w = r.values.watk; const ok = v => AMMO().some(s => s[1] === v);
           if (!ok(w)){ let nums = readStarAttack(c).filter(ok); if (!nums.length){ const c2 = document.createElement("canvas"); c2.width = c.width*2; c2.height = c.height*2; const x2 = c2.getContext("2d", {willReadFrequently:true}); x2.imageSmoothingQuality = "high"; x2.drawImage(c, 0, 0, c2.width, c2.height); nums = readStarAttack(c2).filter(ok); } w = nums.length ? nums[nums.length - 1] : 0; }
-          const hit = w ? STARS.filter(s => s[1] === w) : [];
-          if (hit.length){ S.stars = (hit.find(s => s[0] === S.stars) || hit[0])[0]; IMGS.stars = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stars:true}); return; }
+          const hit = w ? AMMO().filter(s => s[1] === w) : [];
+          if (hit.length){ S[ammoKey()] = (hit.find(s => s[0] === S[ammoKey()]) || hit[0])[0]; IMGS[ammoKey()] = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stars:true}); return; }
         }
         if (!g){ res({ok:false}); return; }
         const slot = placeGear(g, null); IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); return;
       }
       // stars slot selected: a throwing-star tooltip → match the stars by their W.ATK
       const starSel = (forceSlot || S.gearSel) === "stars";
-      if (typeof STARS !== "undefined" && (starSel || (!r.values.type && usesStars()))){
+      if (typeof AMMO !== "undefined" && (starSel || (!r.values.type && usesStars()))){
         let w = r.values.watk;
         if (!w){
-          const ok = v => STARS.some(s => s[1] === v);
+          const ok = v => AMMO().some(s => s[1] === v);
           let nums = readStarAttack(c).filter(ok);
           if (!nums.length){ const c2 = document.createElement("canvas"); c2.width = c.width*2; c2.height = c.height*2; const x2 = c2.getContext("2d", {willReadFrequently:true}); x2.imageSmoothingQuality = "high"; x2.drawImage(c, 0, 0, c2.width, c2.height); nums = readStarAttack(c2).filter(ok); }
           if (nums.length) w = nums[nums.length - 1];
         }
-        const hit = w ? STARS.filter(s => s[1] === w) : [];
-        if (hit.length){ S.stars = (hit.find(s => s[0] === S.stars) || hit[0])[0]; IMGS.stars = {src:snapshot(c), t:Date.now()}; saveImgs(); S.gearSel = "stars"; res({ok:true, stars:true, amb:hit.length > 1}); return; }
+        const hit = w ? AMMO().filter(s => s[1] === w) : [];
+        if (hit.length){ S[ammoKey()] = (hit.find(s => s[0] === S[ammoKey()]) || hit[0])[0]; IMGS[ammoKey()] = {src:snapshot(c), t:Date.now()}; saveImgs(); S.gearSel = "stars"; res({ok:true, stars:true, amb:hit.length > 1}); return; }
         if (starSel){ res({ok:false, stars:true}); return; }
       }
       // a character stat window? apply it directly
@@ -2113,7 +2150,7 @@ function liveTick(){
       }
       if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => { scanToast(r); renderAll(); renderLive(); }); else scanToast(r);
       LIVE.n++; if (IMPW.live && IMPW.step === "gear") IMPW.slots[r.stars ? "stars" : r.slot] = 1;
-      if (r.stars) LIVE.msg = `✓ Throwing stars — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
+      if (r.stars) LIVE.msg = `✓ ${ammoName()} — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
       else { const g = S.gear[r.slot]; LIVE.msg = `✓ ${SLOTS.find(s => s[0] === r.slot)[1]}${g.name ? ' — ' + g.name : ''}: ${statLine(g.st) || 'no attack stats'}`; }
       S.gearEdit = null; renderAll(); renderLive();
     }, true);
@@ -2144,7 +2181,7 @@ function renderLive(){
     const on = !!LIVE.stream && LIVE.mode === "gear";
     el.classList.toggle("on", on);
     el.innerHTML = on
-      ? `<span class="scico"><span class="livedot"></span></span><span class="sctxt"><b>Scanning your Maple screen${LIVE.n ? ` · ${LIVE.n} read` : ''}</b><small>Hover your items in MapleStory one by one${usesStars() ? ' (also your throwing stars)' : ''} — each tooltip is read automatically</small>${LIVE.msg ? `<span class="livemsg">${esc(LIVE.msg)}</span>` : ''}</span><button class="btn small" id="liveStop">Stop</button>`
+      ? `<span class="scico"><span class="livedot"></span></span><span class="sctxt"><b>Scanning your Maple screen${LIVE.n ? ` · ${LIVE.n} read` : ''}</b><small>Hover your items in MapleStory one by one${usesStars() ? ` (also your ${ammoName().toLowerCase()})` : ''} — each tooltip is read automatically</small>${LIVE.msg ? `<span class="livemsg">${esc(LIVE.msg)}</span>` : ''}</span><button class="btn small" id="liveStop">Stop</button>`
       : LIVE.stream
       ? `<span class="scico">🖥</span><span class="sctxt"><b>Your Maple screen is shared</b><small>Start scanning your equipment with it</small></span><button class="btn small go" data-livegear="1">Scan equipment</button>`
       : `<span class="scico">🖥</span><span class="sctxt"><b>Live scan from MapleStory</b><small>Share the <b>MapleStory</b> window (Window tab), then just hover your items — no screenshots needed</small></span><button class="btn small go" id="liveStart">Share Maple screen</button>`;
@@ -2166,9 +2203,9 @@ function renderImp(){
     ["impSteps","impSumStat","impSumGear","impGear","impDone"].forEach(i => set(i, ""));
     return;
   }
-  const st = IMPW.step, order = ["stat","check","gear","gcheck","done"], at = order.indexOf(st);
+  const st = IMPW.step, order = ["stat","check","gear","build","done"], at = order.indexOf(st);
   const chip = (t, from, to) => `<span class="${at > to ? 'ok' : at >= from ? 'cur' : ''}">${at > to ? '✓ ' : ''}${t}</span>`;
-  set("impSteps", chip("1 · Stats", 0, 1) + chip("2 · Equipment", 2, 3) + chip("3 · All set", 4, 4));
+  set("impSteps", chip("1 · Stats", 0, 1) + chip("2 · Equipment", 2, 2) + chip("3 · Build", 3, 3) + chip("4 · All set", 4, 4));
   ["impIntro","drop"].forEach(i => show(i, false)); show("impApply", false); show("impNext", st === "check");
   show("impResult", st === "check");
   im.className = ""; im.style.display = st === "stat" || st === "check" ? "" : "none";
@@ -2180,18 +2217,28 @@ function renderImp(){
   const c = S.char;
   set("impSumStat", at >= 2 ? `<span>✓</span><span><b>Stats</b> · ${esc(jobOf().label)} · Lv ${S.level} · STR ${c.str} · DEX ${c.dex} · INT ${c.int} · LUK ${c.luk} · ACC ${S.baseAcc}</span><button class="btn small" data-impgo="check">Change</button>` : "");
   const got = Object.keys(IMPW.slots || {}).filter(k => k === "stars" || S.gear[k]);
-  if (st === "gear" || st === "gcheck"){
-    const items = got.map(k => k === "stars" ? `<div><b>Throwing stars</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
+  if (st === "gear"){
+    const items = got.map(k => k === "stars" ? `<div><b>${ammoName()}</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
       : `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${S.gear[k].name ? ' · ' + esc(S.gear[k].name) : ''}${S.gear[k].plus ? ' (+' + S.gear[k].plus + ')' : ''} <span class="s">${esc(statLine(S.gear[k].st) || 'no attack stats')}${S.gear[k].slots ? ' · ' + S.gear[k].slots + ' slots' : ''}</span></div>`).join("");
     const head = !got.length
       ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
       : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
-    set("impGear", `<div class="impgearwrap"><div class="impeq">${equipWindow()}${!got.length ? `<div class="impov"><div><b>👉 Open your EQUIPMENT inventory in MapleStory</b><div class="note">Press <kbd>E</kbd> in game, then hover your mouse over your items one by one${usesStars() ? ' (and your throwing stars)' : ''}.<br>Each one is read and shows up here.</div></div></div>` : ''}</div>
-      <div>${head}<div class="impitems">${items}</div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-impgo="done">Skip equipment</button>${got.length ? '<button class="btn primary" data-impgo="done">Looks good ▸</button>' : ''}</div></div></div>`);
+    set("impGear", `<div class="impgearwrap"><div class="impeq">${equipWindow()}${!got.length ? `<div class="impov"><div><b>👉 Open your EQUIPMENT inventory in MapleStory</b><div class="note">Press <kbd>E</kbd> in game, then hover your mouse over your items one by one${usesStars() ? ` (and your ${ammoName().toLowerCase()})` : ''}.<br>Each one is read and shows up here.</div></div></div>` : ''}</div>
+      <div>${head}<div class="impitems">${items}</div>${usesStars() ? `<div class="impammo"><div class="note"><b>Your ${ammoName().toLowerCase()}</b> — hover them in game, or pick them here:</div><div class="ammorow">${AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === curStar()[0] && S[ammoKey()] ? 'on' : ''}" title="${esc(x[0])} · W.ATK +${x[1]}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><b>+${x[1]}</b></button>`).join("")}</div></div>` : ''}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-impgo="build">Skip equipment</button>${got.length ? '<button class="btn primary" data-impgo="build">Looks good — next: build ▸</button>' : ''}</div></div></div>`);
   } else set("impGear", "");
-  set("impSumGear", st === "done" ? `<span>✓</span><span><b>Equipment</b> · ${got.length ? got.length + ' item' + (got.length > 1 ? 's' : '') + ' read' : 'skipped'}</span><button class="btn small" data-impgo="gear">Change</button>` : "");
-  set("impDone", st === "done" ? `<div class="impdone"><h4>🎉 All set!</h4><div class="note">Your stats${got.length ? ' and equipment are' : ' are'} ready. Press Apply to use them everywhere on the site.</div><button class="btn primary" id="impFinish">Apply</button></div>` : "");
+  // step 3: the build, from your base stats (stat window minus the gear you just scanned)
+  const gk = buildGroup(), G = gk ? BUILDS[gk] : null, auto = gk ? detectBuild() : null, bcur = gk ? ((S.builds && S.builds[gk]) || auto) : null;
+  const bico = k => ((BUILD_SHOW[gk] || {})[k] || []).map(n => { const id = itemIconId(n); return id ? `<img src="https://maplestory.io/api/GMS/83/item/${id}/icon" alt="" title="${esc(n)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''; }).join("");
+  if (st === "build" && G){ const b = baseStats();
+    set("impBuild", `<div class="impcheck"><span style="font-size:24px">🧭</span><div><b>Build detected — please check</b><div class="note">From your base stats (STR ${b.str} · DEX ${b.dex} · INT ${b.int} · LUK ${b.luk}, without gear). Pick another one if it's wrong.</div></div></div>
+      <div class="bopts">${G.list.map(x => `<button class="bopt ${bcur === x.k ? 'on' : ''}" data-impbuild="${gk}:${x.k}"><span class="bt">${bcur === x.k ? '✓ ' : ''}${esc(x.l)}${x.k === auto ? ' <small>detected</small>' : ''}</span><span class="bico">${bico(x.k)}</span><span class="note">${esc(x.d)}</span></button>`).join("")}</div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" data-impgo="done">Looks good ▸</button></div>`);
+  } else set("impBuild", "");
+  const bl = G ? (G.list.find(x => x.k === bcur) || G.list[0]) : null;
+  set("impSumBuild", st === "done" && G ? `<span>✓</span><span><b>Build</b> · ${esc(bl.l)}</span><span class="sbico">${bico(bl.k)}</span><button class="btn small" data-impgo="build">Change</button>` : "");
+  set("impSumGear", st === "build" || st === "done" ? `<span>✓</span><span><b>Equipment</b> · ${got.length ? got.length + ' item' + (got.length > 1 ? 's' : '') + ' read' : 'skipped'}</span><button class="btn small" data-impgo="gear">Change</button>` : "");
+  set("impDone", st === "done" ? `<div class="impdone"><h4>🎉 All set!</h4><div class="note">Your stats${got.length ? ', equipment' : ''}${buildGroup() ? ' and build' : ''} are ready. Press Apply to use them everywhere on the site.</div><button class="btn primary" id="impFinish">Apply</button></div>` : "");
 }
 function gearNotice(){
   let n = $("setNotice"); if (n) n.remove();
@@ -2205,10 +2252,12 @@ function gearNotice(){
 }
 document.addEventListener("click", ev => {
   const go = ev.target.closest("[data-impgo]");
-  if (go){ const st = go.dataset.impgo; IMPW.step = st;
+  const ib = ev.target.closest("[data-impbuild]");
+  if (ib){ const [gk, k] = ib.dataset.impbuild.split(":"); S.builds = S.builds || {}; if (k === detectBuild()) delete S.builds[gk]; else S.builds[gk] = k; renderAll(); renderLive(); return; }
+  if (go){ let st = go.dataset.impgo; if (st === "build" && !buildGroup()) st = "done"; IMPW.step = st;
     if (st === "check"){ LIVE.mode = "idle"; $("impResult").style.display = ""; }
     if (st === "gear"){ impNextGear(); return; }
-    if (st === "done") LIVE.mode = "idle";
+    if (st === "done" || st === "build") LIVE.mode = "idle";
     renderLive(); return; }
   if (ev.target.closest("#impFinish")){ IMPW.live = false; liveStop(); $("impModal").classList.remove("open"); renderAll(); gearNotice(); return; }
   if (ev.target.closest("[data-opengear]")){ location.hash = "#gear"; const n = $("setNotice"); if (n) n.remove(); return; }
@@ -2300,7 +2349,7 @@ function nameOldItems(){
 function scanToast(r){
   if (!r || !r.ok) return;
   let txt;
-  if (r.stars) txt = `Throwing stars scanned — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
+  if (r.stars) txt = `${ammoName()} scanned — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
   else if (r.slot){ const g = S.gear[r.slot], im = IMGS[r.slot]; if (!g || !im || !im.icon) return;
     const exl = EXSTATS.filter(([k]) => g.ex && g.ex[k]).map(([k, l]) => `${l} +${g.ex[k]}`).join(' · ');
     txt = `${SLOTS.find(s => s[0] === r.slot)[1]} scanned${g.name ? ' — ' + g.name : ''} · ${[statLine(g.st), exl].filter(Boolean).join(' · ') || 'no stats'}${g.slots ? ' · ' + g.slots + ' slots' : ''}`; }
@@ -2325,7 +2374,7 @@ async function handleGearFiles(files, forceSlot){
     const r = await readTipFile(f, forceSlot);
     if (r.ok && r.slot) await nameFromIcon(r.slot).catch(() => {});
     scanToast(r);
-    if (r.stars){ msgs.push(r.ok ? `<span class="ok">✓</span> Throwing stars: ${esc(curStar()[0])} (W.ATK +${curStar()[1]})${r.amb ? ' — two stars have this W.ATK, click the stars slot to switch' : ''}` : `<span class="bad">✕ Couldn't read the stars from that screenshot.</span> Pick them from the list under the inventory.`); continue; }
+    if (r.stars){ msgs.push(r.ok ? `<span class="ok">✓</span> ${ammoName()}: ${esc(curStar()[0])} (W.ATK +${curStar()[1]})${r.amb ? ' — two kinds have this W.ATK, click that slot to switch' : ''}` : `<span class="bad">✕ Couldn't read the stars from that screenshot.</span> Pick them from the list under the inventory.`); continue; }
     if (r.ok && r.stat){ msgs.push(`<span class="ok">✓</span> Character updated from your stat window: ${esc(jobOf().label)}, Lv ${S.level}`); continue; }
     if (r.ok){ const g = S.gear[r.slot]; msgs.push(`<span class="ok">✓</span> ${SLOTS.find(s => s[0] === r.slot)[1]}: ${statLine(g.st)}${g.slots ? ` · ${g.slots} slots` : ''}`); }
     else msgs.push(`<span class="bad">✕ Couldn't read that tooltip.</span> Use an uncropped PNG screenshot with the whole tooltip visible.`);
@@ -2363,6 +2412,63 @@ document.addEventListener("change", ev => {
     document.querySelectorAll("[data-gf]").forEach(el => { el.value = it.st[el.dataset.gf] || ""; });
     $("gfSlots").value = it.slots; $("gfName").value = it.name; if ($("gfSub")) $("gfSub").value = it.sub;
   }
+});
+
+/* ---------- random example character: a believable MSCW character (Lv ≤ 92) with gear that fits its job ---------- */
+function randomTemplate(){
+  const R = a => a[Math.floor(Math.random() * a.length)], ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const cls = R(["warrior","magician","bowman","thief"]);
+  const lv = ri(15, 92);
+  const tier = lv >= 70 ? "third" : lv >= 30 ? "second" : "first";
+  const jobs = Object.entries(JOBS).filter(([k, j]) => j.cls === cls && (tier === "third" ? j.third : tier === "second" ? (j.sub && !j.third) : !j.sub));
+  const [job, J] = R(jobs);
+  const grp = cls === "thief" ? (/BANDIT/.test(J.sub || "") ? "bandit" : "assassin") : cls;
+  const G = BUILDS[grp], bk = R(G.list).k;
+  // base stats: 25 AP at level 1 + 5 per level, the job's minimum first
+  const total = 25 + 5 * (lv - 1), need = secReq(lv);
+  const min = {warrior:{str:35}, magician:{int:20}, bowman:{dex:25}, thief:{dex:25}}[cls];
+  const base = {str:4, dex:4, int:4, luk:4};
+  let sec = bk === "std" ? need + ri(0, 6) : bk === "low" ? Math.round(need * 0.55) : bk === "str" ? 25 : 4;
+  base[G.stat] = Math.max(sec, min[G.stat] || 4);
+  if (bk === "str") base.str = Math.min(lv + ri(0, 20), Math.floor(total * 0.35));   // STR bandit: STR for STR daggers
+  base[G.main] = total - Object.keys(base).filter(k => k !== G.main).reduce((a, k) => a + base[k], 0);
+  // set the character first, so the gear checks use these stats
+  S.level = lv; S.gear = {}; setJob(job);
+  Object.assign(S.char, base, {critRate:5, critDmg:120});
+  const pickFor = (subs, spread) => {
+    const ok = ITEMS.filter(it => subs.includes(it.sub) && usable(it, cls) && it.lv <= lv && wearCheck(it, null).ok);
+    const own = ok.filter(it => it.job !== 0), pool = own.length ? own : ok;   // prefer gear made for this class
+    const top = pool.filter(it => it.lv >= lv - (spread || 20));
+    const list = top.length ? top : pool.sort((a, b) => b.lv - a.lv).slice(0, 4);
+    return list.length ? R(list) : null;
+  };
+  const put = (slot, it) => { if (it) S.gear[slot] = {sub:it.sub, st:Object.assign({}, it.st), slots:it.slots || 0, name:it.name}; };
+  { // weapon: one of the strongest you can wear (STR bandits: a STR dagger)
+    let ws = ITEMS.filter(it => J.weapons.includes(it.sub) && usable(it, cls) && it.lv <= lv && wearCheck(it, null).ok && (bk !== "str" || it.req[0] > 0));
+    if (!ws.length) ws = ITEMS.filter(it => J.weapons.includes(it.sub) && usable(it, cls) && it.lv <= lv && wearCheck(it, null).ok);
+    if (ws.some(it => it.job !== 0)) ws = ws.filter(it => it.job !== 0);   // a real class weapon, not a fun one (umbrella, plunger…)
+    const pw = it => (cls === "magician" ? (it.st.matk || 0) : (it.st.watk || 0));
+    ws.sort((a, b) => pw(b) - pw(a)); put("weapon", ws.length ? R(ws.slice(0, 3)) : null); }
+  if (Math.random() < 0.5) put("overall", pickFor([2])); if (!S.gear.overall){ put("top", pickFor([1])); put("bottom", pickFor([3])); }
+  ["hat","gloves","shoes","cape","earrings"].forEach(sl => { if (Math.random() < 0.85) put(sl, pickFor(SLOT_SUBS[sl])); });
+  if (S.gear.weapon && !TWO_HANDED.includes(S.gear.weapon.sub) && cls !== "bowman" && Math.random() < 0.6) put("shield", pickFor([7]));
+  // totals as the stat window would show them
+  const gs = Object.values(S.gear).reduce((a, g) => addSt(a, g.st), {});
+  ["str","dex","int","luk"].forEach(k => S.char[k] = base[k] + (gs[k] || 0));
+  if (usesStars()){ const am = AMMO().filter(a => a[1] <= 15 + lv / 3); S[ammoKey()] = R(am.length ? am : AMMO())[0]; }
+  const c = S.char, w = S.gear.weapon ? S.gear.weapon.sub : defaultWeapon(), wm = WEAPON_MODEL(w);
+  const W = Math.max(1, (gs.watk || 0) + (usesStars() ? curStar()[1] : 0)), P = c[wm.P] || 0, Q = wm.Q.reduce((s, k) => s + (c[k] || 0), 0), m = tier === "first" ? 0.15 : 0.5;
+  c.atkMax = Math.round(W * (1 + (P * wm.W + Q) / 100)); c.atkMin = Math.round(W * (0.8 + (P * m * wm.W + Q) / 100));
+  c.magic = Math.floor(c.int / 2) + (gs.matk || 0);
+  S.baseAcc = accFromStatWindow(cls, lv, c);
+  S.builds = Object.assign({}, S.builds, {[grp]: bk}); S.statWin = null; S.charTemplate = Date.now(); S.gearSel = null;
+  Object.keys(IMGS).forEach(k => delete IMGS[k]); saveImgs();
+  renderAll();
+  toast(`🎲 Example character: ${jobOf().label}, Lv ${lv}${BUILDS[grp] ? ' · ' + G.list.find(x => x.k === bk).l : ''}. Import your own stats any time.`);
+}
+document.addEventListener("click", ev => {
+  if (ev.target.closest("[data-randomchar]")) randomTemplate();
+  if (ev.target.closest("[data-openimport]")) $("btnImport").click();
 });
 
 /* ================= CLASS BUILDS (detected from base stats, shown only for your class) ================= */
@@ -2439,18 +2545,40 @@ function wearChar(){
   return c;
 }
 
-/* ================= THROWING STARS (claw users) ================= */
+/* items that show what a build is about (pictures in the import window) */
+const BUILD_SHOW = {
+  magician:{std:["Dark Calas","Cromi","Golden Pride"], low:["Blue Wizard Robe","Fairy Wand","Lemona"], none:["Blue Plain Robe","Lemona","Blue Bamboo Hat"]},
+  warrior:{std:["Black Dragon Robe","Jeweled Katar","Metal Gear"], low:["Blood Fitted Mail","Lion’s Fang"], none:["Blue Sauna Robe","Brown Bamboo Hat"]},
+  bowman:{std:["Blue Lumati","Olympus"], low:["Red Lumati","Rower"], none:["Blue Sauna Robe","Brown Bamboo Hat"]},
+  assassin:{std:["Purple Avenger","Steel Slain"], low:["Dark Avenger","Dark Avarice"], none:["Red Sauna Robe","Brown Bamboo Hat","Steel Guards"]},
+  bandit:{std:["Shinkita","Purple Avenger"], str:["Sai","Bazlud","Red Avenger"], low:["Korean Fan","Dark Avenger"]}
+};
+
+/* ================= THROWING AMMO() (claw users) ================= */
 // MSCW stars with a known source (MeowDB): name, W.ATK, item ID (same ID on maplestory.io)
-const STARS = [["Subi Throwing Stars",15,"2070000"],["Wolbi Throwing Stars",17,"2070001"],["Mokbi Throwing Stars",19,"2070002"],["Wooden Top",19,"2070009"],
+const STAR_LIST = [["Subi Throwing Stars",15,"2070000"],["Wolbi Throwing Stars",17,"2070001"],["Mokbi Throwing Stars",19,"2070002"],["Wooden Top",19,"2070009"],
   ["Kumbi Throwing Stars",21,"2070003"],["Icicle",21,"2070010"],["Tobi Throwing Stars",23,"2070004"],["Steely Throwing Knives",25,"2070005"],["Ilbi Throwing Stars",27,"2070006"]];
-const usesStars = () => S.char.cls === "thief" && (S.gear.weapon ? S.gear.weapon.sub === 22 : !/BANDIT/.test(jobOf().sub || ""));   // assassins, hermits and rogues with a claw
-const curStar = () => STARS.find(s => s[0] === S.stars) || STARS[0];
-const bestStar = () => STARS.reduce((a, s) => s[1] > a[1] ? s : a, STARS[0]);
+// arrows (MSCW names, maplestory.io icon IDs): bows and crossbows each have their own
+const ARROW_BOW = [["Arrows for Bows",0,"2060000"],["Bronze Arrows for Bows",1,"2060001"],["Iron Arrows for Bows",2,"2060002"]];
+const ARROW_XBOW = [["Arrows for Crossbows",0,"2061000"],["Bronze Arrows for Crossbows",1,"2061001"],["Iron Arrows for Crossbows",2,"2061002"]];
+// which ammo you use: "stars" (claw), "bow", "xbow" or null
+const ammoKind = () => {
+  const c = S.char.cls, w = S.gear.weapon ? S.gear.weapon.sub : null;
+  if (c === "thief") return (w ? w === 22 : !/BANDIT/.test(jobOf().sub || "")) ? "stars" : null;
+  if (c === "bowman") return (w ? w === 20 : (jobOf().weapons || [19])[0] === 20) ? "xbow" : "bow";
+  return null;
+};
+const AMMO = () => ({stars:STAR_LIST, bow:ARROW_BOW, xbow:ARROW_XBOW})[ammoKind()] || STAR_LIST;
+const ammoKey = () => ammoKind() === "stars" ? "stars" : "arrow";
+const ammoName = () => ammoKind() === "stars" ? "Throwing stars" : "Arrows";
+const usesStars = () => !!ammoKind();   // stars or arrows: an ammo slot in the inventory
+const curStar = () => AMMO().find(s => s[0] === S[ammoKey()]) || AMMO()[0];
+const bestStar = () => AMMO().reduce((a, s) => s[1] > a[1] ? s : a, AMMO()[0]);
 function starCell(){
   if (!usesStars()) return "";
   const s = curStar();
-  return `<div class="eqcell has starcell ${S.gearSel === 'stars' ? 'sel' : ''}" style="grid-column:5;grid-row:5" data-starpick="1" title="Throwing stars: ${esc(s[0])} (W.ATK +${s[1]}) — click to choose">
-      <img class="eqico" src="https://maplestory.io/api/GMS/83/item/${s[2]}/icon" alt=""><span class="eqslots">+${s[1]}</span>${S.stars ? '' : '<span class="staras">STARS</span>'}<span class="stardrop">▾</span></div>`;
+  return `<div class="eqcell has starcell ${S.gearSel === 'stars' ? 'sel' : ''}" style="grid-column:5;grid-row:5" data-starpick="1" title="${ammoName()}: ${esc(s[0])} (W.ATK +${s[1]}) — click to choose">
+      <img class="eqico" src="https://maplestory.io/api/GMS/83/item/${s[2]}/icon" alt=""><span class="eqslots">+${s[1]}</span>${S[ammoKey()] ? '' : '<span class="staras">AMMO()</span>'}<span class="stardrop">▾</span></div>`;
 }
 /* dropdown with pictures, attached to the page so the inventory window doesn't cut it off */
 function closeStarPop(){ const p = document.getElementById("starPop"); if (p) p.remove(); }
@@ -2458,8 +2586,8 @@ function openStarPop(cell){
   closeStarPop();
   const r = cell.getBoundingClientRect(), cur = curStar();
   const pop = document.createElement("div"); pop.id = "starPop"; pop.className = "starpop2";
-  pop.innerHTML = `<div class="starhint">Which throwing stars do you use?</div>` + STARS.map(x => `<button data-star="${esc(x[0])}" class="${x[0] === cur[0] && S.stars ? 'on' : ''}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt=""><span>${esc(x[0].replace(" Throwing Stars","").replace(" Throwing Knives"," Knives"))}</span><b>+${x[1]}</b></button>`).join("")
-    + `<div class="starhint" style="margin-top:4px">or paste a screenshot of the stars' tooltip (Ctrl+V)</div>`;
+  pop.innerHTML = `<div class="starhint">Which ${ammoKind() === "stars" ? "throwing stars" : "arrows"} do you use?</div>` + AMMO().map(x => `<button data-star="${esc(x[0])}" class="${x[0] === cur[0] && S[ammoKey()] ? 'on' : ''}"><img src="https://maplestory.io/api/GMS/83/item/${x[2]}/icon" alt=""><span>${esc(x[0].replace(" Throwing Stars","").replace(/ for (Cross)?[Bb]ows/,"").trim() || x[0].replace(" Throwing Knives"," Knives"))}</span><b>+${x[1]}</b></button>`).join("")
+    + `<div class="starhint" style="margin-top:4px">or paste a screenshot of their tooltip (Ctrl+V)</div>`;
   document.body.appendChild(pop);
   const w = pop.offsetWidth, h = pop.offsetHeight;
   let left = Math.min(window.innerWidth - w - 8, Math.max(8, r.right - w)), top = r.bottom + 6;
@@ -2467,7 +2595,7 @@ function openStarPop(cell){
   pop.style.left = left + "px"; pop.style.top = top + "px";
 }
 document.addEventListener("click", ev => {
-  const st = ev.target.closest("[data-star]"); if (st){ S.stars = st.dataset.star; closeStarPop(); renderAll(); return; }
+  const st = ev.target.closest("[data-star]"); if (st){ S[ammoKey()] = st.dataset.star; closeStarPop(); if (typeof IMPW !== "undefined" && IMPW.live && IMPW.step === "gear") IMPW.slots.stars = 1; renderAll(); if (typeof renderLive === "function") renderLive(); return; }
   const cell = ev.target.closest("[data-starpick]");
   if (cell){ const was = !!document.getElementById("starPop"); S.gearSel = "stars"; renderAll(); if (!was){ const c2 = document.querySelector("[data-starpick]"); if (c2) openStarPop(c2); } else closeStarPop(); return; }
   if (!ev.target.closest("#starPop")) closeStarPop();
@@ -2737,9 +2865,9 @@ function setColumn(R){
     const c = curStar(), n = R.load.stars, keep = !n;
     const one = keep ? 0 : evalLoadout({stars:n}, R.model, R.mob, R.base).pct;
     rows.push(`<div class="brow ${keep ? 'keep' : ''}"><div class="bico"><img class="bimg" src="https://maplestory.io/api/GMS/83/item/${keep ? c[2] : n.id}/icon" alt=""></div>
-      <div class="bmain"><div class="btop"><span class="bslot">Stars</span><b class="bname">${esc(keep ? c[0] : n.name)}</b>${keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
+      <div class="bmain"><div class="btop"><span class="bslot">${ammoKind() === "stars" ? "Stars" : "Arrows"}</span><b class="bname">${esc(keep ? c[0] : n.name)}</b>${keep ? '<span class="tag t-cus">KEEP</span>' : ''}</div>
         <div class="bchips"><span class="bchip ${keep ? '' : 'up'}">W.ATK +${keep ? c[1] : n.watk}</span></div>
-        <div class="bmeta">${keep ? 'best stars available' : `vs your ${esc(c[0])}${S.stars ? '' : ' (assumed — click the stars in the inventory)'}`}</div></div>
+        <div class="bmeta">${keep ? 'best stars available' : `vs your ${esc(c[0])}${S[ammoKey()] ? '' : ' (assumed — click the stars in the inventory)'}`}</div></div>
       <div class="bside">${keep ? '' : `<span class="bpct ok">+${(one*100).toFixed(1)}%</span>`}</div></div>`);
   }
   if (!R.useOverall && S.gear.overall) rows.push(`<div class="note" style="padding:8px 2px">Top + bottom beat your overall.</div>`);
@@ -2925,7 +3053,7 @@ function usefulColumn(R){
     const sc = x.sc ? `${x.sc.n}× ${esc(x.sc.sc.target)} ${esc(x.sc.sc.stat)} Scroll ${x.sc.rate}%` : "";
     return `<div class="urow"><div class="urank">${i+1}</div>
       <div class="umain"><div class="sname">${x.kind === "scroll" ? iconImg(scrollIconId(x.sc.sc), "") : iconImg(x.id, "")}<b>${x.kind === "scroll" ? `Scroll your ${esc(x.name)}` : x.rebuy ? `Buy a new ${esc(x.name)}` : esc(x.name)}</b><span class="ugoal g-${x.goal.toLowerCase()}" title="What this upgrade mainly improves">${x.goal}</span></div>
-        <div class="note">${x.kind === "stars" ? `Throwing stars · W.ATK +${x.d.watk} vs ${esc(curStar()[0])}` : x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
+        <div class="note">${x.kind === "stars" ? `${ammoName()} · W.ATK +${x.d.watk} vs ${esc(curStar()[0])}` : x.kind === "item" ? `${SLOTS.find(s => s[0] === x.slot)[1]}${x.lv ? ' · Lv ' + x.lv : ''}${sc ? ' + ' + sc : ''}` : sc}${x.sc && x.sc.rate < 100 ? ` <span class="note">(${x.sc.rate}% chance each)</span>` : ''}</div>
         ${x.rebuy ? `<div class="note">yours is +${x.used - x.failed} with ${x.failed} failed scroll${x.failed > 1 ? 's' : ''} (${x.used} slots used) — a fresh one with every scroll working beats it</div>` : x.kind === "item" && x.sc ? `<div class="note"><span class="tg">item alone ${x.raw >= 0 ? '+' : '−'}${Math.abs(x.raw*100).toFixed(1)}%</span> · <span class="to">scrolls add +${((x.g - x.raw)*100).toFixed(1)}%</span> · total +${(x.g*100).toFixed(1)}%</div>` : ''}
         ${x.hit != null && R.base.hitP != null && x.hit - R.base.hitP > 0.004 ? `<div class="note">includes more ACC: hit rate on ${esc(R.mob.name)} ${(R.base.hitP*100).toFixed(1)}% → ${(x.hit*100).toFixed(1)}%</div>` : ''}
         <div class="ubar">${(() => { const it = x.g * (x.share === undefined ? 1 : x.share), scp = x.g - it; return `${it > 0 ? `<i class="ui" style="width:${it/max*100}%" title="item share"></i>` : ''}${scp > 0 ? `<i class="us" style="width:${Math.max(2, scp/max*100)}%" title="scroll share"></i>` : ''}`; })()}</div></div>
@@ -2963,15 +3091,25 @@ function renderHeaderGear(){
   $("genderSwitch").innerHTML = [["m","♂ Male"],["f","♀ Female"]].map(([k,l]) => `<button data-gender="${k}" class="${gd===k?'on':''}" title="${S.gender ? '' : 'Picked automatically'}">${l}</button>`).join("");
 }
 function renderSets(){
+  if (!S.charImported && !S.charTemplate && !Object.keys(S.gear || {}).length){   // nothing to work with yet: no made-up advice
+    const m = (t) => `<div class="gempty"><b>${t}</b><div class="note">Import your stats or scan your items to fill this in.</div><button class="btn primary" data-openimport="1">📷 Import stats</button><button class="btn" data-randomchar="1">🎲 Use random template</button></div>`;
+    $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, 0, 0, "current");
+    $("colSetHead").innerHTML = `<div class="colhead"><div><h3>Best possible set</h3></div></div>`;
+    $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3></div></div>`;
+    $("setList").innerHTML = m("No stats or items yet"); $("scrollList").innerHTML = m("No stats or items yet");
+    $("setTotals").innerHTML = ""; $("scrTotals").innerHTML = "";
+    return null;
+  }
   const R = computeSets();
   $("colCurHead").innerHTML = colHead("Current gear", "what you pasted", 0, R.base.ko, R.base.ko, "current");
   $("colSetHead").innerHTML = colHead("Best possible set", "best item per slot for your level and build, all slots free, with the scrolls you pick", R.withScrolls.pct, R.withScrolls.ko, R.base.ko, "set");
   const ug = S.usefulGrade === undefined ? 60 : S.usefulGrade;
   $("colScrHead").innerHTML = `<div class="colhead"><div><h3>Most useful upgrades</h3><div class="note">${S.gearView === "set" ? '<b style="color:var(--accent)">on top of the Best possible set</b> · ' : ''}single changes that add the most damage for your build vs <b>${esc(R.mob.name)}</b>${R.base.hitP != null && R.base.hitP < 0.999 ? ` (you hit it ${(R.base.hitP*100).toFixed(0)}% of the time, so ACC/DEX count too)` : ''} · scrolls counted as all succeeding · pick the monster in the 1-, 2-, 3-hit panel</div>
-    <div class="ugrade"><span class="note" style="font-weight:700">Include scrolls</span><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
-    <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div>
-    <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" data-tip="${esc(goalTip(k))}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div>
-    <div class="ugrade"><span class="note" style="font-weight:700">Include buying new items</span><div class="seg">${[[1,"Yes"],[0,"No"]].map(([v,l]) => `<button data-unew="${v}" class="${(S.usefulNew === false ? 0 : 1)===v?'on':''}">${l}</button>`).join("")}</div></div></div></div>`;
+    <div class="ugrid">
+      <div class="uopt"><span class="ulbl">Include scrolls</span><div class="uctl"><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div></div></div>
+      <div class="uopt"><span class="ulbl">Goal</span><div class="uctl"><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" data-tip="${esc(goalTip(k))}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div></div>
+      <div class="uopt"><span class="ulbl">Include buying new items</span><div class="uctl"><div class="seg">${[[1,"Yes"],[0,"No"]].map(([v,l]) => `<button data-unew="${v}" class="${(S.usefulNew === false ? 0 : 1)===v?'on':''}">${l}</button>`).join("")}</div><span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div></div>
+    </div></div></div>`;
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = usefulColumn(R);
   $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
@@ -3060,7 +3198,7 @@ function renderKillGoals(){
     <div class="note" style="margin-top:8px">Extra stats on top of your current gear (one stat on its own). "Every time" uses your lowest damage roll, so the kill is guaranteed${magic ? '' : ' when you hit'}.</div>`;
 }
 document.addEventListener("change", ev => { if (ev.target.id === "killMob"){ S.selectedId = ev.target.value; renderAll(); } });
-window.__mf = {itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
+window.__mf = {setJob, renderAll, JOBS, applyStatValues, itemIconId, iconFeat, featDist, findTooltip, readTipCanvas, computeSets, getS:()=>S, ITEMS, SCROLLS, gearModel, valueWith, evalLoadout};
 
 /* slow hover tooltips: [data-tip] shows after a short hover, fades out when you leave */
 (() => {
@@ -3298,7 +3436,7 @@ function renderSummary(){
   const weakLbl = sk.el ? `${{fire:"🔥",ice:"❄",lightning:"⚡",holy:"✨",poison:"☠"}[sk.el]} Weak to ${sk.el} · highest you hit` : "🔥/❄ weak monsters";
   const fwN = all.filter(e => e.fire === 1).length, iwN = all.filter(e => e.ice === 1).length;
   $("summary").innerHTML = `
-    <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length}</div><div class="s">monsters · click to filter</div></div>
+    <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length} <span class="vunit">monsters</span></div><div class="s">click to filter</div></div>
     <div class="panel tile" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span><div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
     <div class="panel tile ${S.topCollapsed === false ? 'open' : ''}" data-ttfold="1" title="Click to ${S.topCollapsed === false ? 'hide' : 'show'} the top 5"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"} (±15 Lv)</span><span class="tmore">${S.topCollapsed === false ? 'Hide ▴' : 'See top 5 ▾'}</span><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
     <div class="panel tile ${sk.el==='ice'?'ice':'fire'}" ${sk.el?`data-quick="mine"`:``}><span class="lbl">${weakLbl}</span><div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} · click to filter` : 'pick a fire/ice skill to compare'}</div></div>`;
@@ -3513,6 +3651,8 @@ function renderSettings(){
   $("formulaText").innerHTML = S.mode === "prebb"
     ? "L = max(0, MobLv − Lv)<br>Hit = ACC / ((1.84 + 0.07·L) × EVA) − 1"
     : "A = ACC × 100 / (10 × max(0, MobLv − Lv) + 255)<br>f = 0.15 + 0.20 / (1 + e^((A − EVA)/12))<br>Hit = (1 + f − EVA/A) / (2f)";
+  $("charbar").classList.toggle("noch", !S.charImported && !S.charTemplate);
+  $("estBox").style.display = S.charImported ? "none" : "";
   $("classChips").innerHTML = Object.entries(CLASSES).map(([k,c]) => `<span class="chip ${S.bClass===k?'on':''}" data-class="${k}">${c.label}</span>`).join("");
   const c = CLASSES[S.bClass]; $("lblPrimary").textContent = c.stat;
   $("outEst").textContent = classAcc(S.bClass, S.level, S.bPrimary, S.bLuk) + S.bGear;
@@ -3587,7 +3727,7 @@ document.addEventListener("click", ev => {
   if (!t) return;
   if (t.dataset.close){ $(t.dataset.close).classList.remove("open"); return; }
   if (t.dataset.step){ const [k, d] = t.dataset.step.split(":"); const [lo, hi] = LIMITS[k]; S[k] = Math.max(lo, Math.min(k === "skillLv" ? skillByKey(S.skill).max : hi, S[k] + (+d))); }
-  else if (t.dataset.class) S.bClass = t.dataset.class;
+  else if (t.dataset.class){ S.bClass = t.dataset.class; if (S.char.cls !== S.bClass && S.bClass !== "beginner") setJob(defaultJobFor(S.bClass)); }   // same job everywhere
   else if (t.dataset.buff) S.buffs[t.dataset.buff] = !S.buffs[t.dataset.buff];
   else if (t.dataset.dbuff) S.dmgBuffs[t.dataset.dbuff] = !S.dmgBuffs[t.dataset.dbuff];
   else if (t.dataset.tab) S.tab = t.dataset.tab;
@@ -3638,7 +3778,7 @@ $("btnApplyEst").onclick = () => { S.baseAcc = classAcc(S.bClass, S.level, S.bPr
   $("dataTip").dataset.tip = `<b>Data &amp; formulas</b><ul><li>Monsters (level, avoid, HP, defense, elements) come from MeowDB, only monsters with a known MSCW location.</li><li>Damage uses MeowDB's MSCW formula: defense, element, level gap and crit.</li><li>Magic never misses in MSCW, so accuracy only matters for physical attacks.</li></ul>`;
   $("blTip").dataset.tip = `<b>Hidden suggestions</b><ul><li>Monsters you removed with the ✕ (clicked twice) in "Best EXP per hit".</li><li>They still show in the monster list — only the top 5 suggestions skip them.</li><li>Click a name here to bring it back into the suggestions.</li></ul>`; }
 $("btnResetAll").addEventListener("click", ev => { const b = $("btnResetAll"); if (!b.classList.contains("sure")){ ev.stopImmediatePropagation(); b.classList.add("sure"); b.textContent = "Sure? This clears your character & gear"; clearTimeout(b._t); b._t = setTimeout(() => { b.classList.remove("sure"); b.textContent = "Reset everything"; }, 4000); } }, true);
-$("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $("btnResetAll").textContent = "Reset everything"; S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), keep); $("setModal").classList.remove("open"); renderAll(); };
+$("btnResetAll").onclick = () => { $("btnResetAll").classList.remove("sure"); $("btnResetAll").textContent = "Reset everything"; S.gear = {}; try { localStorage.removeItem("msacc-gear-img-v1"); } catch(e){} const keep = {pinned:S.pinned, overrides:S.overrides, customMobs:S.customMobs, theme:S.theme}; try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch(e){} location.hash = ""; location.reload(); };   // start clean: every part sets up its own defaults again
 $("btnResetFilters").onclick = () => { Object.assign(S, {search:"", region:"all", status:"all", elFilter:"all", exclude:[]}); $("inSearch").value = ""; renderAll(); };
 document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); }));
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open")); });
@@ -3706,9 +3846,10 @@ function statCrop(src, W, H){
   const sc = b.bw ? b.bw / 59 : b.lh / 14;   // 59px = blue label width at 100% game size
   const x0 = Math.max(0, Math.round(b.x0 - 12*sc)), y0 = Math.max(0, Math.round(b.y0 - 36*sc));
   const x1 = Math.min(W, Math.round(b.x1 + 110*sc)), y1 = Math.min(H, Math.round(b.y1 + 34*sc));
-  const k = Math.min(3, Math.max(1, 1.5 / sc));   // upscale small windows
+  // sharp 2× (or more for small windows) cut-out: whole pixels stay whole at normal game size, so the pixel font reads cleanly
+  const near = Math.abs(sc - Math.round(sc)) < 0.06, k = near ? Math.max(1, Math.round(2 / Math.max(0.5, Math.round(sc)))) : Math.min(3, Math.max(1.5, 2 / sc));
   const c = document.createElement("canvas"); c.width = Math.round((x1 - x0) * k); c.height = Math.round((y1 - y0) * k);
-  const cx = c.getContext("2d", {willReadFrequently:true}); cx.imageSmoothingEnabled = k > 1; cx.imageSmoothingQuality = "high";
+  const cx = c.getContext("2d", {willReadFrequently:true}); cx.imageSmoothingEnabled = !near; cx.imageSmoothingQuality = "high";
   cx.drawImage(f, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
   return {c, full:r0, sc};
 }
