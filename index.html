@@ -361,6 +361,11 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .klv{font-size:12px;color:var(--muted);margin-top:3px}.klv b{color:#f5a524;font-family:var(--mono)}.qmark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--line2);font-size:10px;font-weight:800;color:var(--muted);cursor:help;vertical-align:1px;margin-left:4px}.qmark:hover{color:var(--text);border-color:var(--accent)}
 .tag.t-el-fire{background:rgba(239,68,68,.15);color:#f87171}.tag.t-el-ice{background:rgba(56,189,248,.15);color:#7dd3fc}.tag.t-el-lightning{background:rgba(250,204,21,.15);color:#facc15}.tag.t-el-holy{background:rgba(253,230,138,.14);color:#fde68a}.tag.t-el-poison{background:rgba(132,204,22,.15);color:#a3e635}
 .el.dim{opacity:.45;filter:saturate(.6)}
+.tile{position:relative}.tmore{position:absolute;right:12px;bottom:10px;font-size:11px;font-weight:700;color:var(--accent);opacity:.85}.tile:hover .tmore{opacity:1;text-decoration:underline}
+.blbtn.sure{width:auto!important;padding:0 8px!important;font-size:11px;font-weight:800;background:var(--bad)!important;color:#fff!important}
+.setnotice{position:fixed;z-index:10001;width:300px;padding:12px 14px;border-radius:12px;background:#0f1522;border:1px solid var(--accent);box-shadow:0 12px 34px rgba(0,0,0,.5);font-size:13px;opacity:0;transform:translateY(-8px);transition:opacity .4s ease,transform .4s ease}
+.setnotice.on{opacity:1;transform:translateY(0)}.setnotice::before{content:"";position:absolute;top:-7px;right:28px;width:12px;height:12px;background:#0f1522;border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}
+.setnotice .note{margin:4px 0 8px}.snbtns{display:flex;gap:6px}#btnSettings.pulse{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent);transition:box-shadow .3s}
 </style>
 </head>
 <body>
@@ -2978,11 +2983,28 @@ document.addEventListener("click", ev => {
 });
 document.addEventListener("click", ev => {
   const b = ev.target.closest("[data-bl]");
-  if (b){ ev.preventDefault(); ev.stopPropagation(); S.blacklist = [...new Set([...(S.blacklist || []), b.dataset.bl])]; renderAll(); renderBlacklist(); return; }
+  if (b){ ev.preventDefault(); ev.stopPropagation();
+    // first click asks, second click hides
+    if (!b.classList.contains("sure")){ document.querySelectorAll("[data-bl].sure").forEach(x => { x.classList.remove("sure"); x.textContent = "✕"; }); b.classList.add("sure"); b.textContent = "Sure?"; clearTimeout(b._t); b._t = setTimeout(() => { b.classList.remove("sure"); b.textContent = "✕"; }, 3500); return; }
+    const id = b.dataset.bl, nm = (BYID.get(id) || {}).name || "this monster";
+    S.blacklist = [...new Set([...(S.blacklist || []), id])]; renderAll(); renderBlacklist(); hiddenNotice(id, nm); return; }
+  const un = ev.target.closest("[data-undohide]");
+  if (un){ ev.preventDefault(); S.blacklist = (S.blacklist || []).filter(x => x !== un.dataset.undohide); renderAll(); renderBlacklist(); const n = $("setNotice"); if (n) n.remove(); return; }
   const u = ev.target.closest("[data-unbl]");
   if (u){ ev.preventDefault(); S.blacklist = (S.blacklist || []).filter(x => x !== u.dataset.unbl); renderAll(); renderBlacklist(); return; }
   if (ev.target.closest("[data-openset]")){ ev.preventDefault(); ev.stopPropagation(); renderBlacklist(); $("setModal").classList.add("open"); }
 }, true);
+/* a notice that drops out of the Settings button: where to get a hidden monster back */
+function hiddenNotice(id, name){
+  let n = $("setNotice"); if (n) n.remove();
+  const btn = $("btnSettings"), r = btn.getBoundingClientRect();
+  n = document.createElement("div"); n.id = "setNotice"; n.className = "setnotice";
+  n.innerHTML = `<b>${esc(name)}</b> is hidden from your suggestions.<div class="note">You can bring it back any time under ⚙ Settings → Hidden monsters.</div><div class="snbtns"><button class="btn small" data-undohide="${esc(id)}">Undo</button><button class="btn small ghost" data-openset="1">Open Settings</button></div>`;
+  n.style.top = (r.bottom + 10) + "px"; n.style.right = Math.max(10, window.innerWidth - r.right) + "px";
+  document.body.appendChild(n); btn.classList.add("pulse"); setTimeout(() => btn.classList.remove("pulse"), 1600);
+  requestAnimationFrame(() => n.classList.add("on"));
+  setTimeout(() => { n.classList.remove("on"); setTimeout(() => n.remove(), 600); }, 7000);
+}
 $("btnExclude").onclick = ev => { ev.stopPropagation(); $("exPop").classList.toggle("open"); };
 document.addEventListener("change", ev => { const sh = ev.target.closest("[data-show]"); if (sh){ S[sh.dataset.show] = !sh.checked; renderAll(); $("exPop").classList.add("open"); } });
 document.addEventListener("change", ev => { const c = ev.target.closest("[data-ex]"); if (!c) return; const k = c.dataset.ex; S.exclude = (S.exclude || []).filter(x => x !== k); if (c.checked) S.exclude.push(k); renderAll(); $("exPop").classList.add("open"); });
@@ -3120,7 +3142,7 @@ function renderSummary(){
   $("summary").innerHTML = `
     <div class="panel tile" data-quick="100"><span class="lbl">You hit 100%</span><div class="v ok">${hit100.length} / ${all.length}</div><div class="s">monsters · click to filter</div></div>
     <div class="panel tile" data-jump="${target?target.id:''}"><span class="lbl">Next ACC goal</span><div class="v near">${target?esc(target.name):'Everything!'}</div><div class="s">${target?`Lv ${target.level} · need +${target.missing} ACC`:'You hit every monster'}</div></div>
-    <div class="panel tile ${S.topCollapsed === false ? 'open' : ''}" data-ttfold="1" title="Click to ${S.topCollapsed === false ? 'hide' : 'show'} the top 5"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"} (±15 Lv) <span class="ttcaret">${S.topCollapsed === false ? '▴' : '▾'} top 5</span></span>${train ? `<button class="blbtn" data-bl="${esc(train.id)}" title="Don't suggest ${esc(train.name)} any more (undo in Settings)">✕</button>` : ''}<div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
+    <div class="panel tile ${S.topCollapsed === false ? 'open' : ''}" data-ttfold="1" title="Click to ${S.topCollapsed === false ? 'hide' : 'show'} the top 5"><span class="lbl">${tg === "mesos" ? "Best mesos per hour" : "Best EXP per hit"} (±15 Lv)</span><span class="tmore">${S.topCollapsed === false ? 'Hide ▴' : 'See top 5 ▾'}</span><div class="v">${train?esc(train.name):'—'}</div><div class="s">${train?`${train._ko} hit${train._ko>1?'s':''} to kill · ${tg === 'mesos' ? `${train._mz.est ? '~' : ''}${fmt(Math.round(train._mph/100)*100)} mesos/hr` : `${fmt(train.exp)} EXP`}`:'Set your stats first'}</div></div>
     <div class="panel tile ${sk.el==='ice'?'ice':'fire'}" ${sk.el?`data-quick="mine"`:`data-quick="any"`}><span class="lbl">${weakLbl}</span><div class="v">${sk.el ? (weakBest?esc(weakBest.name):'—') : `${fwN} 🔥 · ${iwN} ❄`}</div><div class="s">${sk.el ? `${weakPool.length} weak monster${weakPool.length===1?'':'s'} · click to filter` : 'pick a fire/ice skill to compare'}</div></div>`;
   const top = pool.slice(0, 5);
   const tc = S.topCollapsed !== false;   // closed by default; opens from the "Best EXP per hit" tile
@@ -3129,7 +3151,7 @@ function renderSummary(){
     <span class="kmlbl">Damage range:</span><div class="seg kmode" title="Which part of your damage range to use for hits to kill">${[["low","Lowest hit"],["avg","Average hit"],["high","Highest hit"]].map(([k,l]) => `<button data-kmode="${k}" class="${km===k?'on':''}">${l}</button>`).join("")}</div>
     <span class="kmlbl">Hits to kill:</span><div class="seg kmode" title="Only suggest monsters you kill in this many hits">${[[0,"Any"],[1,"1 hit"],[2,"2 hits"],[3,"3+ hits"]].map(([k,l]) => `<button data-hk="${k}" class="${(S.hitsKill||0)===k?'on':''}">${l}</button>`).join("")}</div>
     <span class="kmlbl">Goal:</span><div class="seg kmode" title="What to rank the monsters by">${[["exp","EXP"],["mesos","Mesos"]].map(([k,l]) => `<button data-tgoal="${k}" data-tip="${esc(k === "exp" ? TIP_EXP : TIP_MESOS)}" class="${tg===k?'on':''}">${l}</button>`).join("")}</div>
-    <span class="note">monsters within 15 levels you hit every time (no bosses or PQ / job-test monsters) · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level${lowerUsed ? ` · <b style="color:#f5a524">${hk ? `not enough ${hk}${hk>=3?'+':''}-hit kills` : 'not enough monsters you always hit'} within 15 levels — lower-level monsters added</b>` : ''}${noFly ? ' · flying monsters skipped (warriors can\'t reach them)' : ''} · ✕ = don't suggest this monster${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
+    <span class="note">monsters within 15 levels you hit every time (no bosses or PQ / job-test monsters) · hits to kill include the monster's ${RR.type === "magic" ? "magic defense (M.DEF)" : "physical defense (P.DEF)"}, element and level${lowerUsed ? ` · <b style="color:#f5a524">${hk ? `not enough ${hk}${hk>=3?'+':''}-hit kills` : 'not enough monsters you always hit'} within 15 levels — lower-level monsters added</b>` : ''}${noFly ? ' · flying monsters skipped (warriors can\'t reach them)' : ''} · ✕ = don't suggest this monster (click twice)${bl.size ? ` · <a href="#" data-openset="1" style="color:var(--accent)">${bl.size} hidden</a>` : ''}</span></div>
     ${tc ? '' : top.length ? `<div class="ttlist">${top.map((e, i) => `<div class="ttrow" data-jump="${esc(e.id)}">
       <span class="ttrank">${i+1}</span><span class="ttname"><span class="ttnm">${mobPic(e)}${esc(e.name)}</span>${e.isFly ? ' <span class="ttag">🪽 flying</span>' : ''}${e.isBoss ? ' <span class="ttag">👑 boss</span>' : ''}${e.isUndead ? ' <span class="ttag">💀 undead</span>' : ''}${S.showTypeTags === false ? '' : monsterElements(e).map(([k, l]) => ` <span class="tag t-el-${k}">${l}</span>`).join('')}<small>Lv ${e.level}${e._low ? ` <span style="color:#f5a524">(${S.level - e.level} levels below you)</span>` : ''}${e.region ? ' · ' + esc(e.region) : ''}</small>${(() => { const t = trainPlan(e); if (!t) return ''; const m = t.m;
         const cond = t.cond.filter(([l]) => l !== "ok" || !/No special/.test(t.cond[0][1]));
