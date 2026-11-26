@@ -2806,7 +2806,7 @@ function renderSets(){
     <div class="ugrade"><span class="note" style="font-weight:700">Include scrolls</span><div class="seg">${[[0,"No scrolls"],[100,"100%"],[60,"60%"],[10,"10%"]].map(([g,l]) => `<button data-ugrade="${g}" class="${ug===g?'on':''}">${l}</button>`).join("")}</div>
     <span class="ulegend"><i class="ui"></i> item <i class="us"></i> scrolls</span></div>
     <div class="ugrade"><span class="note" style="font-weight:700">Goal</span><div class="seg">${GOALS.map(([k,l]) => `<button data-ugoal="${k}" data-tip="${esc(goalTip(k))}" class="${(S.usefulGoal || 'damage')===k?'on':''}">${goalLabel(k, l)}</button>`).join("")}</div></div>
-    <div class="ugrade"><span class="note" style="font-weight:700">Include new items</span><div class="seg">${[[1,"Yes"],[0,"No"]].map(([v,l]) => `<button data-unew="${v}" class="${(S.usefulNew === false ? 0 : 1)===v?'on':''}">${l}</button>`).join("")}</div></div></div></div>`;
+    <div class="ugrade"><span class="note" style="font-weight:700">Include buying new items</span><div class="seg">${[[1,"Yes"],[0,"No"]].map(([v,l]) => `<button data-unew="${v}" class="${(S.usefulNew === false ? 0 : 1)===v?'on':''}">${l}</button>`).join("")}</div></div></div></div>`;
   $("setList").innerHTML = setColumn(R);
   $("scrollList").innerHTML = usefulColumn(R);
   $("setTotals").innerHTML = `<div class="note">Total change: ${deltaLine(R.withScrolls.d) || 'none'}</div>`;
