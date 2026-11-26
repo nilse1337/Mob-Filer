@@ -2054,6 +2054,10 @@ async function nameFromIcon(slot){
 /* items scanned before naming by picture: name them once */
 const NAMED_TRY = new Set();
 function nameOldItems(){
+  // first: an unnamed item that can only be one item (base stats + used slots)
+  Object.keys(S.gear).forEach(sl => { const g = S.gear[sl]; if (!g || g.name || typeof couldBe !== "function") return;
+    const m = ITEMS.filter(it => it.lv <= S.level + 10 && couldBe(it, g) && Object.keys(it.st).some(k => GSTATS.some(([q]) => q === k)));
+    if (m.length === 1) g.name = m[0].name; });
   const todo = Object.keys(S.gear).filter(sl => S.gear[sl] && !S.gear[sl].name && IMGS[sl] && IMGS[sl].icon && !NAMED_TRY.has(sl + JSON.stringify(S.gear[sl].st)));
   if (!todo.length) return;
   todo.forEach(sl => NAMED_TRY.add(sl + JSON.stringify(S.gear[sl].st)));
@@ -2501,6 +2505,14 @@ function setColumn(R){
 
 /* most useful single changes for your damage: a better item (with its scrolls) or scrolls on what you wear */
 const GOALS = [["damage","Damage"],["attack","Attack"],["accuracy","Accuracy"],["crit","Crit"],["main","Main stat"]];
+/* could your (unnamed) item be this one? base stats fit and the extra fits the slots already used */
+function couldBe(it, cur){
+  if (!it || !cur || it.sub !== cur.sub) return false;
+  if ((cur.slots || 0) > it.slots) return false;
+  let extra = 0;
+  for (const [k] of GSTATS){ const b = it.st[k] || 0, c = cur.st[k] || 0; if (b > c + 0.1) return false; extra += c - b; }
+  return extra <= (it.slots - (cur.slots || 0)) * 6 + 3;
+}
 function usefulList(R){
   const model = R.model, mob = R.mob, base = R.base, out = [], grade = S.usefulGrade === undefined ? 60 : S.usefulGrade;
   const goal = S.usefulGoal || "damage", magic = RR.sk.type === "magic";
@@ -2553,6 +2565,7 @@ function usefulList(R){
     }
     // the same item you already wear is never an 'upgrade' (scrolling it is its own row)
     if (cur && cur.name) cands = cands.filter(it => it.name.toLowerCase() !== cur.name.toLowerCase());
+    else if (cur) cands = cands.filter(it => !couldBe(it, cur));   // unnamed: skip items your current one could be (its base + scrolls fit)
     let bestItem = null;
     for (const it of cands){ const b = bestFor(slot, it.st, it.sub, it.slots, fromSt, extra); if (bestItem && b.m <= bestItem.b.m) continue;
       if (gainOf(Object.assign({}, extra, {[slot]: {st:b.to, sub:it.sub}})) <= 0.0005) continue;   // never suggest something that lowers your damage
