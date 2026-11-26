@@ -384,6 +384,33 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 .totop.on{opacity:1;transform:translateY(0);pointer-events:auto}.totop:hover{filter:brightness(1.1)}
 #btnImport.glow{animation:impglow 1.8s ease-in-out infinite}@keyframes impglow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 0%,transparent)}50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 45%,transparent),0 0 22px color-mix(in srgb,var(--accent) 60%,transparent)}}
 .implive{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}.implive.on{border-color:#2fbf71;background:#10261a}.implive .btn{margin-left:auto;flex:none}
+
+/* import wizard (screen share) */
+.impsteps{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}.impsteps:empty{display:none}
+.impsteps span{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.impsteps span.cur{color:#111;background:var(--accent);border-color:var(--accent)}.impsteps span.ok{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,transparent)}
+.impbig{display:flex;gap:18px;align-items:center;padding:16px 18px;margin:0 0 12px;border:2px solid var(--accent);border-radius:14px;background:color-mix(in srgb,var(--accent) 8%,var(--panel2));animation:impPulse 1.8s ease-in-out infinite}
+@keyframes impPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.0)}50%{box-shadow:0 0 0 5px rgba(245,158,11,.22)}}
+.impbig h4{margin:0 0 6px;font-size:18px}.impbig ol{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6}.impbig .look{margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.impbig kbd{font:700 11px var(--mono);padding:1px 6px;border-radius:5px;background:#222b3a;border:1px solid var(--line2)}
+.swmock{flex:none;width:190px;border-radius:6px;background:#e9edf2;padding:4px;font:700 8px var(--mono);color:#333}
+.swmock .swt{background:#fff;padding:2px 4px;border-radius:3px;margin-bottom:3px}.swmock .swb{display:flex;gap:4px}.swmock .swc{flex:1;display:grid;gap:2px}
+.swmock .r{height:7px;border-radius:2px;background:#c94d7a}.swmock .r.g{background:#9bb53c}.swmock .r.b{background:#5a86c5}.swmock .r.w{background:#fff;opacity:.9}
+.swmock .swf{display:flex;justify-content:space-between;align-items:center;margin-top:3px;padding:2px 3px;background:#4b5a6e;color:#fff;border-radius:3px}
+.swmock .swdet{background:#d4b106;color:#222;padding:1px 4px;border-radius:3px;box-shadow:0 0 0 2px #f59e0b;animation:impPulse 1.2s infinite}
+.impcheck{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 0 12px;border:2px solid #f5a524;border-radius:12px;background:rgba(245,165,36,.09)}
+.impcheck b{font-size:15px}.impcheck .note{margin:2px 0 0}
+.impsum{display:flex;align-items:center;gap:10px;padding:9px 14px;margin:0 0 10px;border:1px solid color-mix(in srgb,var(--good) 45%,transparent);border-radius:10px;background:#10261a;font-size:13px}.impsum:empty{display:none}
+.impsum .btn{margin-left:auto}
+.impgearwrap{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:16px;align-items:start;margin:0 0 12px}
+.impeq{position:relative}.impeq .eqgrid{pointer-events:none}
+.impov{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:18px;border-radius:10px;background:rgba(10,14,22,.82);border:2px solid var(--accent);animation:impPulse 1.8s ease-in-out infinite}
+.impov b{display:block;font-size:16px;margin-bottom:6px}.impov .note{font-size:13px}
+.impitems{display:grid;gap:5px;font-size:13px}.impitems div{padding:6px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+.impitems .s{color:var(--muted);font-size:12px}
+.impdone{text-align:center;padding:22px;border:2px solid #2fbf71;border-radius:14px;background:#10261a}
+.impdone h4{margin:0 0 6px;font-size:22px}.impdone .btn{margin-top:12px;font-size:15px;padding:10px 26px}
+.setnotice.left::before{left:28px;right:auto}#navGear.pulse{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent);border-radius:8px}
 </style>
 </head>
 <body>
@@ -567,18 +594,23 @@ span.iicon.iemo{width:auto;height:auto;margin:0 2px 0 0;font-size:14px}
 <!-- IMPORT -->
 <div class="modal" id="impModal">
   <div class="panel wide">
-    <div class="mhead"><h3>📷 Import character stat window</h3><button class="btn small" data-close="impModal" style="margin-left:auto">✕</button></div>
-    <p class="note" style="margin:0 0 12px">Screenshot your in-game <b>CHARACTER STAT</b> window with the DETAIL panel open, then drop it here, choose a file, or paste with Ctrl+V. It's read in your browser — nothing is uploaded.</p>
+    <div class="mhead"><h3>📷 Import your character</h3><button class="btn small" data-close="impModal" style="margin-left:auto">✕</button></div>
+    <div class="impsteps" id="impSteps"></div>
+    <p class="note" id="impIntro" style="margin:0 0 12px">Screenshot your in-game <b>CHARACTER STAT</b> window with the DETAIL panel open, then drop it here, choose a file, or paste with Ctrl+V. It's read in your browser — nothing is uploaded.</p>
     <div class="implive" id="impLive"></div>
     <label class="drop" id="drop">Drop screenshot here · click to choose · or Ctrl+V (tip: Ctrl+V anywhere on the site works too)<input type="file" id="impFile" accept="image/*" hidden></label>
+    <div class="impsum" id="impSumStat"></div>
     <div class="imp" id="impResult" style="display:none">
       <div><canvas id="impCanvas"></canvas><div class="status" id="impStatus"></div></div>
       <div>
         <div class="impgrid" id="impGrid"></div>
         <div class="note" style="margin-top:10px">Check the values (red = not found). If ACC buffs were active in the screenshot, they're already inside ACCURACY.</div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-close="impModal">Cancel</button><button class="btn primary" id="impApply">Apply</button></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-close="impModal">Cancel</button><button class="btn primary" id="impApply">Apply</button><button class="btn primary" id="impNext" style="display:none">Looks good — next: equipment ▸</button></div>
       </div>
     </div>
+    <div id="impGear"></div>
+    <div class="impsum" id="impSumGear"></div>
+    <div id="impDone"></div>
   </div>
 </div>
 
@@ -764,10 +796,10 @@ const StatOCR = (function(){
 
   function read(imageData){
     const {data:px, width:W, height:H} = imageData;
-    const raw = {}, found = {}; let jobInfo = null;
+    const raw = {}, found = {}, lab = {}; let jobInfo = null;
     for (const color of ["pink","green","blue"]){
       const boxes = findLabels(px, W, H, color);
-      found[color] = boxes.filter(Boolean).length;
+      found[color] = boxes.filter(Boolean).length; lab[color] = boxes.filter(Boolean);
       boxes.forEach((b,i) => {
         const key = FIELDS[color][i]; if (!b) return;
         if (key === "job"){ try { jobInfo = readJob(px, W, H, b); } catch(e){} } if (!key || key === "name" || key === "job") return;
@@ -783,7 +815,11 @@ const StatOCR = (function(){
     const mp = nums(cut("mp", /^\d+\/\d+/)); if (mp.length >= 2){ v.mp = mp[0]; v.maxMp = mp[1]; }
     const at = nums(t("attack")); if (at.length >= 2){ v.attackMin = at[0]; v.attackMax = at[1]; }
     const ex = nums(t("exp")); if (ex.length){ v.exp = ex[0]; if (ex.length > 1) v.expPct = ex[1]; }
-    return {values:v, job:jobInfo, raw:Object.fromEntries(Object.entries(raw).map(([k,r]) => [k, r.text])), found, _glyphs:raw};
+    // where the window is: union of the label boxes (used to crop the window out of a full screenshot)
+    let box = null; const all = [].concat(lab.pink||[], lab.green||[], lab.blue||[]);
+    if (all.length >= 6){ const hs = all.map(b => b.h).sort((a,b) => a-b);
+      box = {x0:Math.min(...all.map(b => b.x0)), y0:Math.min(...all.map(b => b.y0)), x1:Math.max(...all.map(b => b.x1)), y1:Math.max(...all.map(b => b.y1)), lh:hs[hs.length>>1], bw:(lab.blue&&lab.blue[0]) ? lab.blue[0].w : 0}; }
+    return {values:v, job:jobInfo, box, raw:Object.fromEntries(Object.entries(raw).map(([k,r]) => [k, r.text])), found, _glyphs:raw};
   }
 
   return { read, setTemplates: t => { TEMPLATES = t; }, GW, GH };
@@ -1451,6 +1487,9 @@ function detectJob(info, v){
   const statCls = Object.entries(st).sort((a,b) => b[1]-a[1])[0][0];
   const n1 = info ? info.line1 : 0;
   let cls = {7:"warrior", 6:"bowman", 5:"thief"}[n1] || statCls;
+  // the stats clearly say which class (main stat far above the rest)? trust them over a shaky read of the job name
+  const srt = Object.values(st).sort((a,b) => b-a);
+  if (cls !== statCls && srt[0] >= 40 && srt[0] >= srt[1] * 2) cls = statCls;
   if (n1 === 8) cls = statCls === "magician" ? "magician" : ((v.level||0) <= 10 ? "beginner" : statCls);
   if (!n1 && (v.level||0) <= 10 && Math.max(...Object.values(st)) < 35) cls = "beginner";
   if (cls === "beginner") return {job:"beginner", conf:1};
@@ -1987,7 +2026,7 @@ function readTipCanvas(c, forceSlot, res, live){
       }
       // a character stat window? apply it directly
       let sv = null;
-      if (!r.lines.length){ try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){} }
+      if (!r.lines.length && !live){ try { sv = StatOCR.read(x.getImageData(0, 0, c.width, c.height)); } catch(e){} }
       if (sv && Object.keys(sv.values).length >= 5){ applyStat(sv); IMGS.stat = {src:snapshot(c), t:Date.now()}; saveImgs(); res({ok:true, stat:true}); return; }
       const g = gearFromTip(r);
       if (g){ const slot = placeGear(g, forceSlot && SLOT_SUBS[forceSlot].includes(g.sub) ? forceSlot : null); IMGS[slot] = {src:snapshot(c), icon:iconCrop(cc, r.icon), t:Date.now()}; if (slot === "overall"){ delete IMGS.top; delete IMGS.bottom; } if (slot === "top" || slot === "bottom") delete IMGS.overall; saveImgs(); res({ok:true, slot, g}); }
@@ -2038,9 +2077,16 @@ function liveTick(){
   LIVE.busy = true;
   try {
     const f = document.createElement("canvas"); f.width = W; f.height = H; f.getContext("2d", {willReadFrequently:true}).drawImage(v, 0, 0);
-    if (LIVE.mode === "stat"){   // looking for the CHARACTER STAT window
-      let n = 0; try { const r = StatOCR.read(f.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, W, H)); n = Object.keys(r.values || {}).length; if (n >= 8 && r.values.level !== undefined) n = statFromImage(f, W, H); else n = 0; } catch(e){}
-      if (n >= 8){ LIVE.statOk = n; LIVE.mode = "idle"; renderLive(); }
+    if (LIVE.mode === "stat"){   // looking for the CHARACTER STAT window: accept a read once two frames agree
+      let got = null; try { got = statRead(f, W, H); } catch(e){}
+      const v = got ? got.res.values || {} : {};
+      if (Object.keys(v).length >= 8 && v.level !== undefined){
+        const dj = detectJob(got.res.job, v), sig = JSON.stringify([dj.job, ...IMP_FIELDS.map(([k]) => v[k])]);
+        const L = LIVE.sreads = (LIVE.sreads || []).concat([sig]).slice(-8);
+        if (L.filter(x => x === sig).length >= 2 || L.length >= 6){
+          LIVE.statOk = statShow(got.res, got.c, got.sc, dj); LIVE.mode = "idle"; LIVE.sreads = []; IMPW.step = "check"; renderLive();
+        }
+      }
       LIVE.busy = false; return;
     }
     if (LIVE.mode !== "gear"){ LIVE.busy = false; return; }
@@ -2065,20 +2111,21 @@ function liveTick(){
         const best = Object.entries(cnt).sort((a, b) => b[1] - a[1] || list.lastIndexOf(b[0]) - list.lastIndexOf(a[0]))[0][0];
         const v = JSON.parse(best); g.st = v.st; g.slots = v.slots; g.ex = v.ex; if (v.plus !== undefined) g.plus = v.plus;
       }
-      if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => { scanToast(r); renderAll(); }); else scanToast(r);
-      LIVE.n++;
+      if (r.slot) nameFromIcon(r.slot).catch(() => {}).then(() => { scanToast(r); renderAll(); renderLive(); }); else scanToast(r);
+      LIVE.n++; if (IMPW.live && IMPW.step === "gear") IMPW.slots[r.stars ? "stars" : r.slot] = 1;
       if (r.stars) LIVE.msg = `✓ Throwing stars — ${curStar()[0]} (W.ATK +${curStar()[1]})`;
       else { const g = S.gear[r.slot]; LIVE.msg = `✓ ${SLOTS.find(s => s[0] === r.slot)[1]}${g.name ? ' — ' + g.name : ''}: ${statLine(g.st) || 'no attack stats'}`; }
-      S.gearEdit = null; renderAll();
+      S.gearEdit = null; renderAll(); renderLive();
     }, true);
   } catch(e){ console.error(e); LIVE.busy = false; }
 }
 async function liveStart(mode){
-  LIVE.mode = mode || "gear"; LIVE.statOk = 0;
+  LIVE.mode = mode || "gear"; LIVE.statOk = 0; LIVE.sreads = [];
+  if (mode === "stat"){ IMPW.live = true; IMPW.step = "stat"; IMPW.slots = {}; }
   if (LIVE.stream){ renderLive(); return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){ alert("Your browser can't share a screen here. Use Chrome or Edge on a computer."); return; }
   try {
-    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:5, displaySurface:"window", cursor:"never"}, audio:false, preferCurrentTab:false, selfBrowserSurface:"exclude", surfaceSwitching:"include", monitorTypeSurfaces:"exclude"});   // opens the picker on the Window tab; the browser doesn't let a site pick MapleStory.exe itself
+    const st = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:5, width:{ideal:3840}, height:{ideal:2160}, displaySurface:"window", cursor:"never"}, audio:false, preferCurrentTab:false, selfBrowserSurface:"exclude", surfaceSwitching:"include", monitorTypeSurfaces:"exclude"});   // opens the picker on the Window tab; the browser doesn't let a site pick MapleStory.exe itself
     LIVE.stream = st; LIVE.video = document.createElement("video"); LIVE.video.muted = true; LIVE.video.playsInline = true; LIVE.video.srcObject = st; await LIVE.video.play();
     LIVE.last = ""; LIVE.n = 0; LIVE.msg = "";
     st.getVideoTracks()[0].addEventListener("ended", liveStop);
@@ -2102,22 +2149,76 @@ function renderLive(){
       ? `<span class="scico">🖥</span><span class="sctxt"><b>Your Maple screen is shared</b><small>Start scanning your equipment with it</small></span><button class="btn small go" data-livegear="1">Scan equipment</button>`
       : `<span class="scico">🖥</span><span class="sctxt"><b>Live scan from MapleStory</b><small>Share the <b>MapleStory</b> window (Window tab), then just hover your items — no screenshots needed</small></span><button class="btn small go" id="liveStart">Share Maple screen</button>`;
   }
-  const im = $("impLive");
-  if (im){
-    im.classList.toggle("on", !!LIVE.stream);
-    im.innerHTML = !LIVE.stream
-      ? `<span class="scico">🖥</span><span class="sctxt"><b>Or share your Maple screen</b><small>Pick the MapleStory window and open your CHARACTER STAT window (with DETAIL) in game — it's read automatically.</small></span><button class="btn small go" data-livestat="1">Share Maple screen</button>`
-      : LIVE.mode === "stat"
-      ? `<span class="scico"><span class="livedot"></span></span><span class="sctxt"><b>Looking for your stat window…</b><small>Open the CHARACTER STAT window with the DETAIL panel in MapleStory.</small></span><button class="btn small" id="liveStop">Stop</button>`
-      : `<span class="scico">✅</span><span class="sctxt"><b>${LIVE.statOk ? `Stats read (${LIVE.statOk} values)` : 'Screen shared'}</b><small>${LIVE.statOk ? 'Check them below and press Apply. ' : ''}Want your gear too? Keep sharing and hover your equipment in game.</small></span><button class="btn small go" data-livegear="1">Scan my equipment</button>`;
-  }
+  renderImp();
 }
+/* ---------- import wizard: 1 stats → 2 equipment → all set ---------- */
+const IMPW = {live:false, step:"stat", slots:{}};
+function impNextGear(){ IMPW.step = "gear"; LIVE.mode = "gear"; LIVE.last = ""; LIVE.msg = ""; renderAll(); renderLive(); }
+function renderImp(){
+  const im = $("impLive"); if (!im) return;
+  const show = (id, on) => { const e = $(id); if (e) e.style.display = on ? "" : "none"; };
+  const set = (id, h) => { const e = $(id); if (e && e.innerHTML !== h) e.innerHTML = h; };
+  const live = IMPW.live && !!LIVE.stream;
+  if (!live){   // plain screenshot import (with the option to share the screen)
+    im.className = "implive"; im.style.display = "";
+    im.innerHTML = `<span class="scico">🖥</span><span class="sctxt"><b>Easiest: share your Maple screen</b><small>Stats and equipment are read straight from MapleStory — step by step.</small></span><button class="btn small go" data-livestat="1">Share Maple screen</button>`;
+    ["impIntro","drop"].forEach(i => show(i, true)); show("impApply", true); show("impNext", false);
+    ["impSteps","impSumStat","impSumGear","impGear","impDone"].forEach(i => set(i, ""));
+    return;
+  }
+  const st = IMPW.step, order = ["stat","check","gear","gcheck","done"], at = order.indexOf(st);
+  const chip = (t, from, to) => `<span class="${at > to ? 'ok' : at >= from ? 'cur' : ''}">${at > to ? '✓ ' : ''}${t}</span>`;
+  set("impSteps", chip("1 · Stats", 0, 1) + chip("2 · Equipment", 2, 3) + chip("3 · All set", 4, 4));
+  ["impIntro","drop"].forEach(i => show(i, false)); show("impApply", false); show("impNext", st === "check");
+  show("impResult", st === "check");
+  im.className = ""; im.style.display = st === "stat" || st === "check" ? "" : "none";
+  if (st === "stat") set("impLive", `<div class="impbig"><div style="flex:1"><h4>👉 Now open your CHARACTER STAT window in MapleStory</h4>
+      <ol><li>Go to the MapleStory window and press <kbd>S</kbd> (or Menu → Stat).</li><li>Click <b>DETAIL ▸</b> so the right part with Attack, Magic and Accuracy shows.</li><li>Keep it in view — it's read automatically, then you come back here.</li></ol>
+      <div class="look"><span class="livedot"></span> Looking for your stat window… <button class="btn small" id="liveStop" style="margin-left:8px">Stop sharing</button></div></div>
+      <div class="swmock" aria-hidden="true"><div class="swt">CHARACTER STAT</div><div class="swb"><div class="swc"><div class="r"></div><div class="r"></div><div class="r"></div><div class="r w"></div><div class="r g"></div><div class="r g"></div><div class="r g"></div><div class="r g"></div></div><div class="swc"><div class="r b"></div><div class="r b"></div><div class="r b"></div><div class="r b"></div><div class="r b"></div><div class="r b"></div><div class="r b"></div></div></div><div class="swf"><span>ABILITY POINT</span><span class="swdet">DETAIL ▸</span></div></div></div>`);
+  if (st === "check") set("impLive", `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>Stats read — please check</b><div class="note">Compare them with your game. Fix anything that's off, then press <b>Looks good</b>.</div></div></div>`);
+  const c = S.char;
+  set("impSumStat", at >= 2 ? `<span>✓</span><span><b>Stats</b> · ${esc(jobOf().label)} · Lv ${S.level} · STR ${c.str} · DEX ${c.dex} · INT ${c.int} · LUK ${c.luk} · ACC ${S.baseAcc}</span><button class="btn small" data-impgo="check">Change</button>` : "");
+  const got = Object.keys(IMPW.slots || {}).filter(k => k === "stars" || S.gear[k]);
+  if (st === "gear" || st === "gcheck"){
+    const items = got.map(k => k === "stars" ? `<div><b>Throwing stars</b> · ${esc(curStar()[0])} <span class="s">W.ATK +${curStar()[1]}</span></div>`
+      : `<div><b>${esc(SLOTS.find(x => x[0] === k)[1])}</b>${S.gear[k].name ? ' · ' + esc(S.gear[k].name) : ''}${S.gear[k].plus ? ' (+' + S.gear[k].plus + ')' : ''} <span class="s">${esc(statLine(S.gear[k].st) || 'no attack stats')}${S.gear[k].slots ? ' · ' + S.gear[k].slots + ' slots' : ''}</span></div>`).join("");
+    const head = !got.length
+      ? `<div class="impcheck" style="border-color:var(--accent)"><span class="livedot"></span><div><b>Waiting for your items…</b><div class="note">Hover each item in your EQUIPMENT inventory in MapleStory.</div></div></div>`
+      : `<div class="impcheck"><span style="font-size:24px">🔎</span><div><b>${got.length} item${got.length > 1 ? 's' : ''} read — please check</b><div class="note">Hover more items to add them, or the same item again to fix it.${LIVE.msg ? '<br>' + esc(LIVE.msg) : ''}</div></div></div>`;
+    set("impGear", `<div class="impgearwrap"><div class="impeq">${equipWindow()}${!got.length ? `<div class="impov"><div><b>👉 Open your EQUIPMENT inventory in MapleStory</b><div class="note">Press <kbd>E</kbd> in game, then hover your mouse over your items one by one${usesStars() ? ' (and your throwing stars)' : ''}.<br>Each one is read and shows up here.</div></div></div>` : ''}</div>
+      <div>${head}<div class="impitems">${items}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-impgo="done">Skip equipment</button>${got.length ? '<button class="btn primary" data-impgo="done">Looks good ▸</button>' : ''}</div></div></div>`);
+  } else set("impGear", "");
+  set("impSumGear", st === "done" ? `<span>✓</span><span><b>Equipment</b> · ${got.length ? got.length + ' item' + (got.length > 1 ? 's' : '') + ' read' : 'skipped'}</span><button class="btn small" data-impgo="gear">Change</button>` : "");
+  set("impDone", st === "done" ? `<div class="impdone"><h4>🎉 All set!</h4><div class="note">Your stats${got.length ? ' and equipment are' : ' are'} ready. Press Apply to use them everywhere on the site.</div><button class="btn primary" id="impFinish">Apply</button></div>` : "");
+}
+function gearNotice(){
+  let n = $("setNotice"); if (n) n.remove();
+  const a = $("navGear"); if (!a) return; const r = a.getBoundingClientRect();
+  n = document.createElement("div"); n.id = "setNotice"; n.className = "setnotice left";
+  n.innerHTML = `<b>✓ Your character is saved</b><div class="note">You can still change your stats and gear set here in <b>Gear &amp; Upgrades</b>.</div><div class="snbtns"><button class="btn small" data-opengear="1">Open Gear &amp; Upgrades</button><button class="btn small ghost" data-closenote="1">OK</button></div>`;
+  n.style.top = (r.bottom + 10) + "px"; n.style.left = Math.max(10, r.left) + "px";
+  document.body.appendChild(n); a.classList.add("pulse"); setTimeout(() => a.classList.remove("pulse"), 2400);
+  requestAnimationFrame(() => n.classList.add("on"));
+  setTimeout(() => { if (!n.isConnected) return; n.classList.remove("on"); setTimeout(() => n.remove(), 600); }, 9000);
+}
+document.addEventListener("click", ev => {
+  const go = ev.target.closest("[data-impgo]");
+  if (go){ const st = go.dataset.impgo; IMPW.step = st;
+    if (st === "check"){ LIVE.mode = "idle"; $("impResult").style.display = ""; }
+    if (st === "gear"){ impNextGear(); return; }
+    if (st === "done") LIVE.mode = "idle";
+    renderLive(); return; }
+  if (ev.target.closest("#impFinish")){ IMPW.live = false; liveStop(); $("impModal").classList.remove("open"); renderAll(); gearNotice(); return; }
+  if (ev.target.closest("[data-opengear]")){ location.hash = "#gear"; const n = $("setNotice"); if (n) n.remove(); return; }
+  if (ev.target.closest("[data-closenote]")){ const n = $("setNotice"); if (n) n.remove(); return; }
+});
 document.addEventListener("click", ev => {
   if (ev.target.closest("#liveStart")) liveStart("gear");
   else if (ev.target.closest("[data-livestat]")) liveStart("stat");
   else if (ev.target.closest("[data-livegear]")){   // keep the same share, switch to reading equipment tooltips
-    const ap = $("impApply"); if (LIVE.statOk && ap && $("impModal").classList.contains("open")) ap.click();
-    $("impModal").classList.remove("open"); LIVE.mode = "gear"; LIVE.last = ""; location.hash = "#gear"; renderAll(); renderLive();
+    LIVE.mode = "gear"; LIVE.last = ""; location.hash = "#gear"; renderAll(); renderLive();
   }
   else if (ev.target.closest("#liveStop")) liveStop();
 });
@@ -3562,7 +3663,7 @@ function guessClass(v){
   const best = Object.entries(st).sort((a,b) => b[1]-a[1])[0];
   return (v.level||0) < 10 && best[1] < 40 ? "beginner" : best[0];
 }
-$("btnImport").onclick = () => { $("impModal").classList.add("open"); try { renderLive(); } catch(e){} };
+$("btnImport").onclick = () => { if (!LIVE.stream) IMPW.live = false; $("impModal").classList.add("open"); try { renderLive(); } catch(e){} };
 $("impFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) loadImage(f); e.target.value = ""; });
 const drop = $("drop");
 ["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
@@ -3596,14 +3697,38 @@ function loadImage(file){
   img.src = url;
 }
 /* read a stat window from an image or canvas (a pasted screenshot or a frame of the shared screen); returns how many values were read */
-function statFromImage(src, W, H){
-    const c = $("impCanvas"); c.width = W; c.height = H;
-    const ctx = c.getContext("2d", {willReadFrequently:true}); ctx.drawImage(src, 0, 0);
-    let res; try { res = StatOCR.read(ctx.getImageData(0, 0, c.width, c.height)); } catch(err){ res = {values:{}, found:{pink:0,green:0,blue:0}}; }
+/* find the CHARACTER STAT window in a (full) screenshot and cut it out, scaled to a size the reader likes */
+function statCrop(src, W, H){
+  const f = document.createElement("canvas"); f.width = W; f.height = H;
+  const fx = f.getContext("2d", {willReadFrequently:true}); fx.drawImage(src, 0, 0);
+  let r0; try { r0 = StatOCR.read(fx.getImageData(0, 0, W, H)); } catch(e){ return null; }
+  const b = r0 && r0.box; if (!b) return null;
+  const sc = b.bw ? b.bw / 59 : b.lh / 14;   // 59px = blue label width at 100% game size
+  const x0 = Math.max(0, Math.round(b.x0 - 12*sc)), y0 = Math.max(0, Math.round(b.y0 - 36*sc));
+  const x1 = Math.min(W, Math.round(b.x1 + 110*sc)), y1 = Math.min(H, Math.round(b.y1 + 34*sc));
+  const k = Math.min(3, Math.max(1, 1.5 / sc));   // upscale small windows
+  const c = document.createElement("canvas"); c.width = Math.round((x1 - x0) * k); c.height = Math.round((y1 - y0) * k);
+  const cx = c.getContext("2d", {willReadFrequently:true}); cx.imageSmoothingEnabled = k > 1; cx.imageSmoothingQuality = "high";
+  cx.drawImage(f, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
+  return {c, full:r0, sc};
+}
+/* read a stat window: cut it out of the picture first; returns {res, c (picture that was read), sc (game scale)} */
+function statRead(src, W, H){
+    let res = null, c = null, sc = 1; const cut = statCrop(src, W, H);
+    const nv = r => r ? Object.keys(r.values || {}).length : 0;
+    if (cut){ c = cut.c; sc = cut.sc; try { res = StatOCR.read(c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, c.width, c.height)); } catch(err){ res = null; }
+      if (nv(cut.full) > nv(res)) res = cut.full, c = null; }   // the cut-out read worse: use the whole picture
+    if (!c){ c = document.createElement("canvas"); c.width = W; c.height = H; c.getContext("2d", {willReadFrequently:true}).drawImage(src, 0, 0); }
+    if (!res){ try { res = StatOCR.read(c.getContext("2d", {willReadFrequently:true}).getImageData(0, 0, c.width, c.height)); } catch(err){ res = {values:{}, found:{pink:0,green:0,blue:0}}; } }
+    return {res, c, sc};
+}
+function statFromImage(src, W, H){ const r = statRead(src, W, H); return statShow(r.res, r.c, r.sc); }
+function statShow(res, pic, sc, djIn){
+    const c = $("impCanvas"); c.width = pic.width; c.height = pic.height; c.getContext("2d").drawImage(pic, 0, 0);
     const v = res.values, n = IMP_FIELDS.filter(([k]) => v[k] !== undefined).length;
     impLast = v;
-    const dj = detectJob(res.job, v);
-    $("impStatus").innerHTML = n ? `<span class="ok">Read ${n} of ${IMP_FIELDS.length} values.</span>` : `<span class="bad">Couldn't find the stat window.</span> Use an uncropped screenshot with the CHARACTER STAT window and DETAIL panel fully visible.`;
+    const dj = djIn || detectJob(res.job, v);
+    $("impStatus").innerHTML = n ? `<span class="ok">Read ${n} of ${IMP_FIELDS.length} values.</span>${sc && sc < 0.93 ? ' <span class="near">Your stat window looks smaller than normal size, so some numbers may be off — please check.</span>' : ''}` : `<span class="bad">Couldn't find the stat window.</span> Use an uncropped screenshot with the CHARACTER STAT window and DETAIL panel fully visible.`;
     $("impGrid").innerHTML = `<div style="grid-column:span 2"><label>Job ${dj.conf < 0.6 ? '<span class="near">(please check)</span>' : '<span class="ok">✓ read</span>'}</label><select class="txt" id="impCls">${jobOptions(dj.job)}</select></div>` +
       IMP_FIELDS.map(([k,l]) => { const ph = k === "level" && v.level === undefined ? (levelFromStats(v) ? "≈" + levelFromStats(v) + " (from stats)" : "") : k === "accuracy" && v.accuracy === undefined ? "auto from stats" : "";
         return `<div><label>${l}</label><input class="txt mono ${v[k]===undefined && !ph?'miss':''}" data-imp="${k}" value="${v[k] ?? ''}" placeholder="${ph}" inputmode="numeric"></div>`; }).join("");
@@ -3640,14 +3765,18 @@ function applyStatValues(v, job){
   S.charImported = Date.now();
 }
 function applyStat(res){ applyStatValues(res.values, detectJob(res.job, res.values).job); }
-$("impApply").onclick = () => {
+function applyImpFields(){
   const v = {}; ["str","dex","int","luk"].forEach(k => { if (impLast[k+"Base"] !== undefined) v[k+"Base"] = impLast[k+"Base"]; });
   document.querySelectorAll("[data-imp]").forEach(el => { const n = parseInt(el.value, 10); if (Number.isFinite(n)) v[el.dataset.imp] = n; });
   ["str","dex","int","luk"].forEach(k => { if (v[k] !== impLast[k]) delete v[k+"Base"]; });
   applyStatValues(v, $("impCls").value);
+}
+$("impApply").onclick = () => {
+  applyImpFields();
   $("impModal").classList.remove("open"); renderAll();
   toast(`✓ Character saved: ${jobOf().label}, Lv ${S.level}. It stays saved for next time.`);
 };
+$("impNext").onclick = () => { applyImpFields(); impNextGear(); };
 function toast(html){ const t = $("toast"); t.innerHTML = html; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 4000); }
 
 renderAll();
