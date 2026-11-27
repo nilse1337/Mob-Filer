@@ -1818,6 +1818,9 @@ const weaponOK = sub => jobOf().weapons.includes(sub);
 const statLine = st => GSTATS.filter(([k]) => st[k]).map(([k,l]) => `${l} ${st[k] > 0 ? '+' : ''}${st[k]}`).join(" · ") || "no attack stats";
 
 if (!S.gear) S.gear = {};
+// the most any (scrolled) item gives of a stat — more than this was misread from a tooltip
+const GEAR_MAX = {critDamage:40, critRate:30, acc:80, str:60, dex:60, int:60, luk:60, watk:250, matk:300};
+Object.values(S.gear).forEach(g => { if (g && g.st) for (const k in g.st) if (g.st[k] > (GEAR_MAX[k] || 999)) delete g.st[k]; });   // clean misreads saved earlier
 /* screenshots are kept in their own storage key so they survive a refresh */
 const IMG_KEY = "msacc-gear-img-v1";
 let IMGS = {};
@@ -2113,7 +2116,7 @@ function guessName(g, v){
 function gearFromTip(res){
   const v = res.values; const sub = TYPE_TO_SUB[v.type];
   if (sub === undefined) return null;
-  const st = {}; GSTATS.forEach(([k]) => { if (v[k]) st[k] = v[k]; });
+  const st = {}; GSTATS.forEach(([k]) => { if (v[k] && !(v[k] > (GEAR_MAX[k] || 999))) st[k] = v[k]; });   // a number no item can have is a misread: left out
   const g = {sub, st, slots: v.slots || 0, name: "", ex: exStats(v)}; if (Number.isFinite(v.plus)) g.plus = v.plus;
   g.name = guessName(g, v);
   if (g.name && v.slots === undefined){ const it = ITEMS.find(i => i.name === g.name); if (it) g.slots = it.slots; }   // slots line not read: assume unscrolled
@@ -3147,7 +3150,7 @@ function setWhy(R){
     : `Goal of ${B.l}: the most flexible build. Keeping ${SE} near your level − 10 lets you wear every ${CLASS_LABEL[S.char.cls] ? CLASS_LABEL[S.char.cls].toLowerCase() : ''} item as soon as you reach its level, so the set can simply take the strongest item for each slot and fill it with ${M} and ${atk}.`;
   // biggest single gains
   const gains = [];
-  for (const [slot, label] of SLOTS){ const p = R.pick[slot]; if (!p || p.keep) continue;
+  for (const [slot, label] of SLOTS){ const p = R.pick[slot]; if (!p || (p.keep && !(R.scrollRows[slot] && R.scrollRows[slot].bestSc && R.scrollRows[slot].free > 0))) continue;
     const one = evalLoadout({[slot]: R.loadScrolled[slot] || {st:p.st, sub:p.sub}}, R.model, R.mob, R.base).pct; if (one > 0.005) gains.push([label, one, p.name || (p.it && p.it.name) || label]); }
   gains.sort((a, b) => b[1] - a[1]);
   const pct = R.withScrolls.pct, d = deltaLine(R.withScrolls.d);
@@ -3171,12 +3174,13 @@ function setColumn(R){
     const curSt = cur ? cur.st : {};
     // stat chips after scrolls; green = more than you have now, red = less
     const chips = GSTATS.filter(([k]) => Math.abs(scSt[k] || 0) >= 0.05).map(([k,l]) => {
-      const d = (scSt[k] || 0) - (curSt[k] || 0), cls = p.keep ? '' : d > 0.05 ? 'up' : d < -0.05 ? 'down' : '';
-      return `<span class="bchip ${cls}" title="${p.keep ? '' : 'vs now: ' + num(d)}">${l} ${num(scSt[k])}</span>`; }).join("") || '<span class="note">no attack stats</span>';
+      const d = (scSt[k] || 0) - (curSt[k] || 0), cls = d > 0.05 ? 'up' : d < -0.05 ? 'down' : '';
+      return `<span class="bchip ${cls}" title="${Math.abs(d) < 0.05 ? '' : 'vs now: ' + num(d)}">${l} ${num(scSt[k])}</span>`; }).join("") || '<span class="note">no attack stats</span>';
     const lost = p.keep ? [] : GSTATS.filter(([k]) => (curSt[k] || 0) > 0.05 && !(Math.abs(scSt[k] || 0) >= 0.05)).map(([k,l]) => `<span class="bchip down" title="you lose this">${l} −${num(curSt[k]).replace('+','')}</span>`);
     const w = p.it ? wearCheck(p.it, cur) : null;
     const meta = [p.it ? `Lv ${p.it.lv}` : "", scrolled ? `${sr.free}× ${esc(sr.bestSc.sc.stat)} ${sr.g}%` : `${sr ? sr.free : p.slots} slots`].filter(Boolean).join(" · ");
-    const one = p.keep ? 0 : evalLoadout({[slot]: R.loadScrolled[slot] || {st:p.st, sub:p.sub}}, R.model, R.mob, R.base).pct;
+    // kept items still gain from scrolling their free slots: show that gain too
+    const one = p.keep && !scrolled ? 0 : evalLoadout({[slot]: R.loadScrolled[slot] || {st:p.st, sub:p.sub}}, R.model, R.mob, R.base).pct;
     const ico = iconImg(itemIconId(p.name), p.keep && IMGS[slot] && IMGS[slot].icon, "bimg");
     const tipTxt = (() => {
       const cur = S.gear[slot], sr = R.scrollRows[slot], gd = sr && sr.bestSc ? sr.bestSc.sc : null;
@@ -3197,7 +3201,7 @@ function setColumn(R){
         <div class="bchips">${chips}${lost.join("")}</div>
         <div class="bmeta">${meta}${p.it && w && !w.ok ? ` · ${reqLine(p.it, w)}` : ''}</div>
       </div>
-      <div class="bside">${p.keep ? '' : `<span class="bpct ${one > 0.0005 ? 'ok' : one < -0.0005 ? 'bad' : ''}" >${one > 0.0005 ? '+' : one < -0.0005 ? '−' : '±'}${Math.abs(one*100).toFixed(1)}%</span>`}${gradeBtns(slot, p)}</div>
+      <div class="bside">${p.keep && !(one > 0.0005) ? '' : `<span class="bpct ${one > 0.0005 ? 'ok' : one < -0.0005 ? 'bad' : ''}" >${one > 0.0005 ? '+' : one < -0.0005 ? '−' : '±'}${Math.abs(one*100).toFixed(1)}%</span>`}${gradeBtns(slot, p)}</div>
     </div>`);
   }
   if (usesStars() || R.load.stars){
